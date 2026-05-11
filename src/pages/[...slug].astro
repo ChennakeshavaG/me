@@ -1,0 +1,46 @@
+---
+import { getCollection, render } from 'astro:content';
+import ContentLayout from '../layouts/ContentLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('content', (entry) => {
+    if (import.meta.env.PROD && entry.data.type === 'blog' && entry.data.draft) {
+      return false;
+    }
+    return true;
+  });
+
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { type, title, description, createdAt, updatedAt, tags } = entry.data;
+---
+
+<ContentLayout
+  title={title}
+  date={createdAt.toISOString().split('T')[0]}
+  tags={tags}
+>
+  {type === 'wiki' && entry.data.category && (
+    <p class="category">Category: {entry.data.category}</p>
+  )}
+  {type === 'project' && (
+    <div class="project-meta">
+      <span class="status">{entry.data.status}</span>
+      {entry.data.url && <a href={entry.data.url}>Live Site</a>}
+      {entry.data.repo && <a href={entry.data.repo}>Repository</a>}
+    </div>
+  )}
+  {type === 'blog' && entry.data.draft && (
+    <p class="draft-badge">Draft</p>
+  )}
+  {updatedAt && (
+    <p class="updated">Updated: {updatedAt.toISOString().split('T')[0]}</p>
+  )}
+  <Content />
+</ContentLayout>

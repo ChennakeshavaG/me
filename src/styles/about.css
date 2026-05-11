@@ -1,0 +1,23 @@
+.about {
+  max-width: 65ch;
+  margin: 0 auto;
+}
+
+.about p {
+  margin-bottom: 1rem;
+}
+
+.about h1,
+.about h2,
+.about h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .about h1,
+  .about h2,
+  .about h3 {
+    margin-top: 1.25rem;
+  }
+}

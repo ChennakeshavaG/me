@@ -1,0 +1,465 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import '../styles/atelier.css';
+import '../styles/about.css';
+import '../styles/home.css';
+
+const { title, description = '' } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {description && <meta name="description" content={description} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" />
+    <script is:inline>
+      (function() {
+        var t = localStorage.getItem('theme');
+        if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+      document.addEventListener('astro:before-swap', function(e) {
+        var t = document.documentElement.getAttribute('data-theme');
+        if (t) e.newDocument.documentElement.setAttribute('data-theme', t);
+      });
+    </script>
+    <ClientRouter />
+    <title>{title}</title>
+  </head>
+  <body>
+    <canvas class="grid-glow" id="grid-glow" transition:persist></canvas>
+    <header class="site-header glass glow-edge glow-edge--bottom scroll-hide--up" transition:persist>
+      <nav>
+        <a href="/" class="logo pulse-glow">gck.sh</a>
+        <div class="nav-links">
+          <a href="/" aria-current={currentPath === '/' ? 'page' : undefined}>Home</a>
+          <a href="/atelier" aria-current={currentPath.startsWith('/atelier') ? 'page' : undefined}>Atelier</a>
+          <a href="/about" aria-current={currentPath.startsWith('/about') ? 'page' : undefined}>About</a>
+          <button type="button" class="theme-toggle" aria-label="Toggle dark/light mode">
+            <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </button>
+        </div>
+      </nav>
+    </header>
+    <main class="page-width" transition:animate="fade">
+      <slot />
+    </main>
+    <footer class="glass glow-edge glow-edge--top scroll-hide--down" transition:persist>
+      <p class="footer-name">
+        &copy; {new Date().getFullYear()} <strong>G</strong>udapalli <strong>C</strong>henna<strong>k</strong>eshava
+      </p>
+      <div class="footer-links">
+        <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:">Email</a>
+      </div>
+    </footer>
+    <script>
+      function init() {
+        // Update nav active state (header persists across navigations)
+        const path = window.location.pathname;
+        document.querySelectorAll('.nav-links a[href]').forEach(a => {
+          const href = a.getAttribute('href');
+          const active = href === '/' ? path === '/' : path.startsWith(href);
+          if (active) a.setAttribute('aria-current', 'page');
+          else a.removeAttribute('aria-current');
+        });
+
+        const toggle = document.querySelector('.theme-toggle');
+        if (toggle && !toggle.dataset.bound) {
+          toggle.dataset.bound = 'true';
+          toggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            window.dispatchEvent(new Event('theme-change'));
+          });
+        }
+
+        // rehype-mermaid generates <picture> with <source media="(prefers-color-scheme: dark)">
+        // for dark SVG and <img> fallback for light SVG. Since we use data-theme attribute
+        // (not OS prefers-color-scheme), we swap source.media to show/hide the dark variant.
+        function syncMermaidTheme() {
+          var theme = document.documentElement.getAttribute('data-theme');
+          document.querySelectorAll('picture > source').forEach(function(source) {
+            // First call: detect mermaid sources by their original media query and mark them.
+            // Needed because we overwrite media below, losing the original string for future calls.
+            if (!source.dataset.mermaid) {
+              if (source.media && source.media.includes('prefers-color-scheme')) {
+                source.dataset.mermaid = 'dark'; // labels this <source> as the dark-theme SVG
+              } else return; // not a mermaid source, skip
+            }
+            // Show dark source when theme is dark, hide it (falling back to light <img>) otherwise
+            source.media = theme === 'dark' ? 'all' : 'not all';
+          });
+        }
+        syncMermaidTheme();
+        window.addEventListener('theme-change', syncMermaidTheme);
+
+        const header = document.querySelector('.site-header');
+        const footer = document.querySelector('footer');
+        let lastY = window.scrollY;
+        let ticking = false;
+        function onScroll() {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            const y = window.scrollY;
+            const atTop = y <= 50;
+            const atBottom = y + window.innerHeight >= document.documentElement.scrollHeight - 50;
+            const goingDown = y > lastY;
+            if (atTop || !goingDown) {
+              header?.classList.remove('hidden');
+            } else {
+              header?.classList.add('hidden');
+            }
+            if (atBottom || goingDown) {
+              footer?.classList.remove('hidden');
+            } else {
+              footer?.classList.add('hidden');
+            }
+            lastY = y;
+            ticking = false;
+          });
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
+
+      document.addEventListener('astro:page-load', init);
+    </script>
+    <script data-astro-rerun>
+      (function() {
+      if (window.__gridCleanup) window.__gridCleanup();
+
+      const canvas = document.getElementById('grid-glow');
+      const ctx = canvas.getContext('2d');
+
+      // Reuse offscreen canvases across navigations (canvas persists via transition:persist)
+      if (!window.__gridOffscreen) {
+        window.__gridOffscreen = document.createElement('canvas');
+        window.__glowOffscreen = document.createElement('canvas');
+      }
+      const gridCanvas = window.__gridOffscreen;
+      const gridCtx = gridCanvas.getContext('2d');
+      const glowCanvas = window.__glowOffscreen;
+      const glowCtx = glowCanvas.getContext('2d');
+
+      const SPACING = 5;
+      const UNIT = SPACING * 10;
+      const RADIUS = 150;
+      const PI2 = Math.PI * 2;
+      const LABEL_FONT = '600 10px Orbitron, sans-serif';
+
+      const MAIN_ALPHA  = 0.45;
+      const MAJOR_ALPHA = 0.15;
+      const MINOR_ALPHA = 0.06;
+
+      const MAIN_GLOW  = 1.0;
+      const MAJOR_GLOW = 0.7;
+      const MINOR_GLOW = 0.4;
+
+      const MAIN_WIDTH  = 2.5;
+      const MAJOR_WIDTH = 1;
+      const MINOR_WIDTH = 0.5;
+
+      let mouseX = -1000, mouseY = -1000, curX = -1000, curY = -1000;
+      let glowFrame = 0;
+      let gridDirty = true;
+      let cachedR = 0, cachedG = 229, cachedB = 255;
+      let originX = 0, originY = 0;
+      let lastW = 0, lastH = 0;
+
+      function updateColors() {
+        const light = document.documentElement.getAttribute('data-theme') === 'light';
+        cachedR = light ? 230 : 0;
+        cachedG = light ? 26 : 229;
+        cachedB = light ? 110 : 255;
+      }
+
+      function resizeCanvas() {
+        const dpr = devicePixelRatio;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        lastW = w;
+        lastH = h;
+        const pw = w * dpr;
+        const ph = h * dpr;
+        canvas.width = pw;
+        canvas.height = ph;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        glowCanvas.width = pw;
+        glowCanvas.height = ph;
+        originX = Math.round(w / 2);
+        originY = Math.round(h / 2);
+        gridDirty = true;
+        draw();
+      }
+
+      function buildGrid() {
+        const dpr = devicePixelRatio;
+        const w = lastW;
+        const h = lastH;
+        gridCanvas.width = w * dpr;
+        gridCanvas.height = h * dpr;
+        gridCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        updateColors();
+
+        const ox = originX;
+        const oy = originY;
+        const rgb = `${cachedR},${cachedG},${cachedB}`;
+
+        gridCtx.clearRect(0, 0, w, h);
+
+        // Minor lines (every SPACING px, skip major positions)
+        gridCtx.strokeStyle = `rgba(${rgb},${MINOR_ALPHA})`;
+        gridCtx.lineWidth = MINOR_WIDTH;
+        gridCtx.beginPath();
+        for (let x = ox % SPACING; x <= w; x += SPACING) {
+          if ((x - ox) % UNIT === 0) continue;
+          gridCtx.moveTo(x, 0);
+          gridCtx.lineTo(x, h);
+        }
+        for (let y = oy % SPACING; y <= h; y += SPACING) {
+          if ((y - oy) % UNIT === 0) continue;
+          gridCtx.moveTo(0, y);
+          gridCtx.lineTo(w, y);
+        }
+        gridCtx.stroke();
+
+        // Major lines (every UNIT px, skip axes)
+        gridCtx.strokeStyle = `rgba(${rgb},${MAJOR_ALPHA})`;
+        gridCtx.lineWidth = MAJOR_WIDTH;
+        gridCtx.beginPath();
+        for (let x = ox % UNIT; x <= w; x += UNIT) {
+          if (x === ox) continue;
+          gridCtx.moveTo(x, 0);
+          gridCtx.lineTo(x, h);
+        }
+        for (let y = oy % UNIT; y <= h; y += UNIT) {
+          if (y === oy) continue;
+          gridCtx.moveTo(0, y);
+          gridCtx.lineTo(w, y);
+        }
+        gridCtx.stroke();
+
+        // Main lines (axes through origin)
+        gridCtx.strokeStyle = `rgba(${rgb},${MAIN_ALPHA})`;
+        gridCtx.lineWidth = MAIN_WIDTH;
+        gridCtx.beginPath();
+        gridCtx.moveTo(ox, 0);
+        gridCtx.lineTo(ox, h);
+        gridCtx.moveTo(0, oy);
+        gridCtx.lineTo(w, oy);
+        gridCtx.stroke();
+
+        // Dots at all major-line intersections
+        gridCtx.fillStyle = `rgba(${rgb},${MAJOR_ALPHA * 0.8})`;
+        gridCtx.beginPath();
+        for (let x = ox % UNIT; x <= w; x += UNIT) {
+          for (let y = oy % UNIT; y <= h; y += UNIT) {
+            gridCtx.moveTo(x + 2.5, y);
+            gridCtx.arc(x, y, 2.5, 0, PI2);
+          }
+        }
+        gridCtx.fill();
+
+        // Labels
+        gridCtx.fillStyle = `rgba(${rgb},${MAIN_ALPHA * 0.7})`;
+        gridCtx.font = LABEL_FONT;
+
+        gridCtx.textAlign = 'right';
+        gridCtx.textBaseline = 'bottom';
+        for (let x = ox % UNIT; x <= w; x += UNIT) {
+          const n = Math.round((x - ox) / UNIT);
+          if (n === 0) continue;
+          gridCtx.fillText(n, x - 4, oy - 4);
+        }
+
+        gridCtx.textAlign = 'left';
+        gridCtx.textBaseline = 'bottom';
+        for (let y = oy % UNIT; y <= h; y += UNIT) {
+          const n = Math.round((oy - y) / UNIT);
+          if (n === 0) continue;
+          gridCtx.fillText(n, ox + 4, y - 4);
+        }
+
+        gridCtx.fillText('0', ox + 4, oy - 4);
+        gridDirty = false;
+      }
+
+      function draw() {
+        const w = lastW;
+        const h = lastH;
+        const dpr = devicePixelRatio;
+        ctx.clearRect(0, 0, w, h);
+
+        if (gridDirty) buildGrid();
+        ctx.drawImage(gridCanvas, 0, 0, w, h);
+
+        const cx = curX;
+        const cy = curY;
+        if (cx < -RADIUS || cy < -RADIUS || cx > w + RADIUS || cy > h + RADIUS) return;
+
+        const ox = originX;
+        const oy = originY;
+        const r = RADIUS;
+        const rgb = `${cachedR},${cachedG},${cachedB}`;
+
+        // Full clear of glow canvas — avoids partial-clear artifacts on HiDPI
+        glowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        glowCtx.clearRect(0, 0, w, h);
+
+        const left = Math.max(0, cx - r);
+        const right = Math.min(w, cx + r);
+        const top = Math.max(0, cy - r);
+        const bottom = Math.min(h, cy + r);
+        const startCol = Math.floor((left - ox) / SPACING) * SPACING + ox;
+        const startRow = Math.floor((top - oy) / SPACING) * SPACING + oy;
+
+        // Batch glow lines by type (3 passes instead of per-line stroke)
+        const tiers = [
+          { step: SPACING, skip: UNIT, glow: MINOR_GLOW, width: MINOR_WIDTH, skipAxis: false },
+          { step: UNIT, skip: 0, glow: MAJOR_GLOW, width: MAJOR_WIDTH, skipAxis: true },
+        ];
+
+        for (const t of tiers) {
+          glowCtx.strokeStyle = `rgba(${rgb},${t.glow})`;
+          glowCtx.lineWidth = t.width;
+          glowCtx.beginPath();
+          const sc = Math.floor((left - ox) / t.step) * t.step + ox;
+          const sr = Math.floor((top - oy) / t.step) * t.step + oy;
+          for (let x = sc; x <= right; x += t.step) {
+            if (x < left) continue;
+            if (t.skip && (x - ox) % t.skip === 0) continue;
+            if (t.skipAxis && x === ox) continue;
+            glowCtx.moveTo(x, top);
+            glowCtx.lineTo(x, bottom);
+          }
+          for (let y = sr; y <= bottom; y += t.step) {
+            if (y < top) continue;
+            if (t.skip && (y - oy) % t.skip === 0) continue;
+            if (t.skipAxis && y === oy) continue;
+            glowCtx.moveTo(left, y);
+            glowCtx.lineTo(right, y);
+          }
+          glowCtx.stroke();
+        }
+
+        // Main (axes) glow
+        glowCtx.strokeStyle = `rgba(${rgb},${MAIN_GLOW})`;
+        glowCtx.lineWidth = MAIN_WIDTH;
+        glowCtx.beginPath();
+        if (ox >= left && ox <= right) {
+          glowCtx.moveTo(ox, top);
+          glowCtx.lineTo(ox, bottom);
+        }
+        if (oy >= top && oy <= bottom) {
+          glowCtx.moveTo(left, oy);
+          glowCtx.lineTo(right, oy);
+        }
+        glowCtx.stroke();
+
+        // Glow labels
+        glowCtx.font = LABEL_FONT;
+        glowCtx.fillStyle = `rgba(${rgb},${MAIN_GLOW})`;
+
+        const startUnitX = Math.floor((left - ox) / UNIT) * UNIT + ox;
+        const startUnitY = Math.floor((top - oy) / UNIT) * UNIT + oy;
+
+        glowCtx.textAlign = 'right';
+        glowCtx.textBaseline = 'bottom';
+        for (let x = startUnitX; x <= right; x += UNIT) {
+          if (x < left) continue;
+          if (oy - 4 < top - 14 || oy - 4 > bottom) continue;
+          const n = Math.round((x - ox) / UNIT);
+          if (n === 0) continue;
+          glowCtx.fillText(n, x - 4, oy - 4);
+        }
+
+        glowCtx.textAlign = 'left';
+        glowCtx.textBaseline = 'bottom';
+        for (let y = startUnitY; y <= bottom; y += UNIT) {
+          if (y < top) continue;
+          if (ox + 4 < left - 30 || ox + 4 > right) continue;
+          const n = Math.round((oy - y) / UNIT);
+          if (n === 0) continue;
+          glowCtx.fillText(n, ox + 4, y - 4);
+        }
+
+        // Origin "0" — single label, top-right of intersection
+        if (ox + 4 >= left && ox + 4 <= right && oy - 4 >= top && oy - 4 <= bottom) {
+          glowCtx.fillText('0', ox + 4, oy - 4);
+        }
+
+        // Radial gradient mask for circular decay
+        glowCtx.globalCompositeOperation = 'destination-in';
+        const grad = glowCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0, 'rgba(255,255,255,1)');
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.6)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        glowCtx.fillStyle = grad;
+        glowCtx.beginPath();
+        glowCtx.arc(cx, cy, r, 0, PI2);
+        glowCtx.fill();
+        glowCtx.globalCompositeOperation = 'source-over';
+
+        ctx.drawImage(glowCanvas, 0, 0, w, h);
+      }
+
+      function onMouseMove(e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        if (!glowFrame) glowFrame = requestAnimationFrame(lerpGlow);
+      }
+
+      function lerpGlow() {
+        curX += (mouseX - curX) * 0.15;
+        curY += (mouseY - curY) * 0.15;
+        draw();
+        if (Math.abs(mouseX - curX) > 0.5 || Math.abs(mouseY - curY) > 0.5) {
+          glowFrame = requestAnimationFrame(lerpGlow);
+        } else {
+          glowFrame = 0;
+        }
+      }
+
+      function onThemeChange() { gridDirty = true; draw(); }
+
+      var isMobile = window.innerWidth <= 640;
+      window.addEventListener('resize', resizeCanvas);
+      if (!isMobile) document.addEventListener('pointermove', onMouseMove, { passive: true });
+      window.addEventListener('theme-change', onThemeChange);
+
+      window.__gridCleanup = () => {
+        window.removeEventListener('resize', resizeCanvas);
+        document.removeEventListener('pointermove', onMouseMove);
+        window.removeEventListener('theme-change', onThemeChange);
+        if (glowFrame) { cancelAnimationFrame(glowFrame); glowFrame = 0; }
+      };
+
+      resizeCanvas();
+      document.fonts.ready.then(() => { gridDirty = true; draw(); });
+      })();
+    </script>
+  </body>
+</html>

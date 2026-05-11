@@ -1,0 +1,13 @@
+---
+import AtelierLayout from '../layouts/AtelierLayout.astro';
+import AtelierHub from '../components/atelier/AtelierHub.tsx';
+import { getCollection } from 'astro:content';
+import { buildItems } from '../models/item.js';
+
+const entries = await getCollection('content');
+const items = buildItems(entries);
+---
+
+<AtelierLayout title="Atelier" description="A workshop of ideas — blogs, wikis, and projects.">
+  <AtelierHub items={items} client:load transition:persist />
+</AtelierLayout>

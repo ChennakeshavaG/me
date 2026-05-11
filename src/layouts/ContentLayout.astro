@@ -1,0 +1,20 @@
+---
+import AtelierLayout from './AtelierLayout.astro';
+
+const { title, date, tags = [] } = Astro.props;
+---
+
+<AtelierLayout title={title}>
+  <article>
+    <header>
+      <h1>{title}</h1>
+      {date && <time>{date}</time>}
+      {tags.length > 0 && (
+        <div class="tags">
+          {tags.map(tag => <span class="tag">{tag}</span>)}
+        </div>
+      )}
+    </header>
+    <slot />
+  </article>
+</AtelierLayout>
