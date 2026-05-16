@@ -421,88 +421,93 @@ stars.forEach(function(s) {
 
 <p>Here's a more complex scene showing how many simple rectangles combine into something impressive. Study the code; it's all <code>fillRect</code>, <code>strokeRect</code>, and <code>clearRect</code>!</p>
 
-export const cityscapeCode = `// Sky
+export const cityscapeCode = `// Letters spelled out in building windows: C H A O S
+var letters = {
+  C: [[1,1,1],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+  H: [[1,0,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+  A: [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+  O: [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+  S: [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]]
+};
+
+// Five buildings, each shows one letter
+var buildings = [
+  { x: 10,  w: 75,  top: 95,  letter: 'C', shade: '#12121a' },
+  { x: 95,  w: 80,  top: 60,  letter: 'H', shade: '#1a1a2a' },
+  { x: 190, w: 85,  top: 40,  letter: 'A', shade: '#12121a' },
+  { x: 290, w: 80,  top: 60,  letter: 'O', shade: '#1a1a2a' },
+  { x: 385, w: 75,  top: 95,  letter: 'S', shade: '#12121a' }
+];
+
+// Sky
 ctx.fillStyle = '#0a0a0f';
 ctx.fillRect(0, 0, 500, 350);
 
-// Ground
-ctx.fillStyle = '#1a3a1a';
-ctx.fillRect(0, 260, 500, 90);
-
-// Road
-ctx.fillStyle = '#12121a';
-ctx.fillRect(0, 280, 500, 70);
-ctx.fillStyle = '#d29922';
-for (var i = 0; i < 10; i++) {
-  ctx.fillRect(10 + i * 52, 312, 30, 4);
+// Stars
+ctx.fillStyle = '#c8c8d0';
+for (var i = 0; i < 30; i++) {
+  var sx = Math.random() * 500;
+  var sy = Math.random() * 80;
+  ctx.fillRect(sx, sy, 1.5, 1.5);
 }
 
-// Building 1 (tall, left)
-ctx.fillStyle = '#12121a';
-ctx.fillRect(20, 80, 80, 180);
-for (var row = 0; row < 6; row++) {
-  for (var col = 0; col < 2; col++) {
-    if (Math.random() > 0.3) {
-      ctx.fillStyle = Math.random() > 0.5 ? '#d29922' : '#00e5ff';
-      ctx.fillRect(32 + col * 35, 95 + row * 27, 18, 18);
-    }
-  }
-}
-
-// Building 2 (medium, center-left)
-ctx.fillStyle = '#1a1a2a';
-ctx.fillRect(120, 140, 100, 120);
-ctx.fillStyle = '#00e5ff';
-for (var row = 0; row < 3; row++) {
-  for (var col = 0; col < 3; col++) {
-    if (Math.random() > 0.25) {
-      ctx.fillRect(132 + col * 30, 155 + row * 35, 18, 22);
-    }
-  }
-}
-
-// Building 3 (wide, center)
-ctx.fillStyle = '#1a1a2a';
-ctx.fillRect(240, 170, 120, 90);
-for (var row = 0; row < 2; row++) {
-  for (var col = 0; col < 4; col++) {
-    ctx.fillStyle = Math.random() > 0.4 ? '#d29922' : '#12121a';
-    ctx.fillRect(250 + col * 28, 182 + row * 35, 18, 22);
-  }
-}
-
-// Building 4 (tallest, right)
-ctx.fillStyle = '#12121a';
-ctx.fillRect(380, 50, 90, 210);
-ctx.fillStyle = '#ff2d7b';
-ctx.fillRect(420, 30, 6, 20);
-ctx.fillStyle = '#7a7a8a';
-ctx.fillRect(423, 20, 1, 10);
-for (var row = 0; row < 7; row++) {
-  for (var col = 0; col < 3; col++) {
-    if (Math.random() > 0.2) {
-      ctx.fillStyle = Math.random() > 0.6 ? '#00e5ff' : '#d29922';
-      ctx.fillRect(392 + col * 25, 62 + row * 27, 15, 18);
-    }
-  }
-}
-
-// Moon
+// Moon (crescent)
 ctx.fillStyle = '#c8c8d0';
 ctx.beginPath();
-ctx.arc(450, 45, 20, 0, Math.PI * 2);
+ctx.arc(430, 30, 18, 0, Math.PI * 2);
 ctx.fill();
 ctx.fillStyle = '#0a0a0f';
 ctx.beginPath();
-ctx.arc(460, 38, 18, 0, Math.PI * 2);
+ctx.arc(438, 24, 16, 0, Math.PI * 2);
 ctx.fill();
 
-// Stars
-ctx.fillStyle = '#c8c8d0';
-for (var i = 0; i < 20; i++) {
-  var sx = Math.random() * 500;
-  var sy = Math.random() * 60;
-  ctx.fillRect(sx, sy, 1.5, 1.5);
+// Draw buildings and letter-windows
+var groundY = 270;
+for (var b = 0; b < buildings.length; b++) {
+  var bld = buildings[b];
+  var grid = letters[bld.letter];
+
+  // Building body
+  ctx.fillStyle = bld.shade;
+  ctx.fillRect(bld.x, bld.top, bld.w, groundY - bld.top);
+
+  // Window grid: 3 cols x 5 rows, aligned from ground up
+  var winW = 14;
+  var winH = 14;
+  var padX = (bld.w - 3 * winW) / 4;
+  var gapY = 18;
+  var bottomPad = 12;
+  for (var row = 0; row < 5; row++) {
+    for (var col = 0; col < 3; col++) {
+      var wx = bld.x + padX + col * (winW + padX);
+      var wy = groundY - bottomPad - (5 - row) * (winH + gapY);
+      if (grid[row][col]) {
+        var r = Math.random();
+        ctx.fillStyle = r > 0.6 ? '#d29922' : r > 0.3 ? '#00e5ff' : '#e8e4d9';
+      } else {
+        ctx.fillStyle = Math.random() > 0.7 ? '#1a1a2a' : '#0a0a12';
+      }
+      ctx.fillRect(wx, wy, winW, winH);
+    }
+  }
+}
+
+// Antenna on tallest building (A)
+ctx.fillStyle = '#7a7a8a';
+ctx.fillRect(232, 20, 2, 20);
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(230, 18, 6, 4);
+
+// Ground
+ctx.fillStyle = '#1a3a1a';
+ctx.fillRect(0, groundY, 500, 80);
+
+// Road
+ctx.fillStyle = '#12121a';
+ctx.fillRect(0, 285, 500, 65);
+ctx.fillStyle = '#d29922';
+for (var i = 0; i < 10; i++) {
+  ctx.fillRect(10 + i * 52, 316, 30, 4);
 }`;
 
 <CanvasRender
