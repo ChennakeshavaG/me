@@ -1,0 +1,1591 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Text & Images"
+description: "Everything about rendering text, loading and drawing images, sprite sheets, pixel manipulation, and saving your canvas."
+createdAt: 2026-05-14
+tags: [canvas, javascript, graphics, tutorial]
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={4} />
+
+Most real Canvas projects need more than shapes. Labels on a chart, scores in a game, watermarks on an image: text is everywhere. And when you need to display photos, sprites, or user uploads, the `drawImage` API handles it. This lesson covers both, plus pixel-level manipulation for when you need full control.
+
+## Drawing Text on Canvas
+
+<p>Canvas gives you two ways to render text. Think of it like writing on a whiteboard: you can write in solid marker (fill) or trace just the outlines (stroke).</p>
+
+<Concept>
+  <p><strong>fillText(text, x, y)</strong> draws solid, filled text. This is what you'll use 90% of the time.</p>
+  <p><strong>strokeText(text, x, y)</strong> draws only the outlines of each letter. Great for decorative effects.</p>
+  <p>Both methods place the text starting at (x, y), where y refers to the text <strong>baseline</strong>, the invisible line that letters "sit" on (like ruled paper).</p>
+  <pre>{`                       x
+                       │
+  y (baseline) ────────┼─── H e l l o ───
+                       │        │
+                  Ascenders go up (h, l)
+                  Descenders go down (g, p, y)
+
+  fillText("Hello", x, y)
+       The x,y is where the baseline starts`}</pre>
+</Concept>
+
+export const basicTextCode = `// === fillText: solid filled text ===
+ctx.font = '32px sans-serif';
+ctx.fillStyle = '#00e5ff';
+ctx.fillText('Hello, Canvas!', 30, 55);
+
+// === strokeText: outlined text ===
+ctx.font = 'bold 40px sans-serif';
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.strokeText('Outlined Text', 30, 115);
+
+// === Both together: fill + stroke for contrast ===
+ctx.font = 'bold 48px sans-serif';
+ctx.fillStyle = '#3fb950';
+ctx.fillText('Combined', 30, 190);
+ctx.strokeStyle = '#0a0a0f';
+ctx.lineWidth = 1.5;
+ctx.strokeText('Combined', 30, 190);
+
+// === Monospace for code-style text ===
+ctx.font = '16px monospace';
+ctx.fillStyle = '#d29922';
+ctx.fillText('ctx.fillText("text", x, y)', 30, 240);
+
+// Note about order
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Tip: fillText first, then strokeText on top', 30, 280);
+ctx.fillText('for outlined text with a filled interior', 30, 296);`;
+
+<CanvasRender
+  id="basic-text"
+  title="fillText vs strokeText"
+  width={500}
+  height={300}
+  code={basicTextCode}
+/>
+
+<Concept variant="note">
+**Try this:** Change the font size in the `ctx.font` strings. Try `'48px sans-serif'` for large text, or `'bold 24px monospace'` for a different family. Notice how Canvas text does not word-wrap; it just keeps going off the edge.
+</Concept>
+
+## How Fonts Work in Canvas
+
+<p>The <code>ctx.font</code> property uses CSS font syntax, the same format you'd use in a stylesheet. It's a string that combines style, weight, size, and family.</p>
+
+<Concept>
+  <p><strong>Font string format:</strong> <code>"[style] [weight] size family"</code></p>
+  <pre>{`  ctx.font = "italic bold 24px serif"
+              │      │    │    │
+              │      │    │    └── family: serif, sans-serif,
+              │      │    │        monospace, system-ui, or
+              │      │    │        any loaded font name
+              │      │    └─────── size: required! px, em, pt
+              │      └──────────── weight: normal, bold, 100-900
+              └─────────────────── style: normal, italic, oblique
+
+  Minimum required: size + family
+  ctx.font = "24px sans-serif"   // this is enough!`}</pre>
+  <p><strong>Important:</strong> Canvas can only use fonts that are <em>already loaded</em> by the browser. If you use a custom web font, it must be loaded via CSS <code>@font-face</code> <em>before</em> you try to draw with it. If the font isn't loaded yet, Canvas silently falls back to a default font.</p>
+</Concept>
+
+export const fontsCode = `// Show various font configurations
+var fonts = [
+  { font: '24px serif',               label: '24px serif' },
+  { font: 'italic 24px serif',        label: 'italic 24px serif' },
+  { font: 'bold 24px sans-serif',     label: 'bold 24px sans-serif' },
+  { font: '20px monospace',           label: '20px monospace' },
+  { font: '600 28px system-ui',       label: '600 28px system-ui' },
+  { font: 'italic 300 22px sans-serif', label: 'italic 300 22px sans-serif' },
+];
+
+fonts.forEach(function(f, i) {
+  var y = 40 + i * 48;
+
+  // Draw sample text in that font
+  ctx.font = f.font;
+  ctx.fillStyle = '#c8c8d0';
+  ctx.fillText('Sample', 20, y);
+
+  // Show the font string used
+  ctx.font = '11px monospace';
+  ctx.fillStyle = '#7a7a8a';
+  ctx.fillText(f.label, 230, y);
+});
+
+// Warning about custom fonts
+ctx.fillStyle = '#d29922';
+ctx.font = '12px sans-serif';
+ctx.fillText('Custom fonts must be loaded before drawing!', 20, 330);`;
+
+<CanvasRender
+  id="fonts"
+  title="Font Styles, Weights, and Families"
+  width={500}
+  height={340}
+  code={fontsCode}
+/>
+
+## Text Alignment and Baseline
+
+<p>When you call <code>fillText("Hello", 250, 100)</code>, where exactly does "Hello" appear relative to (250, 100)? That depends on two properties.</p>
+
+<Concept>
+  <p><strong>textAlign</strong>: horizontal position relative to the x coordinate:</p>
+  <pre>{`  "left"       "center"       "right"
+   x│Hello      He│llo         Hello│x
+   Text         Text is        Text ends
+   starts       centered       at x
+   at x         on x`}</pre>
+  <p><strong>textBaseline</strong>: vertical position relative to the y coordinate:</p>
+  <pre>{`  "top"          Text hangs below y  ────
+  "middle"       Text centered on y  ────
+  "alphabetic"   Baseline sits on y  ──── (default, most common)
+  "bottom"       Text sits above y   ────`}</pre>
+</Concept>
+
+export const textAlignCode = `// === textAlign demo ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('textAlign (x = 250, the dashed line):', 20, 20);
+
+ctx.font = '18px sans-serif';
+var centerX = 250;
+
+// Draw the reference line at x = 250
+ctx.strokeStyle = '#d29922';
+ctx.lineWidth = 1;
+ctx.setLineDash([4, 4]);
+ctx.beginPath();
+ctx.moveTo(centerX, 28);
+ctx.lineTo(centerX, 195);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Show each alignment option
+var aligns = ['left', 'center', 'right', 'start', 'end'];
+aligns.forEach(function(a, i) {
+  var y = 55 + i * 32;
+  ctx.textAlign = a;
+  ctx.fillStyle = '#00e5ff';
+  ctx.font = '18px sans-serif';
+  ctx.fillText('Hello (' + a + ')', centerX, y);
+});
+
+// Reset alignment for the rest
+ctx.textAlign = 'left';
+
+// === textBaseline demo ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('textBaseline (y = 280, the dashed line):', 20, 225);
+
+var baseY = 280;
+
+// Draw the reference line at y = 280
+ctx.strokeStyle = '#d29922';
+ctx.lineWidth = 1;
+ctx.setLineDash([4, 4]);
+ctx.beginPath();
+ctx.moveTo(0, baseY);
+ctx.lineTo(500, baseY);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Show each baseline option
+var baselines = ['top', 'middle', 'alphabetic', 'bottom'];
+baselines.forEach(function(b, i) {
+  ctx.textBaseline = b;
+  ctx.fillStyle = '#ff2d7b';
+  ctx.font = '16px sans-serif';
+  ctx.fillText(b, 15 + i * 125, baseY);
+
+  // Draw a dot at the exact anchor point
+  ctx.fillStyle = '#d29922';
+  ctx.beginPath();
+  ctx.arc(15 + i * 125, baseY, 3, 0, Math.PI * 2);
+  ctx.fill();
+});
+
+// Reset
+ctx.textAlign = 'left';
+ctx.textBaseline = 'alphabetic';
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Yellow dots = the exact (x, y) anchor point', 20, 340);
+ctx.fillText('Most common: textAlign="left" textBaseline="alphabetic"', 20, 358);`;
+
+<CanvasRender
+  id="text-align"
+  title="textAlign and textBaseline Visualized"
+  width={500}
+  height={380}
+  code={textAlignCode}
+/>
+
+## Measuring Text
+
+<p><code>ctx.measureText(text)</code> returns a <code>TextMetrics</code> object that tells you how wide the text will be when drawn. This is essential for centering text, creating UI layouts, and wrapping text.</p>
+
+export const measureTextCode = `// measureText is your ruler for text on canvas
+var words = ['Canvas', 'is', 'powerful'];
+var colors = ['#00e5ff', '#3fb950', '#ff2d7b'];
+ctx.font = 'bold 32px sans-serif';
+
+var x = 20;
+var y = 80;
+
+words.forEach(function(word, i) {
+  // Measure the word BEFORE drawing it
+  var metrics = ctx.measureText(word);
+  var textWidth = metrics.width;
+
+  // Draw a background box that perfectly fits the text
+  ctx.fillStyle = '#12121a';
+  ctx.strokeStyle = colors[i];
+  ctx.lineWidth = 2;
+  ctx.fillRect(x - 6, y - 30, textWidth + 12, 42);
+  ctx.strokeRect(x - 6, y - 30, textWidth + 12, 42);
+
+  // Draw the word
+  ctx.fillStyle = colors[i];
+  ctx.font = 'bold 32px sans-serif';
+  ctx.fillText(word, x, y);
+
+  // Show the measured width below
+  ctx.font = '11px monospace';
+  ctx.fillStyle = '#7a7a8a';
+  ctx.fillText('w=' + Math.round(textWidth) + 'px', x, y + 35);
+
+  // Move x for the next word (width + padding)
+  x += textWidth + 24;
+});
+
+// Centering example
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Centering text with measureText:', 20, 160);
+
+ctx.font = '24px sans-serif';
+var phrase = 'Perfectly Centered';
+var phraseWidth = ctx.measureText(phrase).width;
+var canvasCenter = 250;
+var textX = canvasCenter - phraseWidth / 2;  // key formula!
+
+// Show the centered text with guides
+ctx.strokeStyle = '#1a1a2a';
+ctx.setLineDash([3, 3]);
+ctx.beginPath();
+ctx.moveTo(canvasCenter, 170);
+ctx.lineTo(canvasCenter, 210);
+ctx.stroke();
+ctx.setLineDash([]);
+
+ctx.fillStyle = '#d29922';
+ctx.fillText(phrase, textX, 200);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('x = canvasCenter - measureText(text).width / 2', 60, 235);`;
+
+<CanvasRender
+  id="measure-text"
+  title="measureText: Width Calculation"
+  width={500}
+  height={280}
+  code={measureTextCode}
+/>
+
+## Auto-Shrinking Text with maxWidth
+
+<p>Both <code>fillText</code> and <code>strokeText</code> accept an optional fourth argument: <code>maxWidth</code>. If the text would be wider than this value, the browser automatically squishes it to fit. This is like "shrink to fit" in a spreadsheet cell.</p>
+
+export const maxWidthCode = `var longText = 'This is a very long sentence that would overflow';
+ctx.font = '24px sans-serif';
+ctx.fillStyle = '#c8c8d0';
+
+// Without maxWidth: text overflows the box
+ctx.fillStyle = '#12121a';
+ctx.fillRect(20, 15, 300, 40);
+ctx.strokeStyle = '#ff2d7b';
+ctx.strokeRect(20, 15, 300, 40);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText(longText, 25, 43);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('No maxWidth: text overflows the box!', 20, 75);
+
+// With maxWidth: text shrinks to fit
+ctx.font = '24px sans-serif';
+ctx.fillStyle = '#12121a';
+ctx.fillRect(20, 95, 300, 40);
+ctx.strokeStyle = '#3fb950';
+ctx.strokeRect(20, 95, 300, 40);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText(longText, 25, 123, 290);  // maxWidth = 290
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('maxWidth = 290: text squished to fit', 20, 155);
+
+// Show different maxWidth values
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Same text at different maxWidth values:', 20, 185);
+
+var widths = [450, 300, 200, 100];
+widths.forEach(function(mw, i) {
+  var y = 205 + i * 18;
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#00e5ff';
+  ctx.fillText('The quick brown fox jumps', 20, y, mw);
+
+  ctx.font = '10px monospace';
+  ctx.fillStyle = '#7a7a8a';
+  ctx.fillText('maxWidth=' + mw, 20 + mw + 10, y);
+});`;
+
+<CanvasRender
+  id="max-width"
+  title="fillText maxWidth: Auto-Shrink"
+  width={500}
+  height={280}
+  code={maxWidthCode}
+/>
+
+## Text Wrapping: Canvas Doesn't Do It!
+
+<p>Here's a surprise for beginners: <strong>Canvas has no built-in text wrapping.</strong> If your text is longer than the canvas, it just keeps going off the right edge. To wrap text, you have to do it yourself using <code>measureText()</code>.</p>
+
+<Concept>
+  <p><strong>The word-wrap algorithm:</strong></p>
+  <pre>{`  1. Split text into words
+  2. Start with an empty line
+  3. For each word:
+     ├─ Measure (current line + word) width
+     ├─ If it fits within maxWidth: add word to current line
+     └─ If it doesn't: draw current line, start new line with this word
+  4. Don't forget to draw the last line!
+
+  "The quick brown fox jumps over the lazy dog"
+   maxWidth = 200px
+
+   Line 1: "The quick brown"     (fits in 200px)
+   Line 2: "fox jumps over"      (fits in 200px)
+   Line 3: "the lazy dog"        (fits in 200px)`}</pre>
+</Concept>
+
+export const wordWrapCode = `// Word wrap function: you'll reuse this in many projects!
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  var words = text.split(' ');
+  var line = '';
+  var lines = [];
+
+  for (var i = 0; i < words.length; i++) {
+    var testLine = line + words[i] + ' ';
+    var testWidth = ctx.measureText(testLine).width;
+
+    if (testWidth > maxWidth && i > 0) {
+      // This word doesn't fit: save current line
+      lines.push(line.trim());
+      line = words[i] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  lines.push(line.trim()); // don't forget the last line!
+
+  // Draw all lines
+  for (var j = 0; j < lines.length; j++) {
+    ctx.fillText(lines[j], x, y + j * lineHeight);
+  }
+  return lines.length; // return line count
+}
+
+// Demo it!
+var paragraph = 'Canvas is a powerful HTML element that lets you draw graphics using JavaScript. Unlike SVG, which uses DOM elements, Canvas gives you a bitmap surface where you paint pixel by pixel. This makes it perfect for games, data visualizations, image editing, and creative coding.';
+
+// Draw in a bounded box
+var boxX = 20;
+var boxY = 20;
+var boxW = 280;
+
+// Box border
+ctx.strokeStyle = '#1a1a2a';
+ctx.strokeRect(boxX, boxY, boxW, 310);
+
+// Wrapped text
+ctx.font = '15px sans-serif';
+ctx.fillStyle = '#c8c8d0';
+var lineCount = wrapText(ctx, paragraph, boxX + 10, boxY + 25, boxW - 20, 22);
+
+// Stats
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText(lineCount + ' lines at 15px font', 320, 40);
+ctx.fillText('maxWidth: ' + (boxW - 20) + 'px', 320, 58);
+ctx.fillText('lineHeight: 22px', 320, 76);
+
+// Show the same text at a different width
+ctx.strokeStyle = '#1a1a2a';
+ctx.strokeRect(320, 100, 160, 230);
+ctx.font = '13px sans-serif';
+ctx.fillStyle = '#00e5ff';
+wrapText(ctx, paragraph, 330, 120, 140, 18);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Narrower box:', 320, 95);`;
+
+<CanvasRender
+  id="word-wrap"
+  title="Manual Word Wrapping"
+  width={500}
+  height={350}
+  code={wordWrapCode}
+/>
+
+## Drawing Multiline Text
+
+<p>If your text contains newline characters (<code>\n</code>), Canvas ignores them completely. It draws everything on one line. You need to split by <code>\n</code> and draw each line separately.</p>
+
+export const multilineCode = `// A multiline string
+var poem = 'Roses are red,\\nViolets are blue,\\nCanvas is awesome,\\nAnd so are you.';
+
+// WRONG: fillText ignores newlines
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Without splitting (all on one line):', 20, 25);
+ctx.font = '16px sans-serif';
+ctx.fillStyle = '#ff2d7b';
+ctx.fillText(poem, 20, 50);
+
+// Draw a strikethrough to show this is bad
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(20, 46);
+ctx.lineTo(480, 46);
+ctx.stroke();
+
+// RIGHT: split by \\n and draw each line
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('With line splitting (correct):', 20, 100);
+
+ctx.font = '18px serif';
+ctx.fillStyle = '#3fb950';
+var lines = poem.split('\\n');
+var lineHeight = 26;
+
+lines.forEach(function(line, i) {
+  ctx.fillText(line, 30, 130 + i * lineHeight);
+});
+
+// Show the code pattern
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText("var lines = text.split('\\\\n');", 20, 248);
+ctx.fillText('lines.forEach(function(line, i) {', 20, 264);
+ctx.fillText('  ctx.fillText(line, x, y + i * lineHeight);', 20, 278);`;
+
+<CanvasRender
+  id="multiline"
+  title="Handling Newlines in Text"
+  width={500}
+  height={280}
+  code={multilineCode}
+/>
+
+## Practical: Game HUD / Scoreboard
+
+<p>One of the most common uses of Canvas text is building a heads-up display (HUD) for games. Let's combine text alignment, measurement, and styling to build a polished scoreboard. This demo also uses <code>createLinearGradient</code> from Lesson 3 for the bar backgrounds.</p>
+
+export const gameHudCode = `// === Top bar background ===
+var topBar = ctx.createLinearGradient(0, 0, 0, 45);
+topBar.addColorStop(0, 'rgba(10, 10, 15, 0.95)');
+topBar.addColorStop(1, 'rgba(10, 10, 15, 0.7)');
+ctx.fillStyle = topBar;
+ctx.fillRect(0, 0, 500, 45);
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, 45);
+ctx.lineTo(500, 45);
+ctx.stroke();
+
+// === Score (left aligned) ===
+ctx.fillStyle = '#d29922';
+ctx.font = 'bold 11px monospace';
+ctx.fillText('SCORE', 15, 16);
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 20px monospace';
+ctx.fillText('00042350', 15, 38);
+
+// === Health bar (center) ===
+ctx.fillStyle = '#d29922';
+ctx.font = 'bold 11px monospace';
+ctx.textAlign = 'center';
+ctx.fillText('HEALTH', 250, 16);
+
+// Health bar background
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(190, 22, 120, 16);
+// Health bar fill (75% health)
+var healthPct = 0.75;
+var healthGrad = ctx.createLinearGradient(190, 0, 310, 0);
+healthGrad.addColorStop(0, '#3fb950');
+healthGrad.addColorStop(1, '#2ea043');
+ctx.fillStyle = healthGrad;
+ctx.fillRect(190, 22, 120 * healthPct, 16);
+// Border
+ctx.strokeStyle = '#1a1a2a';
+ctx.strokeRect(190, 22, 120, 16);
+// Percentage text
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 11px monospace';
+ctx.fillText(Math.round(healthPct * 100) + '%', 250, 35);
+
+// === Level (right aligned) ===
+ctx.textAlign = 'right';
+ctx.fillStyle = '#d29922';
+ctx.font = 'bold 11px monospace';
+ctx.fillText('LEVEL', 485, 16);
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 20px monospace';
+ctx.fillText('07', 485, 38);
+
+ctx.textAlign = 'left';
+
+// === Simulated game area ===
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, 45, 500, 215);
+
+// Fake game objects
+ctx.fillStyle = '#00e5ff';
+ctx.beginPath();
+ctx.moveTo(100, 160);
+ctx.lineTo(115, 130);
+ctx.lineTo(130, 160);
+ctx.closePath();
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('player', 96, 175);
+
+// Enemies
+ctx.fillStyle = '#ff2d7b';
+for (var e = 0; e < 4; e++) {
+  ctx.fillRect(250 + e * 50, 120 + Math.sin(e) * 30, 15, 15);
+}
+
+// === Bottom bar: inventory ===
+var botBar = ctx.createLinearGradient(0, 260, 0, 300);
+botBar.addColorStop(0, 'rgba(10, 10, 15, 0.7)');
+botBar.addColorStop(1, 'rgba(10, 10, 15, 0.95)');
+ctx.fillStyle = botBar;
+ctx.fillRect(0, 260, 500, 40);
+ctx.strokeStyle = '#1a1a2a';
+ctx.beginPath();
+ctx.moveTo(0, 260);
+ctx.lineTo(500, 260);
+ctx.stroke();
+
+// Inventory slots
+var items = ['Sword', 'Shield', 'Potion', 'Key', '???'];
+items.forEach(function(item, i) {
+  var ix = 20 + i * 95;
+  ctx.strokeStyle = i === 0 ? '#d29922' : '#1a1a2a';
+  ctx.lineWidth = i === 0 ? 2 : 1;
+  ctx.strokeRect(ix, 268, 80, 26);
+  ctx.fillStyle = i === 0 ? '#d29922' : '#7a7a8a';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(item, ix + 40, 285);
+});
+ctx.textAlign = 'left';`;
+
+<CanvasRender
+  id="game-hud"
+  layout="stack"
+  title="Game HUD with Score, Health, Level"
+  width={500}
+  height={300}
+  code={gameHudCode}
+/>
+
+## Drawing Images on Canvas
+
+<p><code>drawImage()</code> is one of the most powerful Canvas methods. It can draw images, videos, and even other canvases onto your canvas. It has three forms with 3, 5, or 9 arguments.</p>
+
+<Concept>
+  <p><strong>The three forms of drawImage:</strong></p>
+  <pre>{`  3-arg: drawImage(img, dx, dy)
+         Draw at position, original size
+
+  5-arg: drawImage(img, dx, dy, dw, dh)
+         Draw at position AND scale to dw x dh
+
+  9-arg: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
+         Crop a region from source, then draw scaled
+
+  9-arg breakdown:
+  +──SOURCE IMAGE──+        +──YOUR CANVAS──+
+  │                │        │               │
+  │  (sx,sy)       │        │  (dx,dy)      │
+  │   +──────+     │  ───>  │   +──────+    │
+  │   │ sw   │     │        │   │ dw   │    │
+  │   │ x sh │     │        │   │ x dh │    │
+  │   +──────+     │        │   +──────+    │
+  │                │        │               │
+  +────────────────+        +───────────────+
+   Crop this area            Paste it here`}</pre>
+</Concept>
+
+export const drawImageFormsCode = `// Create an offscreen canvas as our "source image"
+// (In real code, you'd use an Image element)
+var img = document.createElement('canvas');
+img.width = 100;
+img.height = 100;
+var ictx = img.getContext('2d');
+
+// Draw a smiley face on our source image
+ictx.fillStyle = '#12121a';
+ictx.fillRect(0, 0, 100, 100);
+ictx.fillStyle = '#00e5ff';
+ictx.beginPath();
+ictx.arc(50, 50, 42, 0, Math.PI * 2);
+ictx.fill();
+// Eyes
+ictx.fillStyle = '#0a0a0f';
+ictx.beginPath();
+ictx.arc(35, 40, 7, 0, Math.PI * 2);
+ictx.fill();
+ictx.beginPath();
+ictx.arc(65, 40, 7, 0, Math.PI * 2);
+ictx.fill();
+// Smile
+ictx.beginPath();
+ictx.arc(50, 52, 20, 0.3, Math.PI - 0.3);
+ictx.strokeStyle = '#0a0a0f';
+ictx.lineWidth = 3;
+ictx.stroke();
+
+// === 3-arg: drawImage(img, dx, dy) ===
+ctx.drawImage(img, 20, 20);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('3-arg: original size', 20, 135);
+ctx.fillText('drawImage(img, 20, 20)', 20, 150);
+
+// === 5-arg: drawImage(img, dx, dy, dw, dh) ===
+ctx.drawImage(img, 170, 35, 60, 60);    // shrink
+ctx.drawImage(img, 250, 15, 130, 105);  // stretch
+ctx.fillText('5-arg: scaled', 170, 135);
+ctx.fillText('60x60        130x105', 175, 150);
+
+// === 9-arg: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) ===
+// Crop just the left eye area and enlarge it
+ctx.drawImage(img, 15, 20, 35, 35, 20, 180, 140, 140);
+
+// Show the source region we cropped
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.setLineDash([4, 3]);
+ctx.strokeRect(20 + 15, 20 + 20, 35, 35); // outline on original
+ctx.setLineDash([]);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('9-arg: crop (15,20,35,35) from source', 20, 340);
+ctx.fillText('then draw scaled at (20,180,140,140)', 20, 355);
+
+// Arrow showing crop-to-dest relationship
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 1;
+ctx.setLineDash([]);
+ctx.beginPath();
+ctx.moveTo(50, 75);
+ctx.lineTo(50, 180);
+ctx.stroke();
+ctx.fillStyle = '#ff2d7b';
+ctx.beginPath();
+ctx.moveTo(50, 180);
+ctx.lineTo(45, 170);
+ctx.lineTo(55, 170);
+ctx.closePath();
+ctx.fill();
+
+// Show the destination border
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 2;
+ctx.strokeRect(20, 180, 140, 140);
+
+ctx.fillStyle = '#ff2d7b';
+ctx.font = '10px monospace';
+ctx.fillText('source crop', 60, 65);
+ctx.fillStyle = '#3fb950';
+ctx.fillText('dest region', 170, 260);`;
+
+<CanvasRender
+  id="draw-image-forms"
+  title="drawImage: 3, 5, and 9 Argument Forms"
+  width={500}
+  height={380}
+  code={drawImageFormsCode}
+/>
+
+## Loading Images the Right Way
+
+<p>In real projects, you load images from files or URLs. The critical thing to understand: <strong>images load asynchronously</strong>. If you try to draw an image before it's loaded, nothing appears. There is no error, just silence.</p>
+
+<Concept>
+  <p><strong>The correct pattern:</strong></p>
+  <pre>{`  var img = new Image();
+
+  // STEP 1: Set up onload BEFORE setting src
+  img.onload = function() {
+    // STEP 3: Image is ready: NOW you can draw it
+    ctx.drawImage(img, 0, 0);
+  };
+
+  img.onerror = function() {
+    // Handle failures gracefully
+    console.error('Image failed to load!');
+  };
+
+  // STEP 2: Setting src starts the download
+  img.src = 'path/to/image.png';
+
+  // WARNING: drawImage(img, 0, 0) here would draw NOTHING
+  // because the image hasn't loaded yet!`}</pre>
+  <p><strong>CORS (Cross-Origin Resource Sharing):</strong> If you load an image from a different domain, you may need to set <code>img.crossOrigin = "anonymous"</code> before setting <code>src</code>. Without this, <code>getImageData()</code> and <code>toDataURL()</code> will throw a security error (the canvas becomes "tainted").</p>
+</Concept>
+
+export const imageLoadingCode = `// Since we can't reliably load external images in demos,
+// let's show the pattern visually and use generated images
+
+// The correct loading pattern (shown as code diagram):
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 14px sans-serif';
+ctx.fillText('Image Loading Timeline:', 20, 25);
+
+// Timeline visualization
+var steps = [
+  { x: 30,  label: 'new Image()', detail: 'Create element', color: '#00e5ff' },
+  { x: 130, label: '.onload = fn', detail: 'Set callback', color: '#3fb950' },
+  { x: 250, label: '.src = url', detail: 'Start download', color: '#d29922' },
+  { x: 380, label: 'onload fires', detail: 'NOW draw!', color: '#ff2d7b' },
+];
+
+// Draw timeline line
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.moveTo(30, 80);
+ctx.lineTo(470, 80);
+ctx.stroke();
+
+// Arrow head
+ctx.fillStyle = '#1a1a2a';
+ctx.beginPath();
+ctx.moveTo(470, 80);
+ctx.lineTo(460, 75);
+ctx.lineTo(460, 85);
+ctx.closePath();
+ctx.fill();
+
+steps.forEach(function(s) {
+  // Dot on timeline
+  ctx.fillStyle = s.color;
+  ctx.beginPath();
+  ctx.arc(s.x + 30, 80, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Label
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText(s.label, s.x, 60);
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#7a7a8a';
+  ctx.fillText(s.detail, s.x + 5, 100);
+  ctx.fillStyle = s.color;
+});
+
+// "Downloading..." indicator
+ctx.setLineDash([6, 4]);
+ctx.strokeStyle = '#d29922';
+ctx.beginPath();
+ctx.moveTo(310, 73);
+ctx.lineTo(380, 73);
+ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#d29922';
+ctx.font = '9px monospace';
+ctx.fillText('downloading...', 315, 70);
+
+// Simulated loaded image
+var loaded = document.createElement('canvas');
+loaded.width = 80;
+loaded.height = 80;
+var lctx = loaded.getContext('2d');
+lctx.fillStyle = '#1a1a2e';
+lctx.fillRect(0, 0, 80, 80);
+lctx.fillStyle = '#00e5ff';
+lctx.fillRect(10, 10, 25, 25);
+lctx.fillStyle = '#ff2d7b';
+lctx.fillRect(45, 10, 25, 25);
+lctx.fillStyle = '#3fb950';
+lctx.fillRect(10, 45, 25, 25);
+lctx.fillStyle = '#d29922';
+lctx.fillRect(45, 45, 25, 25);
+
+ctx.drawImage(loaded, 30, 130);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('After onload: drawImage works!', 125, 170);
+
+// Error handling note
+ctx.fillStyle = '#ff2d7b';
+ctx.font = 'bold 11px sans-serif';
+ctx.fillText('Always add img.onerror too!', 125, 200);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Networks fail. Show a placeholder.', 125, 218);`;
+
+<CanvasRender
+  id="image-loading"
+  title="Image Loading Pattern with Error Handling"
+  width={500}
+  height={250}
+  code={imageLoadingCode}
+/>
+
+## Sprite Sheets: How Games Use Images
+
+<p>A <strong>sprite sheet</strong> is a single image file containing many smaller images (sprites) arranged in a grid. Games use them because loading one big file is faster than loading hundreds of small files. The 9-argument <code>drawImage</code> is how you slice out individual sprites.</p>
+
+<Concept>
+  <p><strong>How sprite sheets work:</strong></p>
+  <pre>{`  Sprite Sheet (one PNG file):
+  +────+────+────+────+
+  │ W1 │ W2 │ W3 │ W4 │  Row 0: Walking animation
+  +────+────+────+────+
+  │ R1 │ R2 │ R3 │ R4 │  Row 1: Running animation
+  +────+────+────+────+
+  │ J1 │ J2 │idle│hurt│  Row 2: Jump, idle, hurt
+  +────+────+────+────+
+  Each cell is 32x32 pixels
+
+  To get "R2" (running frame 2):
+    row = 1, col = 1
+    sx  = col * 32 = 32
+    sy  = row * 32 = 32
+    drawImage(sheet, 32, 32, 32, 32, dx, dy, 32, 32)`}</pre>
+</Concept>
+
+export const spriteSheetCode = `// Create a fake sprite sheet with character frames
+var spriteSize = 40;
+var cols = 4;
+var rows = 3;
+var sheet = document.createElement('canvas');
+sheet.width = cols * spriteSize;
+sheet.height = rows * spriteSize;
+var sctx = sheet.getContext('2d');
+
+// Draw 12 sprite frames (simple stick figure poses)
+for (var row = 0; row < rows; row++) {
+  for (var col = 0; col < cols; col++) {
+    var sx = col * spriteSize;
+    var sy = row * spriteSize;
+
+    // Background
+    sctx.fillStyle = (row + col) % 2 === 0 ? '#1a1a2e' : '#12121a';
+    sctx.fillRect(sx, sy, spriteSize, spriteSize);
+
+    // Simple character: body
+    sctx.fillStyle = ['#00e5ff', '#ff2d7b', '#3fb950'][row];
+    // Head
+    sctx.beginPath();
+    sctx.arc(sx + 20, sy + 12, 6, 0, Math.PI * 2);
+    sctx.fill();
+    // Body
+    sctx.strokeStyle = ['#00e5ff', '#ff2d7b', '#3fb950'][row];
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    sctx.moveTo(sx + 20, sy + 18);
+    sctx.lineTo(sx + 20, sy + 30);
+    sctx.stroke();
+    // Legs: different poses based on column
+    var legAngle = col * 0.4 - 0.6;
+    sctx.beginPath();
+    sctx.moveTo(sx + 20, sy + 30);
+    sctx.lineTo(sx + 20 - 6 * Math.sin(legAngle), sy + 38);
+    sctx.moveTo(sx + 20, sy + 30);
+    sctx.lineTo(sx + 20 + 6 * Math.sin(legAngle), sy + 38);
+    sctx.stroke();
+    // Arms
+    sctx.beginPath();
+    sctx.moveTo(sx + 20, sy + 22);
+    sctx.lineTo(sx + 12 + col * 3, sy + 26 - col);
+    sctx.moveTo(sx + 20, sy + 22);
+    sctx.lineTo(sx + 28 - col * 3, sy + 26 - col);
+    sctx.stroke();
+  }
+}
+
+// === Draw the full sprite sheet ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Full Sprite Sheet:', 20, 18);
+ctx.drawImage(sheet, 20, 28);
+
+// Grid lines and labels
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 0.5;
+for (var gr = 0; gr <= rows; gr++) {
+  ctx.beginPath();
+  ctx.moveTo(20, 28 + gr * spriteSize);
+  ctx.lineTo(20 + cols * spriteSize, 28 + gr * spriteSize);
+  ctx.stroke();
+}
+for (var gc = 0; gc <= cols; gc++) {
+  ctx.beginPath();
+  ctx.moveTo(20 + gc * spriteSize, 28);
+  ctx.lineTo(20 + gc * spriteSize, 28 + rows * spriteSize);
+  ctx.stroke();
+}
+
+// Row labels
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('walk', 185, 55);
+ctx.fillText('run', 185, 95);
+ctx.fillText('misc', 185, 135);
+
+// === Extracted single sprite (enlarged) ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Extracted Sprite (row=1, col=2, scaled 3x):', 20, 185);
+
+// Use 9-arg drawImage to extract one frame
+var extractRow = 1;
+var extractCol = 2;
+ctx.drawImage(
+  sheet,
+  extractCol * spriteSize, extractRow * spriteSize,  // source x, y
+  spriteSize, spriteSize,                             // source w, h
+  20, 195,                                            // dest x, y
+  spriteSize * 3, spriteSize * 3                      // dest w, h (3x bigger)
+);
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.strokeRect(20, 195, spriteSize * 3, spriteSize * 3);
+
+// Highlight source on the sheet
+ctx.strokeStyle = '#ff2d7b';
+ctx.strokeRect(20 + extractCol * spriteSize, 28 + extractRow * spriteSize, spriteSize, spriteSize);
+
+// === Animated sprite cycling ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Animated (cycling cols):', 200, 210);
+
+var frame = 0;
+function animate() {
+  // Clear animation area
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(200, 220, 280, 150);
+
+  // Current frame for each row
+  var currentCol = Math.floor(frame / 10) % cols;
+
+  for (var aRow = 0; aRow < rows; aRow++) {
+    ctx.drawImage(
+      sheet,
+      currentCol * spriteSize, aRow * spriteSize,
+      spriteSize, spriteSize,
+      220 + aRow * 80, 240,
+      spriteSize * 2, spriteSize * 2
+    );
+    ctx.fillStyle = '#7a7a8a';
+    ctx.font = '10px monospace';
+    ctx.fillText('frame ' + currentCol, 222 + aRow * 80, 340);
+  }
+
+  frame++;
+  __raf = requestAnimationFrame(animate);
+}
+animate();`;
+
+<CanvasRender
+  id="sprite-sheet"
+  title="Sprite Sheet: Grid Extraction and Animation"
+  width={500}
+  height={400}
+  code={spriteSheetCode}
+/>
+
+## Pixel Manipulation: Reading and Writing Pixels
+
+<p>Canvas lets you access individual pixels through <code>ImageData</code> objects. Each pixel is stored as four consecutive numbers (Red, Green, Blue, Alpha), each ranging from 0 to 255.</p>
+
+<Concept>
+  <p><strong>How pixel data is stored:</strong></p>
+  <pre>{`  ImageData.data is a flat Uint8ClampedArray:
+  [ R, G, B, A,  R, G, B, A,  R, G, B, A, ... ]
+    pixel 0       pixel 1       pixel 2
+
+  For a 3x2 image (3 wide, 2 tall):
+    Row 0: [pix0] [pix1] [pix2]
+    Row 1: [pix3] [pix4] [pix5]
+
+  To find pixel at (x, y):
+    index = (y * width + x) * 4
+
+    data[index]     = Red    (0-255)
+    data[index + 1] = Green  (0-255)
+    data[index + 2] = Blue   (0-255)
+    data[index + 3] = Alpha  (0-255)  ← 255 = opaque, 0 = transparent`}</pre>
+  <p><strong>createImageData(w, h)</strong> creates blank (all zero/transparent) pixel data.</p>
+  <p><strong>getImageData(x, y, w, h)</strong> reads pixel data from the canvas.</p>
+  <p><strong>putImageData(data, x, y)</strong> writes pixel data back to the canvas.</p>
+</Concept>
+
+export const pixelsBasicCode = `// === Create a gradient image pixel by pixel ===
+var w = 200;
+var h = 200;
+var imageData = ctx.createImageData(w, h);
+var data = imageData.data;
+
+for (var y = 0; y < h; y++) {
+  for (var x = 0; x < w; x++) {
+    var i = (y * w + x) * 4; // pixel index formula!
+    data[i]     = x;         // Red increases left to right
+    data[i + 1] = y;         // Green increases top to bottom
+    data[i + 2] = 128;       // Blue stays constant
+    data[i + 3] = 255;       // Alpha = fully opaque
+  }
+}
+ctx.putImageData(imageData, 20, 15);
+
+// === Noise pattern ===
+var noise = ctx.createImageData(200, 200);
+var nd = noise.data;
+for (var j = 0; j < nd.length; j += 4) {
+  var v = Math.random() * 255;
+  nd[j]     = v * 0.3;  // tinted blue noise
+  nd[j + 1] = v * 0.6;
+  nd[j + 2] = v;
+  nd[j + 3] = 255;
+}
+ctx.putImageData(noise, 270, 15);
+
+// Labels
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('R=x, G=y, B=128', 50, 232);
+ctx.fillText('random tinted noise', 310, 232);
+
+// Formula reminder
+ctx.fillStyle = '#d29922';
+ctx.font = '12px monospace';
+ctx.fillText('index = (y * width + x) * 4', 20, 265);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('data[index+0]=R  [+1]=G  [+2]=B  [+3]=A', 20, 285);`;
+
+<CanvasRender
+  id="pixels-basic"
+  title="Creating Pixel Art from Scratch"
+  width={500}
+  height={320}
+  code={pixelsBasicCode}
+/>
+
+## Practical Pixel Filters
+
+<p>By reading pixels with <code>getImageData</code>, modifying them, and writing them back with <code>putImageData</code>, you can implement image filters like grayscale, inversion, and brightness adjustment.</p>
+
+export const pixelFiltersCode = `// Create a colorful source image to filter
+var srcSize = 100;
+var srcCanvas = document.createElement('canvas');
+srcCanvas.width = srcSize;
+srcCanvas.height = srcSize;
+var sc = srcCanvas.getContext('2d');
+
+// Paint a colorful scene
+var grad = sc.createLinearGradient(0, 0, srcSize, srcSize);
+grad.addColorStop(0, '#00e5ff');
+grad.addColorStop(0.3, '#3fb950');
+grad.addColorStop(0.6, '#ff2d7b');
+grad.addColorStop(1, '#d29922');
+sc.fillStyle = grad;
+sc.fillRect(0, 0, srcSize, srcSize);
+sc.fillStyle = '#ffffff';
+sc.beginPath();
+sc.arc(50, 50, 25, 0, Math.PI * 2);
+sc.fill();
+sc.fillStyle = '#0a0a0f';
+sc.beginPath();
+sc.arc(40, 45, 5, 0, Math.PI * 2);
+sc.fill();
+sc.beginPath();
+sc.arc(60, 45, 5, 0, Math.PI * 2);
+sc.fill();
+
+// Draw original
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 12px sans-serif';
+ctx.fillText('Original:', 20, 18);
+ctx.drawImage(srcCanvas, 20, 25, srcSize, srcSize);
+
+// === GRAYSCALE FILTER ===
+var srcCtx = srcCanvas.getContext('2d');
+var grayData = srcCtx.getImageData(0, 0, srcSize, srcSize);
+var gd = grayData.data;
+for (var gi = 0; gi < gd.length; gi += 4) {
+  // Luminance formula: human eyes are most sensitive to green
+  var gray = gd[gi] * 0.299 + gd[gi+1] * 0.587 + gd[gi+2] * 0.114;
+  gd[gi] = gray;
+  gd[gi+1] = gray;
+  gd[gi+2] = gray;
+}
+ctx.fillText('Grayscale:', 145, 18);
+ctx.putImageData(grayData, 145, 25);
+
+// === INVERT FILTER ===
+var invData = srcCtx.getImageData(0, 0, srcSize, srcSize);
+var id2 = invData.data;
+for (var ii = 0; ii < id2.length; ii += 4) {
+  id2[ii]     = 255 - id2[ii];     // invert R
+  id2[ii + 1] = 255 - id2[ii + 1]; // invert G
+  id2[ii + 2] = 255 - id2[ii + 2]; // invert B
+  // Alpha stays the same
+}
+ctx.fillText('Invert:', 270, 18);
+ctx.putImageData(invData, 270, 25);
+
+// === BRIGHTNESS FILTER ===
+var brightData = srcCtx.getImageData(0, 0, srcSize, srcSize);
+var bd = brightData.data;
+var brightness = 60; // add this much to each channel
+for (var bi = 0; bi < bd.length; bi += 4) {
+  bd[bi]     = Math.min(255, bd[bi] + brightness);
+  bd[bi + 1] = Math.min(255, bd[bi + 1] + brightness);
+  bd[bi + 2] = Math.min(255, bd[bi + 2] + brightness);
+}
+ctx.fillText('Brighter:', 395, 18);
+ctx.putImageData(brightData, 395, 25);
+
+// === SEPIA FILTER ===
+var sepData = srcCtx.getImageData(0, 0, srcSize, srcSize);
+var sd = sepData.data;
+for (var si = 0; si < sd.length; si += 4) {
+  var sr = sd[si], sg = sd[si+1], sb = sd[si+2];
+  sd[si]     = Math.min(255, sr * 0.393 + sg * 0.769 + sb * 0.189);
+  sd[si + 1] = Math.min(255, sr * 0.349 + sg * 0.686 + sb * 0.168);
+  sd[si + 2] = Math.min(255, sr * 0.272 + sg * 0.534 + sb * 0.131);
+}
+ctx.fillText('Sepia:', 20, 155);
+ctx.putImageData(sepData, 20, 162);
+
+// === PIXELATE FILTER ===
+var pixSize = 8; // pixel block size
+var pixData = srcCtx.getImageData(0, 0, srcSize, srcSize);
+var pd = pixData.data;
+for (var py = 0; py < srcSize; py += pixSize) {
+  for (var px = 0; px < srcSize; px += pixSize) {
+    // Sample the color at the block's top-left corner
+    var pi = (py * srcSize + px) * 4;
+    var pr = pd[pi], pg = pd[pi+1], pb = pd[pi+2];
+    // Fill the entire block with that color
+    for (var by = py; by < py + pixSize && by < srcSize; by++) {
+      for (var bx = px; bx < px + pixSize && bx < srcSize; bx++) {
+        var bi2 = (by * srcSize + bx) * 4;
+        pd[bi2] = pr;
+        pd[bi2+1] = pg;
+        pd[bi2+2] = pb;
+      }
+    }
+  }
+}
+ctx.fillText('Pixelate:', 145, 155);
+ctx.putImageData(pixData, 145, 162);
+
+// Code explanations
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Grayscale: gray = R*0.299+G*0.587+B*0.114', 20, 290);
+ctx.fillText('Invert:    newR = 255 - oldR', 20, 308);
+ctx.fillText('Bright:    newR = min(255, oldR + amount)', 20, 326);
+ctx.fillText('Sepia:     weighted RGB matrix transform', 20, 344);
+ctx.fillText('Pixelate:  sample one pixel per block', 20, 362);
+
+ctx.fillStyle = '#d29922';
+ctx.font = '11px sans-serif';
+ctx.fillText('All filters use getImageData -> modify -> putImageData', 20, 390);`;
+
+<CanvasRender
+  id="pixel-filters"
+  title="Image Filters: Grayscale, Invert, Brightness"
+  width={500}
+  height={400}
+  code={pixelFiltersCode}
+/>
+
+## Image Smoothing for Pixel Art
+
+<p>When you scale up a small image, the browser applies <strong>smoothing</strong> (anti-aliasing) by default. This makes photos look great but ruins pixel art, turning crisp pixels into blurry blobs. Toggle it off with <code>imageSmoothingEnabled = false</code>.</p>
+
+export const imageSmoothingCode = `// Create a tiny 8x8 pixel art heart
+var tinyCanvas = document.createElement('canvas');
+tinyCanvas.width = 8;
+tinyCanvas.height = 8;
+var tc = tinyCanvas.getContext('2d');
+
+// Heart pattern (8x8 grid)
+var heart = [
+  '..rr.rr.',
+  '.rrrrrr.',
+  '.rrrrrr.',
+  '.rrrrrr.',
+  '..rrrr..',
+  '...rr...',
+  '....r...',
+  '........',
+];
+
+heart.forEach(function(row, y) {
+  for (var x = 0; x < row.length; x++) {
+    if (row[x] === 'r') {
+      tc.fillStyle = '#ff2d7b';
+      tc.fillRect(x, y, 1, 1);
+    }
+  }
+});
+
+// === With smoothing (blurry: bad for pixel art) ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('imageSmoothingEnabled = true (default)', 20, 20);
+ctx.fillText('Blurry! Bad for pixel art.', 20, 38);
+
+ctx.imageSmoothingEnabled = true;
+ctx.drawImage(tinyCanvas, 20, 50, 160, 160);
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 1;
+ctx.strokeRect(20, 50, 160, 160);
+
+// === Without smoothing (crisp: perfect for pixel art) ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('imageSmoothingEnabled = false', 260, 20);
+ctx.fillText('Crisp! Perfect for pixel art.', 260, 38);
+
+ctx.imageSmoothingEnabled = false;
+ctx.drawImage(tinyCanvas, 260, 50, 160, 160);
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 1;
+ctx.strokeRect(260, 50, 160, 160);
+
+// Reset
+ctx.imageSmoothingEnabled = true;
+
+// Show original size
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Original (8x8 pixels):', 20, 240);
+ctx.imageSmoothingEnabled = false;
+ctx.drawImage(tinyCanvas, 175, 225, 32, 32);
+ctx.imageSmoothingEnabled = true;
+ctx.fillText('Scaled to 160x160 (20x zoom)', 20, 275);`;
+
+<CanvasRender
+  id="image-smoothing"
+  title="imageSmoothingEnabled: Pixel Art Scaling"
+  width={500}
+  height={300}
+  code={imageSmoothingCode}
+/>
+
+## Saving Your Canvas as an Image
+
+<p><code>canvas.toDataURL()</code> converts the entire canvas into a data URL, a long string that represents the image. You can use this to create a download link, display the result in an <code>&lt;img&gt;</code> tag, or send it to a server.</p>
+
+<Concept>
+  <p><strong>toDataURL(type, quality)</strong></p>
+  <pre>{`  canvas.toDataURL()                   // PNG (default)
+  canvas.toDataURL('image/png')        // PNG explicitly
+  canvas.toDataURL('image/jpeg', 0.8)  // JPEG at 80% quality
+  canvas.toDataURL('image/webp', 0.9)  // WebP at 90% quality
+
+  Returns a string like:
+    "data:image/png;base64,iVBORw0KGgo..."
+    (very long base64-encoded image data)
+
+  To create a download:
+    var link = document.createElement('a');
+    link.download = 'my-canvas.png';
+    link.href = canvas.toDataURL();
+    link.click();  // triggers download!`}</pre>
+  <p><strong>Warning:</strong> If you've drawn a cross-origin image (from another domain) without CORS headers, <code>toDataURL()</code> will throw a security error. The canvas is "tainted" and you can no longer export it.</p>
+</Concept>
+
+export const saveCanvasCode = `// Draw something worth saving
+var bg = ctx.createLinearGradient(0, 0, 500, 300);
+bg.addColorStop(0, '#0a0a2e');
+bg.addColorStop(1, '#1a0a3e');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, 500, 300);
+
+// Stars
+for (var i = 0; i < 40; i++) {
+  ctx.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.8 + 0.2) + ')';
+  ctx.fillRect(Math.random() * 500, Math.random() * 200, 1.5, 1.5);
+}
+
+// Moon
+ctx.fillStyle = '#ffffdd';
+ctx.beginPath();
+ctx.arc(380, 60, 30, 0, Math.PI * 2);
+ctx.fill();
+
+// Mountain
+ctx.fillStyle = '#1a1a30';
+ctx.beginPath();
+ctx.moveTo(0, 250);
+ctx.lineTo(150, 120);
+ctx.lineTo(250, 200);
+ctx.lineTo(350, 100);
+ctx.lineTo(500, 250);
+ctx.lineTo(500, 300);
+ctx.lineTo(0, 300);
+ctx.closePath();
+ctx.fill();
+
+// Text overlay
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 24px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('My Canvas Art', 250, 270);
+ctx.textAlign = 'left';
+
+// Show the toDataURL info
+ctx.fillStyle = 'rgba(0,0,0,0.6)';
+ctx.fillRect(10, 10, 240, 55);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+
+// Get just the first bit of the data URL to show
+var dataUrl = canvas.toDataURL('image/png');
+var preview = dataUrl.substring(0, 40) + '...';
+ctx.fillText('toDataURL() returns:', 18, 28);
+ctx.fillStyle = '#00e5ff';
+ctx.fillText(preview, 18, 45);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('(' + dataUrl.length + ' chars total)', 18, 58);`;
+
+<CanvasRender
+  id="save-canvas"
+  title="toDataURL: Export and Preview"
+  width={500}
+  height={300}
+  code={saveCanvasCode}
+/>
+
+## Putting It All Together: Mini Image Editor
+
+<p>Let's combine text rendering, image creation, pixel manipulation, and filtering into an interactive mini image editor. Click the buttons below the canvas to apply different filters to the generated image. The <code>addListener</code> helper used below is provided by the demo framework to attach event listeners that are automatically cleaned up when the demo is removed.</p>
+
+export const miniEditorCode = `// Create a generated "photo" to edit
+var photoW = 460;
+var photoH = 300;
+
+function drawOriginal() {
+  // Sky
+  var sky = ctx.createLinearGradient(20, 20, 20, 200);
+  sky.addColorStop(0, '#3498db');
+  sky.addColorStop(1, '#85c1e9');
+  ctx.fillStyle = sky;
+  ctx.fillRect(20, 20, photoW, 200);
+
+  // Sun
+  ctx.fillStyle = '#f9e71c';
+  ctx.beginPath();
+  ctx.arc(400, 70, 30, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  [{ x: 100, y: 60 }, { x: 250, y: 85 }, { x: 380, y: 120 }].forEach(function(cloud) {
+    ctx.beginPath();
+    ctx.arc(cloud.x, cloud.y, 20, 0, Math.PI * 2);
+    ctx.arc(cloud.x + 25, cloud.y - 5, 22, 0, Math.PI * 2);
+    ctx.arc(cloud.x + 50, cloud.y, 18, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Hills
+  ctx.fillStyle = '#27ae60';
+  ctx.beginPath();
+  ctx.moveTo(20, 220);
+  ctx.quadraticCurveTo(130, 150, 250, 200);
+  ctx.quadraticCurveTo(370, 160, 480, 210);
+  ctx.lineTo(480, 320);
+  ctx.lineTo(20, 320);
+  ctx.closePath();
+  ctx.fill();
+
+  // Grass
+  ctx.fillStyle = '#2ecc71';
+  ctx.fillRect(20, 260, photoW, 60);
+
+  // Flowers
+  var flowerColors = ['#e74c3c', '#f39c12', '#9b59b6', '#e91e63', '#ff5722'];
+  for (var fi = 0; fi < 15; fi++) {
+    var fx = 30 + Math.random() * 440;
+    var fy = 265 + Math.random() * 45;
+    ctx.fillStyle = '#27ae60';
+    ctx.fillRect(fx, fy, 2, 10);
+    ctx.fillStyle = flowerColors[fi % flowerColors.length];
+    ctx.beginPath();
+    ctx.arc(fx + 1, fy, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Border
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(20, 20, photoW, photoH);
+}
+
+drawOriginal();
+
+// Current filter state
+var currentFilter = 'original';
+
+function applyFilter(filterName) {
+  // Redraw original first
+  ctx.clearRect(0, 0, 500, 400);
+  drawOriginal();
+  currentFilter = filterName;
+
+  if (filterName === 'original') {
+    // Nothing more to do
+  } else {
+    var imgData = ctx.getImageData(20, 20, photoW, photoH);
+    var d = imgData.data;
+
+    for (var p = 0; p < d.length; p += 4) {
+      var r = d[p], g = d[p+1], b = d[p+2];
+
+      if (filterName === 'grayscale') {
+        var gray = r * 0.299 + g * 0.587 + b * 0.114;
+        d[p] = gray; d[p+1] = gray; d[p+2] = gray;
+      } else if (filterName === 'invert') {
+        d[p] = 255 - r; d[p+1] = 255 - g; d[p+2] = 255 - b;
+      } else if (filterName === 'sepia') {
+        d[p]   = Math.min(255, r*0.393 + g*0.769 + b*0.189);
+        d[p+1] = Math.min(255, r*0.349 + g*0.686 + b*0.168);
+        d[p+2] = Math.min(255, r*0.272 + g*0.534 + b*0.131);
+      } else if (filterName === 'contrast') {
+        var factor = 1.5;
+        d[p]   = Math.min(255, Math.max(0, factor * (r - 128) + 128));
+        d[p+1] = Math.min(255, Math.max(0, factor * (g - 128) + 128));
+        d[p+2] = Math.min(255, Math.max(0, factor * (b - 128) + 128));
+      }
+    }
+
+    ctx.putImageData(imgData, 20, 20);
+  }
+
+  // Draw filter label
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(20, 20, 120, 25);
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(currentFilter, 30, 38);
+
+  // Draw filter buttons
+  drawButtons();
+}
+
+// Filter buttons
+var filters = ['original', 'grayscale', 'invert', 'sepia', 'contrast'];
+
+function drawButtons() {
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 335, 500, 65);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '11px sans-serif';
+  ctx.fillText('Click a filter:', 20, 350);
+
+  filters.forEach(function(f, i) {
+    var bx = 20 + i * 95;
+    var by = 358;
+    var bw = 85;
+    var bh = 28;
+
+    ctx.fillStyle = f === currentFilter ? '#00e5ff' : '#1a1a2a';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = f === currentFilter ? '#00e5ff' : '#1a1a2a';
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = f === currentFilter ? '#0a0a0f' : '#c8c8d0';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(f, bx + bw/2, by + 18);
+  });
+  ctx.textAlign = 'left';
+}
+
+drawButtons();
+
+// Handle clicks on filter buttons
+addListener(canvas, 'click', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var scaleX = canvas.width / rect.width;
+  var scaleY = canvas.height / rect.height;
+  var mx = (e.clientX - rect.left) * scaleX / (window.devicePixelRatio || 1);
+  var my = (e.clientY - rect.top) * scaleY / (window.devicePixelRatio || 1);
+
+  // Check each button
+  filters.forEach(function(f, i) {
+    var bx = 20 + i * 95;
+    var by = 358;
+    if (mx >= bx && mx <= bx + 85 && my >= by && my <= by + 28) {
+      applyFilter(f);
+    }
+  });
+});`;
+
+<CanvasRender
+  id="mini-editor"
+  title="Interactive Mini Image Editor"
+  width={500}
+  height={400}
+  code={miniEditorCode}
+/>
+
+<Concept>
+  <p><strong>Lesson 4 Recap: What you learned.</strong></p>
+  <p><strong>Text:</strong> <code>fillText</code>/<code>strokeText</code> for rendering. <code>ctx.font</code> uses CSS syntax. <code>textAlign</code> and <code>textBaseline</code> for positioning. <code>measureText()</code> for width. <code>maxWidth</code> parameter for auto-shrinking.</p>
+  <p><strong>Text challenges:</strong> Canvas has no built-in word wrap (implement manually with measureText). Newlines are ignored (split and draw line by line). Fonts must be pre-loaded.</p>
+  <p><strong>Images:</strong> <code>drawImage</code> with 3, 5, or 9 arguments. Always use <code>img.onload</code> callback. Set <code>crossOrigin</code> for external images. Sprite sheets use the 9-arg form to extract frames.</p>
+  <p><strong>Pixels:</strong> <code>getImageData</code>/<code>putImageData</code>/<code>createImageData</code> for pixel-level access. Each pixel = 4 bytes (RGBA). Index formula: <code>(y * width + x) * 4</code>.</p>
+  <p><strong>Filters:</strong> Grayscale (luminance weighted), invert (255 - value), brightness (add), sepia (matrix), pixelate (block sampling).</p>
+  <p><strong>Pixel art:</strong> <code>imageSmoothingEnabled = false</code> for crisp scaling.</p>
+  <p><strong>Export:</strong> <code>canvas.toDataURL()</code> converts canvas to a downloadable image string.</p>
+</Concept>
+
+<LessonNav
+  prev={{ href: "/wiki/canvas-lab/03-colors", title: "Colors & Styles" }}
+  next={{ href: "/wiki/canvas-lab/05-transforms", title: "Transforms" }}
+/>

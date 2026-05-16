@@ -1,20 +1,86 @@
 ---
-import AtelierLayout from './AtelierLayout.astro';
+import BaseLayout from './BaseLayout.astro';
+import '../styles/canvas-lab.css';
 
-const { title, date, tags = [] } = Astro.props;
+interface Props {
+  title: string;
+  description: string;
+  type: 'blog' | 'wiki' | 'project';
+  date: string;
+  updatedAt?: string;
+  tags?: string[];
+  draft?: boolean;
+  category?: string;
+  status?: string;
+  url?: string;
+  repo?: string;
+}
+
+const { title, description, type, date, updatedAt, tags = [], draft, category, status, url, repo } = Astro.props;
+
+const typeLabel = type.toUpperCase();
+
+const segments = Astro.url.pathname.replace(/\/$/, '').split('/').filter(Boolean);
+const crumbs = segments.slice(0, -1).map((seg, i) => ({
+  label: seg,
+  href: '/' + segments.slice(0, i + 1).join('/'),
+}));
 ---
 
-<AtelierLayout title={title}>
-  <article>
-    <header>
+<BaseLayout title={title} description={description} ogType="article">
+  <article class="content">
+    <nav class="content__breadcrumb" aria-label="Breadcrumb">
+      <a href="/atelier">Atelier</a>
+      {crumbs.map(c => (
+        <>
+          <span class="content__crumb-sep">/</span>
+          <a href={c.href}>{c.label}</a>
+        </>
+      ))}
+      <span class="content__crumb-sep">/</span>
+      <span class="content__crumb-current">{segments[segments.length - 1]}</span>
+    </nav>
+    <header class="content__header">
+      <div class="content__meta">
+        <span class="content__type">{typeLabel}</span>
+        {category && (
+          <>
+            <span class="content__separator">&middot;</span>
+            <span class="content__category">{category}</span>
+          </>
+        )}
+        {status && (
+          <>
+            <span class="content__separator">&middot;</span>
+            <span class="content__status" data-status={status}>{status}</span>
+          </>
+        )}
+        <span class="content__separator">&middot;</span>
+        <time datetime={date}>{date}</time>
+        {updatedAt && (
+          <>
+            <span class="content__separator">&middot;</span>
+            <span class="content__updated">Updated {updatedAt}</span>
+          </>
+        )}
+        {draft && <span class="content__draft">DRAFT</span>}
+      </div>
       <h1>{title}</h1>
-      {date && <time>{date}</time>}
+      <p class="content__desc">{description}</p>
       {tags.length > 0 && (
-        <div class="tags">
-          {tags.map(tag => <span class="tag">{tag}</span>)}
+        <div class="content__tags">
+          {tags.map(tag => <span class="content__tag">{tag}</span>)}
+        </div>
+      )}
+      {(url || repo) && (
+        <div class="content__links">
+          {url && <a href={url}>Live Site</a>}
+          {repo && <a href={repo}>Repository</a>}
         </div>
       )}
     </header>
-    <slot />
+    <div class="content__body">
+      <slot />
+    </div>
   </article>
-</AtelierLayout>
+</BaseLayout>

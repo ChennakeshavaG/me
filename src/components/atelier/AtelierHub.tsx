@@ -25,15 +25,16 @@ export default function AtelierHub(props: { items: Item[] }) {
 
   return (
     <>
-      <div class="atelier-controls-wrapper glow-edge glow-edge--bottom">
+      <div class="atelier-controls-wrapper">
         <div class="atelier-controls page-width">
           <div class="atelier-views">
             <span class="atelier-controls__label">View type:</span>
-            <div class="atelier-views__group glow-hover">
+            <div class="atelier-views__group" role="group" aria-label="View type">
               <For each={views}>
                 {(v) => (
                   <button
                     class={`atelier-view-btn${viewType() === v ? ' atelier-view-btn--active' : ''}`}
+                    aria-pressed={viewType() === v}
                     onClick={() => setViewType(v)}
                   >
                     {v}

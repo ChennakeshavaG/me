@@ -1,0 +1,14 @@
+---
+interface Props {
+  prev?: { href: string; title: string };
+  next?: { href: string; title: string };
+}
+
+const { prev, next } = Astro.props;
+---
+
+<nav class="cl-lesson-nav" aria-label="Lesson navigation">
+  {prev ? <a href={prev.href}>&larr; {prev.title}</a> : <span aria-hidden="true"></span>}
+  <a href="/wiki/canvas-lab">All Lessons</a>
+  {next ? <a href={next.href}>{next.title} &rarr;</a> : <span aria-hidden="true"></span>}
+</nav>

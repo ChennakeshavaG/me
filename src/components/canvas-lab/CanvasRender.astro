@@ -1,0 +1,237 @@
+---
+interface Props {
+  id: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  code: string;
+  readonly?: boolean;
+  layout?: 'side' | 'stack';
+}
+
+const { id, title, width = 500, height = 400, code, readonly = false, layout = 'side' } = Astro.props;
+const trimmedCode = code.trim();
+
+const wrapperClasses = [
+  'cl-render',
+  layout === 'stack' && 'cl-render--stack',
+  readonly && 'cl-render--readonly',
+].filter(Boolean).join(' ');
+---
+
+<div class={wrapperClasses}>
+  {title && <div class="cl-render__title">{title}</div>}
+  <div class="cl-render__body">
+    <div class="cl-render__canvas-wrap">
+      <canvas
+        id={id}
+        style={`aspect-ratio: ${width} / ${height}; max-width: ${width}px; width: 100%;`}
+        aria-label={title ? `Canvas: ${title}` : 'Canvas demo'}
+      ></canvas>
+    </div>
+    <div class="cl-render__editor">
+      <div class="cl-render__code-wrap">
+        <pre
+          class="cl-render__highlight"
+          id={`${id}-highlight`}
+          aria-hidden="true"
+        ><code></code></pre>
+        <textarea
+          class="cl-render__textarea"
+          id={`${id}-editor`}
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          readonly={readonly || undefined}
+          aria-label={title ? `Code editor: ${title}` : 'Code editor'}
+        ></textarea>
+      </div>
+      {!readonly && (
+        <div class="cl-render__controls">
+          <button class="cl-render__btn cl-render__btn--run" data-run={id}>Run</button>
+          <button class="cl-render__btn" data-reset={id}>Reset</button>
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
+<script data-astro-rerun set:html={`
+(function() {
+  var id = '${id}';
+  var isReadonly = ${readonly};
+
+  if (window['__canvasCleanup_' + id]) {
+    window['__canvasCleanup_' + id]();
+  }
+
+  var canvas = document.getElementById(id);
+  if (!canvas) return;
+
+  var ctx = canvas.getContext('2d');
+  var editor = document.getElementById(id + '-editor');
+  var originalCode = ${JSON.stringify(trimmedCode)};
+
+  var dpr = window.devicePixelRatio || 1;
+  var w = ${width};
+  var h = ${height};
+
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = 'auto';
+  canvas.style.maxWidth = '100%';
+  canvas.style.aspectRatio = w + ' / ' + h;
+  ctx.scale(dpr, dpr);
+
+  var __rafRef = { current: null };
+  var __demoListeners = [];
+  var __editorListeners = [];
+
+  function addDemoListener(target, event, fn) {
+    target.addEventListener(event, fn);
+    __demoListeners.push({ target: target, event: event, fn: fn });
+  }
+
+  function addEditorListener(target, event, fn) {
+    target.addEventListener(event, fn);
+    __editorListeners.push({ target: target, event: event, fn: fn });
+  }
+
+  function runDemo(codeStr) {
+    if (__rafRef.current) { cancelAnimationFrame(__rafRef.current); __rafRef.current = null; }
+    __demoListeners.forEach(function(l) {
+      l.target.removeEventListener(l.event, l.fn);
+    });
+    __demoListeners = [];
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    try {
+      new Function(
+        'canvas', 'ctx', 'w', 'h', 'addListener', 'requestAnimationFrame', 'cancelAnimationFrame',
+        codeStr
+      )(canvas, ctx, w, h, addDemoListener,
+        function(cb) { var rid = window.requestAnimationFrame(cb); __rafRef.current = rid; return rid; },
+        function(rid) { if (__rafRef.current === rid) __rafRef.current = null; window.cancelAnimationFrame(rid); }
+      );
+    } catch(e) {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '14px monospace';
+      ctx.fillText('Error: ' + e.message, 10, 30);
+    }
+  }
+
+  function highlightJS(code) {
+    var escaped = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    var tokens = [];
+
+    function ph(match, cls) {
+      var i = tokens.length;
+      tokens.push('<span class="' + cls + '">' + match + '</span>');
+      return '\\x01T' + i + '\\x02';
+    }
+
+    escaped = escaped.replace(
+      /(\\/\\/.*)/g,
+      function(m) { return ph(m, 'cl-hl-comment'); }
+    );
+    escaped = escaped.replace(
+      /(\\/\\*[\\s\\S]*?\\*\\/)/g,
+      function(m) { return ph(m, 'cl-hl-comment'); }
+    );
+    escaped = escaped.replace(
+      /('(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")/g,
+      function(m) { return ph(m, 'cl-hl-string'); }
+    );
+    escaped = escaped.replace(
+      /\\b(\\d+\\.?\\d*(?:e[+-]?\\d+)?)\\b/g,
+      function(m) { return ph(m, 'cl-hl-number'); }
+    );
+    escaped = escaped.replace(
+      /\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|new|typeof|instanceof|this|true|false|null|undefined|Math|console|window|document)\\b/g,
+      function(m) { return ph(m, 'cl-hl-keyword'); }
+    );
+
+    escaped = escaped.replace(
+      /\\x01T(\\d+)\\x02/g,
+      function(_, i) { return tokens[parseInt(i)]; }
+    );
+
+    return escaped;
+  }
+
+  var highlightEl = document.getElementById(id + '-highlight');
+  var codeEl = highlightEl ? highlightEl.querySelector('code') : null;
+
+  function updateHighlight() {
+    if (codeEl) codeEl.innerHTML = highlightJS(editor.value);
+  }
+
+  editor.value = originalCode;
+  runDemo(originalCode);
+  updateHighlight();
+
+  addEditorListener(editor, 'input', updateHighlight);
+  addEditorListener(editor, 'scroll', function() {
+    if (highlightEl) {
+      highlightEl.scrollTop = editor.scrollTop;
+      highlightEl.scrollLeft = editor.scrollLeft;
+    }
+  });
+
+  if (!isReadonly) {
+    addEditorListener(editor, 'keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runDemo(editor.value);
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = editor.selectionStart;
+        var end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 2;
+        updateHighlight();
+      }
+    });
+  }
+
+  window['__canvasCleanup_' + id] = function() {
+    if (__rafRef.current) { cancelAnimationFrame(__rafRef.current); __rafRef.current = null; }
+    __demoListeners.forEach(function(l) {
+      l.target.removeEventListener(l.event, l.fn);
+    });
+    __demoListeners = [];
+    __editorListeners.forEach(function(l) {
+      l.target.removeEventListener(l.event, l.fn);
+    });
+    __editorListeners = [];
+  };
+
+  if (!isReadonly) {
+    var runBtn = document.querySelector('[data-run="' + id + '"]');
+    if (runBtn) {
+      runBtn.onclick = function() {
+        runDemo(editor.value);
+      };
+    }
+
+    var resetBtn = document.querySelector('[data-reset="' + id + '"]');
+    if (resetBtn) {
+      resetBtn.onclick = function() {
+        editor.value = originalCode;
+        runDemo(originalCode);
+        updateHighlight();
+      };
+    }
+  }
+})();
+`} />

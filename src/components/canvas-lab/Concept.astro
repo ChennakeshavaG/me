@@ -1,0 +1,11 @@
+---
+interface Props {
+  variant?: 'tip' | 'warn' | 'note';
+}
+
+const { variant = 'tip' } = Astro.props;
+---
+
+<div class={`cl-concept cl-concept--${variant}`}>
+  <slot />
+</div>

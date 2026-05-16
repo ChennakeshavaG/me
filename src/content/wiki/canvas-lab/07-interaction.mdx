@@ -1,0 +1,1677 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Interaction"
+description: "Mouse, touch, and keyboard input: coordinate mapping, hit detection, dragging, and building interactive tools."
+createdAt: 2026-05-14
+tags: [canvas, javascript, graphics, tutorial]
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={7} />
+
+Everything you have built so far is passive; the user watches but cannot interact. This lesson changes that. You will respond to mouse clicks, track cursor movement, detect which shape was clicked, and build drag-and-drop tools. By the end, your canvas will feel like an application, not a picture.
+
+## What Are Browser Events?
+
+<p>Before we make our canvas interactive, let's understand how browsers tell your code that something happened. Every time a user clicks, moves the mouse, presses a key, scrolls, or touches the screen, the browser creates an <strong>event object</strong> and sends it to your code. Think of it like a mail carrier delivering a letter every time something happens; your code is the mailbox.</p>
+
+<Concept>
+  <p><strong>Analogy:</strong> Imagine you are sitting in a room with a doorbell. You do not constantly check the door. Instead, you <em>listen</em> for the bell. When it rings, you go check who is there. Browser events work the same way: you register a "listener" function, and the browser calls it when that event happens.</p>
+  <pre>{`  Your code            The browser
+  ┌──────────┐        ┌───────────────┐
+  │ listener │◄───────│ "click" event │
+  │ function │        │ happened!     │
+  └──────────┘        └───────────────┘
+       │
+       ▼
+  "Oh! The user
+   clicked at
+   x=150, y=80"`}</pre>
+</Concept>
+
+<p>When we do <code>addListener(canvas, 'mousemove', function(e) {'{ ... }'})</code>, we are telling the browser: "whenever the mouse moves over the canvas, run this function and give me the details in <code>e</code>." The <code>e</code> parameter (the event object) contains everything about what happened: where the mouse is, which button was pressed, whether Shift was held, and more.</p>
+
+## The Event Object
+
+<p>Every event handler receives an event object packed with useful properties. Here are the ones you will use most often for Canvas interaction:</p>
+
+<Concept>
+  <p><strong>Key event properties for mouse events:</strong></p>
+  <pre>{`  e.clientX, e.clientY   → position relative to the browser window
+  e.pageX, e.pageY       → position relative to the entire page
+  e.offsetX, e.offsetY   → position relative to the target element
+  e.button               → which mouse button (0=left, 1=middle, 2=right)
+  e.buttons              → bitmask of currently pressed buttons
+  e.shiftKey             → true if Shift is held
+  e.ctrlKey              → true if Ctrl/Cmd is held
+  e.altKey               → true if Alt is held
+  e.preventDefault()     → stop the browser default action
+  e.target               → the element the event fired on`}</pre>
+</Concept>
+
+<p>Let's build a demo that shows you the event object in real time. Move your mouse, click, and hold modifier keys to see the properties change.</p>
+
+export const eventInspectorCode = `// Store the latest event data
+var info = {
+  type: 'none yet',
+  clientX: 0, clientY: 0,
+  offsetX: 0, offsetY: 0,
+  button: '-', buttons: 0,
+  shift: false, ctrl: false, alt: false
+};
+
+// Update info from any mouse or touch event
+function capture(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  info.type = e.type;               // 'mousemove', 'touchstart', etc.
+  info.clientX = clientX;           // window-relative X
+  info.clientY = clientY;           // window-relative Y
+  info.offsetX = Math.round((clientX - rect.left) * (500 / rect.width));
+  info.offsetY = Math.round((clientY - rect.top) * (350 / rect.height));
+  info.button = e.button || '-';    // which button (on click)
+  info.buttons = e.buttons || 0;    // currently pressed buttons
+  info.shift = e.shiftKey;          // modifier keys
+  info.ctrl = e.ctrlKey;
+  info.alt = e.altKey;
+}
+
+function captureTouch(e) {
+  e.preventDefault();
+  capture(e);
+}
+
+// Listen for several event types
+addListener(canvas, 'mousemove', capture);
+addListener(canvas, 'mousedown', capture);
+addListener(canvas, 'mouseup', capture);
+addListener(canvas, 'click', capture);
+
+// Touch events
+addListener(canvas, 'touchstart', captureTouch);
+addListener(canvas, 'touchmove', captureTouch);
+addListener(canvas, 'touchend', function(e) {
+  e.preventDefault();
+  var rect = canvas.getBoundingClientRect();
+  var touch = e.changedTouches[0];
+  info.type = e.type;
+  info.clientX = touch.clientX;
+  info.clientY = touch.clientY;
+  info.offsetX = Math.round((touch.clientX - rect.left) * (500 / rect.width));
+  info.offsetY = Math.round((touch.clientY - rect.top) * (350 / rect.height));
+});
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  // Title
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('Event Object Properties', 20, 30);
+
+  // Draw all the properties
+  ctx.font = '13px monospace';
+  var lines = [
+    'e.type       = "' + info.type + '"',
+    'e.clientX    = ' + info.clientX,
+    'e.clientY    = ' + info.clientY,
+    'e.offsetX    = ' + info.offsetX,
+    'e.offsetY    = ' + info.offsetY,
+    'e.button     = ' + info.button,
+    'e.buttons    = ' + info.buttons,
+    'e.shiftKey   = ' + info.shift,
+    'e.ctrlKey    = ' + info.ctrl,
+    'e.altKey     = ' + info.alt,
+  ];
+
+  for (var i = 0; i < lines.length; i++) {
+    // Color the value part differently
+    ctx.fillStyle = '#7a7a8a';
+    ctx.fillText(lines[i], 30, 65 + i * 24);
+  }
+
+  // Crosshair at the offset position
+  ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(info.offsetX, 0);
+  ctx.lineTo(info.offsetX, 350);
+  ctx.moveTo(0, info.offsetY);
+  ctx.lineTo(500, info.offsetY);
+  ctx.stroke();
+
+  // Dot at cursor
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(info.offsetX, info.offsetY, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#484f58';
+  ctx.font = '12px monospace';
+  ctx.fillText('Move mouse, click, hold Shift/Ctrl/Alt', 100, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="event-inspector"
+  title="Event Object Inspector"
+  width={500}
+  height={350}
+  code={eventInspectorCode}
+/>
+
+<Concept variant="note">
+**Try this:** Hold Shift while moving the mouse to see modifier key detection. Then try changing the circle color from cyan to something based on position, like `'hsl(' + (x / w * 360) + ', 80%, 60%)'`.
+</Concept>
+
+## Understanding Coordinate Systems
+
+<p>This is the number one source of confusion for beginners. When the browser reports a mouse position, it uses the <strong>browser window's</strong> coordinate system. But your canvas has its own coordinate system. If the canvas is not at the top-left corner of the page, these numbers will be different. You <em>must</em> convert.</p>
+
+<Concept>
+  <p><strong>Three coordinate systems at play:</strong></p>
+  <pre>{`  Page coordinates (e.pageX, e.pageY)
+  ┌─────────────────────────────────────────┐
+  │ Browser window (may be scrolled)        │
+  │                                         │
+  │   Client coordinates                    │
+  │   (e.clientX, e.clientY)                │
+  │   ┌───────────────────────────┐         │
+  │   │ Visible viewport          │         │
+  │   │                           │         │
+  │   │   ┌────────────┐          │         │
+  │   │   │ CANVAS     │ ◄── Canvas coords  │
+  │   │   │ (0,0)      │          │         │
+  │   │   │   · click   │          │         │
+  │   │   └────────────┘          │         │
+  │   │                           │         │
+  │   └───────────────────────────┘         │
+  └─────────────────────────────────────────┘
+
+  To convert from client → canvas:
+  canvasX = e.clientX - canvas.getBoundingClientRect().left
+  canvasY = e.clientY - canvas.getBoundingClientRect().top`}</pre>
+</Concept>
+
+<p><code>canvas.getBoundingClientRect()</code> returns an object with <code>left</code>, <code>top</code>, <code>width</code>, and <code>height</code>, representing the canvas's position and size in the viewport. Subtracting <code>left</code> and <code>top</code> from the mouse's client position gives you the position relative to the canvas's top-left corner.</p>
+
+export const mouseCoordsCode = `var mx = 0, my = 0;  // canvas-relative mouse position
+
+addListener(canvas, 'mousemove', function(e) {
+  // Step 1: get canvas position on the page
+  var rect = canvas.getBoundingClientRect();
+  // Step 2: subtract to get canvas-relative coords
+  // Step 3: scale for CSS vs pixel size differences
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (300 / rect.height);
+});
+
+function loop() {
+  ctx.clearRect(0, 0, 500, 300);
+
+  // Draw crosshair lines
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mx, 0); ctx.lineTo(mx, 300);  // vertical line
+  ctx.moveTo(0, my); ctx.lineTo(500, my);   // horizontal line
+  ctx.stroke();
+
+  // Dot at mouse position
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(mx, my, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Show coordinate label
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '14px monospace';
+  ctx.fillText('(' + Math.round(mx) + ', ' + Math.round(my) + ')', mx + 15, my - 15);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '13px monospace';
+  ctx.fillText('Move your mouse over the canvas', 120, 290);
+
+  __raf = requestAnimationFrame(loop);
+}
+loop();`;
+
+<CanvasRender
+  id="mouse-coords"
+  title="Mouse Position Tracking"
+  width={500}
+  height={300}
+  code={mouseCoordsCode}
+/>
+
+## DPI and devicePixelRatio
+
+<p>On high-DPI screens (Retina displays, modern phones), one CSS pixel might actually be 2 or 3 real screen pixels. The <code>CanvasDemo</code> component in this tutorial already handles DPI scaling for you, but you need to understand it for your own projects.</p>
+
+<Concept>
+  <p><strong>The DPI scaling problem and solution:</strong></p>
+  <pre>{`  Without DPI scaling (blurry on Retina):
+  ┌───────────────────────┐
+  │ canvas.width  = 500   │  CSS size: 500px
+  │ canvas.height = 400   │  Pixel buffer: 500x400
+  │ Looks blurry on 2x!   │  (half the pixels needed)
+  └───────────────────────┘
+
+  With DPI scaling (sharp):
+  ┌───────────────────────┐
+  │ canvas.width  = 1000  │  CSS size: 500px
+  │ canvas.height = 800   │  Pixel buffer: 1000x800
+  │ ctx.scale(2, 2)       │  (we draw at 500x400 scale,
+  │ Sharp on Retina!      │   rendered at 2x resolution)
+  └───────────────────────┘
+
+  The code:
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width  = desiredWidth  * dpr;
+    canvas.height = desiredHeight * dpr;
+    canvas.style.width  = desiredWidth  + 'px';
+    canvas.style.height = desiredHeight + 'px';
+    ctx.scale(dpr, dpr);`}</pre>
+  <p>After this setup, you draw using your original coordinates (e.g. 500x400), and the canvas renders at the correct resolution.</p>
+</Concept>
+
+<p>When converting mouse coordinates on a DPI-scaled canvas, you must account for the difference between the CSS size and the drawing coordinate space:</p>
+
+<Concept>
+  <pre>{`  // Full coordinate conversion formula:
+  var rect = canvas.getBoundingClientRect();
+  var canvasX = (e.clientX - rect.left) * (logicalWidth / rect.width);
+  var canvasY = (e.clientY - rect.top)  * (logicalHeight / rect.height);
+
+  // logicalWidth = your drawing coordinate width (e.g. 500)
+  // rect.width   = actual CSS rendered width on screen
+  // The ratio handles any scaling (CSS resize, DPI, etc.)`}</pre>
+</Concept>
+
+## Touch Events for Mobile
+
+<p>Mouse events do not fire on phones and tablets. Instead, you get <strong>touch events</strong>. Touch events are similar to mouse events but support multiple simultaneous touches (fingers). The three core touch events are:</p>
+
+<Concept>
+  <p><strong>Touch events vs. mouse events:</strong></p>
+  <pre>{`  Mouse events:         Touch events:
+  mousedown       →     touchstart
+  mousemove       →     touchmove
+  mouseup         →     touchend
+
+  Key difference: touch events store positions in
+  e.touches[] (active touches) and
+  e.changedTouches[] (touches that changed).
+
+  Getting the first touch position:
+    var touch = e.touches[0];
+    var x = touch.clientX;
+    var y = touch.clientY;`}</pre>
+</Concept>
+
+<p>The demo below works with both mouse and touch. Try it on a phone, or use browser dev tools to simulate touch.</p>
+
+export const touchDrawCode = `var isDrawing = false;
+var lastX = 0, lastY = 0;
+var hue = 0;
+
+// Fill background
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, 0, 500, 350);
+
+// Helper: get position from mouse or touch event
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  // Check if it is a touch event
+  var source = e.touches ? e.touches[0] : e;
+  return {
+    x: (source.clientX - rect.left) * (500 / rect.width),
+    y: (source.clientY - rect.top) * (350 / rect.height)
+  };
+}
+
+function startDraw(e) {
+  e.preventDefault();          // prevent scrolling on mobile
+  isDrawing = true;
+  var pos = getPos(e);
+  lastX = pos.x;
+  lastY = pos.y;
+}
+
+function moveDraw(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  var pos = getPos(e);
+
+  ctx.strokeStyle = 'hsl(' + hue + ', 80%, 60%)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+
+  lastX = pos.x;
+  lastY = pos.y;
+  hue = (hue + 2) % 360;       // cycle through colors
+}
+
+function stopDraw() {
+  isDrawing = false;
+}
+
+// Mouse events
+addListener(canvas, 'mousedown', startDraw);
+addListener(canvas, 'mousemove', moveDraw);
+addListener(canvas, 'mouseup', stopDraw);
+addListener(canvas, 'mouseleave', stopDraw);
+
+// Touch events (same logic!)
+addListener(canvas, 'touchstart', startDraw);
+addListener(canvas, 'touchmove', moveDraw);
+addListener(canvas, 'touchend', stopDraw);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('Draw with mouse or touch', 140, 340);`;
+
+<CanvasRender
+  id="touch-draw"
+  title="Mouse + Touch Drawing"
+  width={500}
+  height={350}
+  code={touchDrawCode}
+/>
+
+<Concept>
+  <p><strong>Tip:</strong> Always call <code>e.preventDefault()</code> in touch handlers on a canvas. Without it, the browser will try to scroll the page when the user drags their finger, fighting your drawing code.</p>
+</Concept>
+
+## Keyboard Events on Canvas
+
+<p>Canvas elements do not receive keyboard events by default because they are not "focusable" elements (like input fields). To make a canvas keyboard-interactive, you need to give it a <code>tabindex</code> attribute and then focus it. Here we listen on the <code>window</code> for simplicity; use the arrow keys to move the square.</p>
+
+export const keyboardCode = `// Object that the player controls
+var player = { x: 230, y: 155, size: 40, speed: 200 };
+
+// Track which keys are currently pressed
+var keys = {};
+
+addListener(window, 'keydown', function(e) {
+  keys[e.key] = true;           // mark key as pressed
+  // Prevent page scrolling with arrow keys
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.key) !== -1) {
+    e.preventDefault();
+  }
+});
+
+addListener(window, 'keyup', function(e) {
+  keys[e.key] = false;          // mark key as released
+});
+
+var lastTime = performance.now();
+
+function loop(now) {
+  var dt = (now - lastTime) / 1000;  // delta time in seconds
+  lastTime = now;
+
+  // Move based on which keys are held
+  if (keys['ArrowLeft']  || keys['a']) player.x -= player.speed * dt;
+  if (keys['ArrowRight'] || keys['d']) player.x += player.speed * dt;
+  if (keys['ArrowUp']    || keys['w']) player.y -= player.speed * dt;
+  if (keys['ArrowDown']  || keys['s']) player.y += player.speed * dt;
+
+  // Keep player in bounds
+  if (player.x < 0) player.x = 0;
+  if (player.y < 0) player.y = 0;
+  if (player.x + player.size > 500) player.x = 500 - player.size;
+  if (player.y + player.size > 350) player.y = 350 - player.size;
+
+  // Draw
+  ctx.clearRect(0, 0, 500, 350);
+
+  // Grid for reference
+  ctx.strokeStyle = '#0a0a0f';
+  ctx.lineWidth = 1;
+  for (var gx = 0; gx < 500; gx += 40) {
+    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, 350); ctx.stroke();
+  }
+  for (var gy = 0; gy < 350; gy += 40) {
+    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(500, gy); ctx.stroke();
+  }
+
+  // Player square
+  ctx.fillStyle = '#00e5ff';
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  // Position label
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '13px monospace';
+  ctx.fillText('pos: (' + Math.round(player.x) + ', ' + Math.round(player.y) + ')', 10, 20);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Arrow keys or WASD to move', 150, 340);
+
+  __raf = requestAnimationFrame(loop);
+}
+loop(performance.now());`;
+
+<CanvasRender
+  id="keyboard"
+  title="Keyboard Control: Arrow Keys to Move"
+  width={500}
+  height={350}
+  code={keyboardCode}
+/>
+
+<Concept>
+  <p><strong>Why track keys in an object?</strong> If you just move in the <code>keydown</code> handler, the player jumps once per key press. By storing which keys are pressed and checking every frame, movement is smooth and continuous. This pattern is standard in game development.</p>
+</Concept>
+
+## Circle Hit Detection (Distance Formula)
+
+<p>How do you know if a click landed on a circle? You need the <strong>distance formula</strong> from math class. If the distance from the click to the circle's center is less than the circle's radius, the click is inside.</p>
+
+<Concept>
+  <p><strong>The distance formula:</strong></p>
+  <pre>{`                   click point (cx, cy)
+                       ·
+                      /|
+                     / |
+          distance  /  │ dy = cy - circle.y
+                   /   │
+                  /    │
+  circle center ·──────┘
+  (circle.x, circle.y)
+          dx = cx - circle.x
+
+  distance = sqrt(dx*dx + dy*dy)   ← Pythagorean theorem!
+
+  if (distance <  circle.radius) → HIT!
+  if (distance >= circle.radius) → MISS!`}</pre>
+</Concept>
+
+export const clickDetectCode = `// Create some circles to click on
+var circles = [
+  { x: 100, y: 120, r: 40, hue: 200 },
+  { x: 250, y: 180, r: 50, hue: 330 },
+  { x: 400, y: 130, r: 35, hue: 120 },
+  { x: 170, y: 270, r: 45, hue: 40 },
+  { x: 350, y: 260, r: 40, hue: 270 },
+];
+
+addListener(canvas, 'click', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var cx = (e.clientX - rect.left) * (500 / rect.width);
+  var cy = (e.clientY - rect.top) * (350 / rect.height);
+
+  circles.forEach(function(c) {
+    var dx = cx - c.x;                // horizontal distance
+    var dy = cy - c.y;                // vertical distance
+    var dist = Math.sqrt(dx * dx + dy * dy); // actual distance
+    if (dist < c.r) {                 // inside the circle?
+      c.hue = (c.hue + 60) % 360;    // change color!
+    }
+  });
+});
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  circles.forEach(function(c) {
+    // Filled circle
+    ctx.fillStyle = 'hsl(' + c.hue + ', 70%, 55%)';
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = 'hsl(' + c.hue + ', 70%, 70%)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '13px monospace';
+  ctx.fillText('Click the circles to change their color', 110, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="click-detect"
+  title="Click to Change Colors"
+  width={500}
+  height={350}
+  code={clickDetectCode}
+/>
+
+## Circle-Circle Collision Detection
+
+<p>What about detecting when two circles overlap (collide)? The idea is the same as click detection: measure the distance between their centers. If that distance is less than the sum of their radii, they are overlapping.</p>
+
+<Concept>
+  <pre>{`  Circle A (r=30)       Circle B (r=20)
+
+       ┌───┐                ┌──┐
+      ╱  A  ╲              ╱  B ╲
+     │   ·───┼─────────────┼──·  │
+      ╲     ╱   distance    ╲   ╱
+       └───┘                └──┘
+            ◄──────────────►
+                  dist
+
+  Collision if:    dist <  A.r + B.r  (30 + 20 = 50)
+  No collision if: dist >= A.r + B.r`}</pre>
+</Concept>
+
+export const circleCollisionCode = `// Draggable circle
+var circleA = { x: 150, y: 175, r: 45, color: '#00e5ff' };
+
+// Stationary circles
+var others = [
+  { x: 300, y: 120, r: 40, color: '#3fb950' },
+  { x: 380, y: 250, r: 35, color: '#d29922' },
+  { x: 200, y: 280, r: 50, color: '#bc8cff' },
+];
+
+var dragging = false;
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (350 / rect.height)
+  };
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+  var dx = pos.x - circleA.x;
+  var dy = pos.y - circleA.y;
+  if (Math.sqrt(dx * dx + dy * dy) < circleA.r) {
+    dragging = true;
+  }
+}
+
+function moveDrag(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  var pos = getPos(e);
+  circleA.x = pos.x;
+  circleA.y = pos.y;
+}
+
+function stopDrag() { dragging = false; }
+
+addListener(canvas, 'mousedown', startDrag);
+addListener(canvas, 'mousemove', moveDrag);
+addListener(canvas, 'mouseup', stopDrag);
+addListener(canvas, 'mouseleave', stopDrag);
+
+// Touch events
+addListener(canvas, 'touchstart', startDrag);
+addListener(canvas, 'touchmove', moveDrag);
+addListener(canvas, 'touchend', stopDrag);
+
+function checkCollision(a, b) {
+  var dx = a.x - b.x;
+  var dy = a.y - b.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  return dist < a.r + b.r;        // true if overlapping
+}
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  // Draw stationary circles
+  others.forEach(function(c) {
+    var hit = checkCollision(circleA, c);
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.fillStyle = hit ? '#ff2d7b' : c.color;  // red if colliding
+    ctx.globalAlpha = hit ? 0.8 : 0.5;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = hit ? '#ff2d7b' : c.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Show distance line
+    ctx.strokeStyle = '#484f58';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(circleA.x, circleA.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Distance label
+    var dx = circleA.x - c.x;
+    var dy = circleA.y - c.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    ctx.fillStyle = '#7a7a8a';
+    ctx.font = '11px monospace';
+    var midX = (circleA.x + c.x) / 2;
+    var midY = (circleA.y + c.y) / 2;
+    ctx.fillText(Math.round(dist) + ' < ' + (circleA.r + c.r) + '?', midX + 5, midY - 5);
+  });
+
+  // Draw draggable circle
+  ctx.beginPath();
+  ctx.arc(circleA.x, circleA.y, circleA.r, 0, Math.PI * 2);
+  ctx.fillStyle = circleA.color;
+  ctx.globalAlpha = 0.7;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#c8c8d0';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Drag the blue circle into the others', 120, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="circle-collision"
+  layout="stack"
+  title="Circle-Circle Collision: Drag the Blue Circle"
+  width={500}
+  height={350}
+  code={circleCollisionCode}
+/>
+
+## Rectangle Collision (AABB)
+
+<p>AABB stands for "Axis-Aligned Bounding Box," a rectangle that is not rotated. This is the most common collision check in 2D games. Instead of distance, you check whether two rectangles overlap on both the X and Y axes.</p>
+
+<Concept>
+  <p><strong>AABB overlap logic:</strong></p>
+  <pre>{`  Two rectangles overlap if and only if they overlap
+  on BOTH the X axis AND the Y axis.
+
+  Box A                 Box B
+  ┌─────────┐          ┌─────────┐
+  │ Ax, Ay  │          │ Bx, By  │
+  │         │          │         │
+  │    Ax+Aw┤          │    Bx+Bw┤
+  └─────────┘          └─────────┘
+      Ay+Ah                By+Bh
+
+  Overlap on X axis:
+    A's left edge  < B's right edge  AND
+    A's right edge > B's left edge
+
+  Overlap on Y axis:
+    A's top edge    < B's bottom edge  AND
+    A's bottom edge > B's top edge
+
+  In code:
+    Ax < Bx + Bw  &&  Ax + Aw > Bx  &&
+    Ay < By + Bh  &&  Ay + Ah > By
+
+  If ALL FOUR are true → collision!`}</pre>
+</Concept>
+
+export const aabbCollisionCode = `// Draggable box
+var boxA = { x: 50, y: 120, w: 80, h: 60, color: '#00e5ff' };
+
+// Stationary boxes
+var boxes = [
+  { x: 200, y: 80,  w: 100, h: 70, color: '#3fb950' },
+  { x: 340, y: 200, w: 90,  h: 80, color: '#d29922' },
+  { x: 150, y: 230, w: 110, h: 60, color: '#bc8cff' },
+];
+
+var dragging = false;
+var offsetX = 0, offsetY = 0;
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (350 / rect.height)
+  };
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+  if (pos.x >= boxA.x && pos.x <= boxA.x + boxA.w &&
+      pos.y >= boxA.y && pos.y <= boxA.y + boxA.h) {
+    dragging = true;
+    offsetX = pos.x - boxA.x;
+    offsetY = pos.y - boxA.y;
+  }
+}
+
+function moveDrag(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  var pos = getPos(e);
+  boxA.x = pos.x - offsetX;
+  boxA.y = pos.y - offsetY;
+}
+
+function stopDrag() { dragging = false; }
+
+addListener(canvas, 'mousedown', startDrag);
+addListener(canvas, 'mousemove', moveDrag);
+addListener(canvas, 'mouseup', stopDrag);
+addListener(canvas, 'mouseleave', stopDrag);
+
+// Touch events
+addListener(canvas, 'touchstart', startDrag);
+addListener(canvas, 'touchmove', moveDrag);
+addListener(canvas, 'touchend', stopDrag);
+
+// AABB collision check
+function aabbCollision(a, b) {
+  return a.x < b.x + b.w &&     // A left < B right
+         a.x + a.w > b.x &&     // A right > B left
+         a.y < b.y + b.h &&     // A top < B bottom
+         a.y + a.h > b.y;       // A bottom > B top
+}
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  // Draw stationary boxes
+  boxes.forEach(function(b) {
+    var hit = aabbCollision(boxA, b);
+    ctx.fillStyle = hit ? '#ff2d7b' : b.color;
+    ctx.globalAlpha = hit ? 0.7 : 0.4;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = hit ? '#ff2d7b' : b.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(b.x, b.y, b.w, b.h);
+  });
+
+  // Draw draggable box
+  ctx.fillStyle = boxA.color;
+  ctx.globalAlpha = 0.7;
+  ctx.fillRect(boxA.x, boxA.y, boxA.w, boxA.h);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#c8c8d0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boxA.x, boxA.y, boxA.w, boxA.h);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Drag the blue box into the others', 130, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="aabb-collision"
+  layout="stack"
+  title="AABB Collision: Drag the Blue Box"
+  width={500}
+  height={350}
+  code={aabbCollisionCode}
+/>
+
+## Dragging Objects
+
+<p>Dragging combines three events: <code>mousedown</code> (start), <code>mousemove</code> (update), and <code>mouseup</code> (stop). The key trick is storing the <strong>offset</strong>, the distance between the click point and the object's corner, so the object does not "jump" to the cursor.</p>
+
+<Concept>
+  <pre>{`  Step 1: mousedown
+  ┌───────────┐
+  │ BOX       │  Click happens at (clickX, clickY)
+  │   · ◄─────┼── offset = click - box position
+  └───────────┘
+
+  Step 2: mousemove
+  Mouse moves to (newX, newY)
+  box.x = newX - offsetX   ← preserves the grab point
+  box.y = newY - offsetY
+
+  Step 3: mouseup
+  Stop tracking.`}</pre>
+</Concept>
+
+export const dragCode = `var boxes = [
+  { x: 50,  y: 50,  w: 80, h: 80, color: '#00e5ff' },
+  { x: 200, y: 100, w: 80, h: 80, color: '#ff2d7b' },
+  { x: 350, y: 50,  w: 80, h: 80, color: '#3fb950' },
+];
+var dragging = null;           // which box is being dragged
+var offsetX = 0, offsetY = 0;  // grab offset
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (350 / rect.height),
+  };
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+  // Check boxes in reverse order (top-most first)
+  for (var i = boxes.length - 1; i >= 0; i--) {
+    var b = boxes[i];
+    if (pos.x >= b.x && pos.x <= b.x + b.w &&
+        pos.y >= b.y && pos.y <= b.y + b.h) {
+      dragging = b;
+      offsetX = pos.x - b.x;    // remember where we grabbed
+      offsetY = pos.y - b.y;
+      // Move to top of draw order
+      boxes.splice(i, 1);
+      boxes.push(b);
+      break;
+    }
+  }
+}
+
+function moveDrag(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  var pos = getPos(e);
+  dragging.x = pos.x - offsetX;  // apply offset so it doesn't jump
+  dragging.y = pos.y - offsetY;
+}
+
+function stopDrag() {
+  dragging = null;
+}
+
+addListener(canvas, 'mousedown', startDrag);
+addListener(canvas, 'mousemove', moveDrag);
+addListener(canvas, 'mouseup', stopDrag);
+addListener(canvas, 'mouseleave', stopDrag);
+
+// Touch events
+addListener(canvas, 'touchstart', startDrag);
+addListener(canvas, 'touchmove', moveDrag);
+addListener(canvas, 'touchend', stopDrag);
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  boxes.forEach(function(b) {
+    ctx.fillStyle = b.color;
+    ctx.globalAlpha = b === dragging ? 0.8 : 1;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+
+    // Highlight the dragged box
+    if (b === dragging) {
+      ctx.strokeStyle = '#c8c8d0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '13px monospace';
+  ctx.fillText('Drag the boxes around', 150, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="drag"
+  title="Drag and Drop"
+  width={500}
+  height={350}
+  code={dragCode}
+/>
+
+## Hover Effects and Cursor Styles
+
+<p>You can make canvas feel more like a real UI by changing the cursor when the mouse is over clickable things. The <code>canvas.style.cursor</code> property lets you set any CSS cursor: <code>'pointer'</code>, <code>'grab'</code>, <code>'crosshair'</code>, etc.</p>
+
+export const hoverCode = `var dots = [];
+for (var i = 0; i < 25; i++) {
+  dots.push({
+    x: 30 + Math.random() * 440,
+    y: 30 + Math.random() * 240,
+    baseR: 8 + Math.random() * 12,
+    r: 8 + Math.random() * 12,
+    hue: Math.floor(Math.random() * 360),
+  });
+}
+var mx = -100, my = -100;
+var hoveredDot = null;
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (300 / rect.height);
+
+  // Check if hovering over any dot
+  hoveredDot = null;
+  for (var i = 0; i < dots.length; i++) {
+    var d = dots[i];
+    var dx = mx - d.x;
+    var dy = my - d.y;
+    if (Math.sqrt(dx * dx + dy * dy) < d.baseR) {
+      hoveredDot = d;
+      break;
+    }
+  }
+
+  // Change cursor based on hover
+  canvas.style.cursor = hoveredDot ? 'pointer' : 'default';
+});
+
+addListener(canvas, 'mouseleave', function() {
+  mx = -100; my = -100;
+  hoveredDot = null;
+  canvas.style.cursor = 'default';
+});
+
+addListener(canvas, 'click', function() {
+  // Change color on click
+  if (hoveredDot) {
+    hoveredDot.hue = (hoveredDot.hue + 60) % 360;
+  }
+});
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 300);
+
+  dots.forEach(function(d) {
+    var dx = mx - d.x;
+    var dy = my - d.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    // Smoothly grow when mouse is near
+    var targetR = dist < 50 ? d.baseR * 2.5 : d.baseR;
+    d.r += (targetR - d.r) * 0.15;     // ease toward target
+
+    ctx.fillStyle = 'hsl(' + d.hue + ', 70%, 60%)';
+    ctx.globalAlpha = dist < 50 ? 1 : 0.5;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Show tooltip on hovered dot
+    if (d === hoveredDot) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#c8c8d0';
+      ctx.font = '11px monospace';
+      ctx.fillText('hue: ' + d.hue, d.x + d.r + 5, d.y - 5);
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="hover"
+  title="Hover: Grow on Mouseover + Cursor Change"
+  width={500}
+  height={300}
+  code={hoverCode}
+/>
+
+<Concept variant="note">
+**Tooltips on hover:** To add tooltips, combine hover detection (above) with `ctx.roundRect()` to draw a background rectangle, then `ctx.fillText()` for the label. Position the tooltip near the hovered item and check bounds to keep it on screen.
+</Concept>
+
+## Zoom and Pan (Wheel + Drag)
+
+<p>For data visualization or maps, you often need to let users zoom in/out with the mouse wheel and pan by dragging. This uses canvas <code>translate()</code> and <code>scale()</code> transforms, which shift and resize the coordinate system before drawing. If you covered transforms in an earlier lesson, this is the same idea applied to user input. We also use <code>ctx.save()</code> and <code>ctx.restore()</code> to isolate the transform so it does not affect UI overlays drawn afterward.</p>
+
+<Concept>
+  <p><strong>How zoom and pan work together:</strong></p>
+  <pre>{`  Without transform:           With translate + scale:
+  ┌──────────────┐             ┌──────────────┐
+  │ · · · · · ·  │             │              │
+  │ · · · · · ·  │   zoom in   │   · · · ·    │
+  │ · · · · · ·  │   ───────→  │   · · · ·    │
+  │ · · · · · ·  │             │   · · · ·    │
+  └──────────────┘             └──────────────┘
+  All dots visible            Fewer dots, bigger
+
+  ctx.translate(panX, panY);  // move the "camera"
+  ctx.scale(zoom, zoom);      // zoom level
+  // then draw everything at normal coordinates`}</pre>
+</Concept>
+
+export const zoomPanCode = `var panX = 0, panY = 0;       // camera offset
+var zoom = 1;                  // zoom level
+var isPanning = false;
+var startX = 0, startY = 0;
+
+// Generate a grid of dots to navigate
+var dots = [];
+for (var gx = -400; gx <= 400; gx += 40) {
+  for (var gy = -400; gy <= 400; gy += 40) {
+    dots.push({ x: gx, y: gy, hue: ((gx + 400) + (gy + 400)) % 360 });
+  }
+}
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (350 / rect.height)
+  };
+}
+
+// Zoom with mouse wheel
+addListener(canvas, 'wheel', function(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+
+  // Zoom toward mouse position
+  var oldZoom = zoom;
+  zoom *= e.deltaY < 0 ? 1.1 : 0.9;  // scroll up = zoom in
+  zoom = Math.max(0.2, Math.min(5, zoom)); // clamp
+
+  // Adjust pan so zoom centers on mouse
+  panX = pos.x - (pos.x - panX) * (zoom / oldZoom);
+  panY = pos.y - (pos.y - panY) * (zoom / oldZoom);
+});
+
+// Pan with mouse drag
+addListener(canvas, 'mousedown', function(e) {
+  isPanning = true;
+  var pos = getPos(e);
+  startX = pos.x - panX;
+  startY = pos.y - panY;
+  canvas.style.cursor = 'grabbing';
+});
+
+addListener(canvas, 'mousemove', function(e) {
+  if (!isPanning) return;
+  var pos = getPos(e);
+  panX = pos.x - startX;
+  panY = pos.y - startY;
+});
+
+addListener(canvas, 'mouseup', function() {
+  isPanning = false;
+  canvas.style.cursor = 'grab';
+});
+addListener(canvas, 'mouseleave', function() {
+  isPanning = false;
+  canvas.style.cursor = 'grab';
+});
+
+// Touch events for panning
+addListener(canvas, 'touchstart', function(e) {
+  e.preventDefault();
+  isPanning = true;
+  var pos = getPos(e);
+  startX = pos.x - panX;
+  startY = pos.y - panY;
+});
+
+addListener(canvas, 'touchmove', function(e) {
+  if (!isPanning) return;
+  e.preventDefault();
+  var pos = getPos(e);
+  panX = pos.x - startX;
+  panY = pos.y - startY;
+});
+
+addListener(canvas, 'touchend', function(e) {
+  e.preventDefault();
+  isPanning = false;
+});
+
+canvas.style.cursor = 'grab';
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(zoom, zoom);
+
+  // Draw dots
+  dots.forEach(function(d) {
+    ctx.fillStyle = 'hsl(' + d.hue + ', 60%, 55%)';
+    ctx.beginPath();
+    ctx.arc(d.x + 250, d.y + 175, 6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Origin marker
+  ctx.strokeStyle = '#484f58';
+  ctx.lineWidth = 1 / zoom;
+  ctx.beginPath();
+  ctx.moveTo(230, 175); ctx.lineTo(270, 175);
+  ctx.moveTo(250, 155); ctx.lineTo(250, 195);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // UI overlay (not affected by transform)
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '12px monospace';
+  ctx.fillText('zoom: ' + zoom.toFixed(2) + 'x', 10, 20);
+  ctx.fillText('pan: (' + Math.round(panX) + ', ' + Math.round(panY) + ')', 10, 38);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Scroll to zoom, drag to pan', 155, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="zoom-pan"
+  title="Scroll to Zoom, Drag to Pan"
+  width={500}
+  height={350}
+  code={zoomPanCode}
+/>
+
+## Building Canvas Buttons
+
+<p>HTML buttons are great, but sometimes you need buttons drawn directly on the canvas (for a game UI, for example). You build them by drawing rectangles with text, then checking if clicks land inside.</p>
+
+export const canvasButtonsCode = `var buttons = [
+  { x: 40,  y: 120, w: 120, h: 45, label: 'Red',    color: '#ff2d7b', active: false },
+  { x: 190, y: 120, w: 120, h: 45, label: 'Green',  color: '#3fb950', active: false },
+  { x: 340, y: 120, w: 120, h: 45, label: 'Blue',   color: '#00e5ff', active: false },
+];
+
+var bgColor = '#0a0a0f';
+var mx = -100, my = -100;
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (300 / rect.height)
+  };
+}
+
+function hitButton(pos) {
+  for (var i = 0; i < buttons.length; i++) {
+    var b = buttons[i];
+    if (pos.x >= b.x && pos.x <= b.x + b.w &&
+        pos.y >= b.y && pos.y <= b.y + b.h) {
+      return b;
+    }
+  }
+  return null;
+}
+
+function activateButton(pos) {
+  var btn = hitButton(pos);
+  if (btn) {
+    buttons.forEach(function(b) { b.active = false; });
+    btn.active = true;
+    bgColor = btn.color;
+  }
+}
+
+addListener(canvas, 'mousemove', function(e) {
+  var pos = getPos(e);
+  mx = pos.x; my = pos.y;
+  canvas.style.cursor = hitButton(pos) ? 'pointer' : 'default';
+});
+
+addListener(canvas, 'click', function(e) {
+  var pos = getPos(e);
+  activateButton(pos);
+});
+
+// Touch events
+addListener(canvas, 'touchstart', function(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+  activateButton(pos);
+});
+
+function draw() {
+  // Full clear then opaque background
+  ctx.clearRect(0, 0, 500, 300);
+  ctx.fillStyle = bgColor;
+  ctx.globalAlpha = 1;
+  ctx.fillRect(0, 0, 500, 300);
+
+  // Title
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText('Pick a color:', 170, 50);
+
+  // Draw buttons
+  buttons.forEach(function(b) {
+    var isHover = mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
+
+    // Button background
+    ctx.fillStyle = b.active ? b.color : (isHover ? b.color : '#1a1a2a');
+    ctx.globalAlpha = b.active ? 0.9 : (isHover ? 0.6 : 0.8);
+    ctx.beginPath();
+    ctx.roundRect(b.x, b.y, b.w, b.h, 8);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Border
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = b.active ? 3 : 1;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#c8c8d0';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2);
+  });
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  // Show selection
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '13px monospace';
+  var activeBtn = buttons.filter(function(b) { return b.active; })[0];
+  var msg = activeBtn ? 'Selected: ' + activeBtn.label : 'Click a button to select';
+  ctx.fillText(msg, 160, 220);
+
+  ctx.fillStyle = '#484f58';
+  ctx.font = '12px monospace';
+  ctx.fillText('Canvas buttons with hover + click states', 100, 280);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="canvas-buttons"
+  title="Canvas UI Buttons"
+  width={500}
+  height={300}
+  code={canvasButtonsCode}
+/>
+
+<Concept variant="note">
+**Marquee selection:** To build a drag-to-select box, combine the drag pattern (above) with AABB collision: track mousedown/mousemove to define a rectangle, then on mouseup check which objects fall inside it. Use `ctx.setLineDash([4, 4])` for the dashed selection border.
+</Concept>
+
+## Practical Example: Color Picker
+
+<p>Let's build something useful: a hue/saturation color picker drawn entirely on canvas. This shows how interaction, gradients, and real-time feedback come together.</p>
+
+export const colorPickerCode = `var pickerX = 170, pickerY = 100;  // cursor in the gradient area
+var hue = 200;                      // current hue from the strip
+var picking = false;
+var hueDragging = false;
+
+var gradW = 300, gradH = 250;       // gradient area size
+var gradX = 20, gradY = 20;         // gradient area position
+var stripX = 350, stripY = 20;      // hue strip position
+var stripW = 30, stripH = 250;
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (350 / rect.height)
+  };
+}
+
+function startPick(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+  // Check if in gradient area
+  if (pos.x >= gradX && pos.x <= gradX + gradW &&
+      pos.y >= gradY && pos.y <= gradY + gradH) {
+    picking = true;
+    pickerX = pos.x; pickerY = pos.y;
+  }
+  // Check if in hue strip
+  if (pos.x >= stripX && pos.x <= stripX + stripW &&
+      pos.y >= stripY && pos.y <= stripY + stripH) {
+    hueDragging = true;
+    hue = ((pos.y - stripY) / stripH) * 360;
+  }
+}
+
+function movePick(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+  if (picking) {
+    pickerX = Math.max(gradX, Math.min(gradX + gradW, pos.x));
+    pickerY = Math.max(gradY, Math.min(gradY + gradH, pos.y));
+  }
+  if (hueDragging) {
+    hue = Math.max(0, Math.min(360, ((pos.y - stripY) / stripH) * 360));
+  }
+}
+
+function stopPick() {
+  picking = false;
+  hueDragging = false;
+}
+
+addListener(canvas, 'mousedown', startPick);
+addListener(canvas, 'mousemove', movePick);
+addListener(canvas, 'mouseup', stopPick);
+
+// Touch events
+addListener(canvas, 'touchstart', startPick);
+addListener(canvas, 'touchmove', movePick);
+addListener(canvas, 'touchend', function(e) {
+  e.preventDefault();
+  stopPick();
+});
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 350);
+
+  // Draw saturation/brightness gradient
+  // Layer 1: hue fill
+  ctx.fillStyle = 'hsl(' + Math.round(hue) + ', 100%, 50%)';
+  ctx.fillRect(gradX, gradY, gradW, gradH);
+
+  // Layer 2: white gradient (left to right = saturation)
+  var whiteGrad = ctx.createLinearGradient(gradX, 0, gradX + gradW, 0);
+  whiteGrad.addColorStop(0, 'rgba(255,255,255,1)');
+  whiteGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = whiteGrad;
+  ctx.fillRect(gradX, gradY, gradW, gradH);
+
+  // Layer 3: black gradient (top to bottom = brightness)
+  var blackGrad = ctx.createLinearGradient(0, gradY, 0, gradY + gradH);
+  blackGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  blackGrad.addColorStop(1, 'rgba(0,0,0,1)');
+  ctx.fillStyle = blackGrad;
+  ctx.fillRect(gradX, gradY, gradW, gradH);
+
+  // Draw hue strip
+  for (var i = 0; i < stripH; i++) {
+    var h = (i / stripH) * 360;
+    ctx.fillStyle = 'hsl(' + h + ', 100%, 50%)';
+    ctx.fillRect(stripX, stripY + i, stripW, 1);
+  }
+
+  // Hue strip indicator
+  var hueY = stripY + (hue / 360) * stripH;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(stripX - 2, hueY - 3, stripW + 4, 6);
+
+  // Picker crosshair
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(pickerX, pickerY, 7, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Calculate approximate color from position
+  var sat = Math.round(((pickerX - gradX) / gradW) * 100);
+  var light = Math.round(100 - ((pickerY - gradY) / gradH) * 100);
+  var colorStr = 'hsl(' + Math.round(hue) + ', ' + sat + '%, ' + Math.round(light) + '%)';
+
+  // Preview swatch
+  ctx.fillStyle = colorStr;
+  ctx.beginPath();
+  ctx.roundRect(400, 40, 80, 60, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#484f58';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Color info
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '12px monospace';
+  ctx.fillText('H: ' + Math.round(hue), 400, 130);
+  ctx.fillText('S: ' + sat + '%', 400, 148);
+  ctx.fillText('L: ' + Math.round(light) + '%', 400, 166);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Click gradient or hue strip', 110, 340);
+
+  __raf = requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="color-picker"
+  title="Canvas Color Picker"
+  width={500}
+  height={350}
+  code={colorPickerCode}
+/>
+
+## Practical Example: Mini Paint App
+
+<p>Let's combine everything into a tiny paint application. It has a color bar, brush size control, and a drawing canvas, all rendered with Canvas 2D.</p>
+
+export const miniPaintCode = `var brushColor = '#00e5ff';
+var brushSize = 5;
+var isDrawing = false;
+var lastX = 0, lastY = 0;
+var toolbarH = 50;  // top bar height
+
+// Color palette
+var colors = [
+  '#ff2d7b', '#f0883e', '#d29922', '#3fb950',
+  '#00e5ff', '#bc8cff', '#ff2d7b', '#c8c8d0',
+  '#7a7a8a', '#0a0a0f',
+];
+
+// Initialize the drawing area
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, toolbarH, 500, 400 - toolbarH);
+
+function drawToolbar() {
+  // Toolbar background
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, 500, toolbarH);
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, toolbarH);
+  ctx.lineTo(500, toolbarH);
+  ctx.stroke();
+
+  // Color swatches
+  for (var i = 0; i < colors.length; i++) {
+    var sx = 10 + i * 28;
+    ctx.fillStyle = colors[i];
+    ctx.beginPath();
+    ctx.roundRect(sx, 10, 22, 22, 4);
+    ctx.fill();
+
+    // Highlight selected
+    if (colors[i] === brushColor) {
+      ctx.strokeStyle = '#c8c8d0';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  // Brush size indicator
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '11px monospace';
+  ctx.fillText('Size: ' + brushSize, 310, 22);
+
+  // Size buttons
+  ctx.fillStyle = '#1a1a2a';
+  ctx.beginPath(); ctx.roundRect(370, 8, 26, 26, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(400, 8, 26, 26, 4); ctx.fill();
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('-', 383, 26);
+  ctx.fillText('+', 413, 26);
+  ctx.textAlign = 'left';
+
+  // Clear button
+  ctx.fillStyle = '#1a1a2a';
+  ctx.beginPath(); ctx.roundRect(440, 8, 50, 26, 4); ctx.fill();
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '11px monospace';
+  ctx.fillText('Clear', 448, 26);
+
+  // Brush preview
+  ctx.fillStyle = brushColor;
+  ctx.beginPath();
+  ctx.arc(295, 20, Math.min(brushSize, 12), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (500 / rect.width),
+    y: (clientY - rect.top) * (400 / rect.height)
+  };
+}
+
+function handleToolbar(pos) {
+  // Color swatch click
+  for (var i = 0; i < colors.length; i++) {
+    var sx = 10 + i * 28;
+    if (pos.x >= sx && pos.x <= sx + 22 && pos.y >= 10 && pos.y <= 32) {
+      brushColor = colors[i];
+      drawToolbar();
+      return true;
+    }
+  }
+  // Size - button
+  if (pos.x >= 370 && pos.x <= 396 && pos.y >= 8 && pos.y <= 34) {
+    brushSize = Math.max(1, brushSize - 2);
+    drawToolbar();
+    return true;
+  }
+  // Size + button
+  if (pos.x >= 400 && pos.x <= 426 && pos.y >= 8 && pos.y <= 34) {
+    brushSize = Math.min(30, brushSize + 2);
+    drawToolbar();
+    return true;
+  }
+  // Clear button
+  if (pos.x >= 440 && pos.x <= 490) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, toolbarH, 500, 400 - toolbarH);
+    drawToolbar();
+    return true;
+  }
+  return false;
+}
+
+function startPaint(e) {
+  e.preventDefault();
+  var pos = getPos(e);
+
+  // Check toolbar clicks
+  if (pos.y < toolbarH) {
+    handleToolbar(pos);
+    return;
+  }
+
+  // Start drawing
+  isDrawing = true;
+  lastX = pos.x;
+  lastY = pos.y;
+}
+
+function movePaint(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  var pos = getPos(e);
+  if (pos.y < toolbarH) return;
+
+  ctx.strokeStyle = brushColor;
+  ctx.lineWidth = brushSize;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+
+  lastX = pos.x;
+  lastY = pos.y;
+
+  // Redraw toolbar over drawing
+  drawToolbar();
+}
+
+function stopPaint() { isDrawing = false; }
+
+addListener(canvas, 'mousedown', startPaint);
+addListener(canvas, 'mousemove', movePaint);
+addListener(canvas, 'mouseup', stopPaint);
+addListener(canvas, 'mouseleave', stopPaint);
+
+// Touch events
+addListener(canvas, 'touchstart', startPaint);
+addListener(canvas, 'touchmove', movePaint);
+addListener(canvas, 'touchend', function(e) {
+  e.preventDefault();
+  stopPaint();
+});
+
+drawToolbar();`;
+
+<CanvasRender
+  id="mini-paint"
+  title="Mini Paint App"
+  width={500}
+  height={400}
+  code={miniPaintCode}
+/>
+
+<Concept>
+  <p><strong>What you learned in this lesson:</strong></p>
+  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+    <li>Browser events deliver information through the event object (<code>e</code>)</li>
+    <li>Convert page/client coordinates to canvas coordinates with <code>getBoundingClientRect()</code></li>
+    <li>DPI scaling: multiply canvas size by <code>devicePixelRatio</code>, then <code>ctx.scale()</code></li>
+    <li>Touch events mirror mouse events but use <code>e.touches[0]</code></li>
+    <li>Keyboard input: track pressed keys in an object, check every frame</li>
+    <li>Circle hit detection: <code>distance &lt; radius</code> (Pythagorean theorem)</li>
+    <li>Circle-circle collision: <code>distance &lt; radiusA + radiusB</code></li>
+    <li>AABB collision: four overlap checks on X and Y axes</li>
+    <li>Drag = mousedown (start + offset) → mousemove (update) → mouseup (stop)</li>
+    <li>Cursor styles: <code>canvas.style.cursor = 'pointer'</code></li>
+    <li>Zoom/pan: <code>ctx.translate()</code> + <code>ctx.scale()</code> with wheel events</li>
+    <li>Canvas can be used to build complete UI elements like buttons and color pickers</li>
+  </ul>
+</Concept>
+
+<LessonNav
+  prev={{ href: '/wiki/canvas-lab/06-animation', title: 'Animation' }}
+  next={{ href: '/wiki/canvas-lab/08-particle-system', title: 'Particle System' }}
+/>

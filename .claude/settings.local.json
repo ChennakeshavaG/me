@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/keshava-13944/playground/canvas-lab/**)",
+      "Read(//Users/keshava-13944/playground/**)",
+      "Bash(grep -E \"\\\\.\\(astro|mdx\\)$\")"
+    ]
+  }
+}

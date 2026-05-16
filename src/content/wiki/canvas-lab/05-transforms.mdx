@@ -1,0 +1,1322 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Transforms"
+description: "Translate, rotate, scale, and the critical save/restore state stack."
+createdAt: 2026-05-14
+tags: [canvas, javascript, graphics, tutorial]
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={5} />
+
+## What Is a Coordinate System?
+
+<p>Before we talk about transforms, let's make sure we understand the <strong>coordinate system</strong> that Canvas uses. If you've ever used graph paper, you already know the idea: every point on the canvas has an address made of two numbers: <code>x</code> (how far right) and <code>y</code> (how far down).</p>
+
+<Concept>
+  <p><strong>The Canvas coordinate system:</strong></p>
+  <pre>{`  (0,0)───────────────────────▶ x increases
+    │
+    │    (50,30)●
+    │
+    │              (200,100)●
+    │
+    │                          (400,250)●
+    │
+    ▼
+  y increases`}</pre>
+  <p>Notice two things that are different from math class: (1) the origin <code>(0,0)</code> is at the <strong>top-left</strong>, not bottom-left; (2) <code>y</code> goes <strong>down</strong>, not up. This is standard for all computer graphics.</p>
+</Concept>
+
+export const coordSystemCode = `// Draw a grid to show the coordinate system
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 1;
+
+// Vertical grid lines every 50px
+for (var gx = 0; gx <= 500; gx += 50) {
+  ctx.beginPath();
+  ctx.moveTo(gx, 0);
+  ctx.lineTo(gx, 300);
+  ctx.stroke();
+}
+
+// Horizontal grid lines every 50px
+for (var gy = 0; gy <= 300; gy += 50) {
+  ctx.beginPath();
+  ctx.moveTo(0, gy);
+  ctx.lineTo(500, gy);
+  ctx.stroke();
+}
+
+// Draw axes thicker
+ctx.strokeStyle = '#484f58';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.moveTo(0, 0);
+ctx.lineTo(500, 0);
+ctx.stroke();
+ctx.beginPath();
+ctx.moveTo(0, 0);
+ctx.lineTo(0, 300);
+ctx.stroke();
+
+// Label the origin
+ctx.fillStyle = '#ff2d7b';
+ctx.font = 'bold 14px monospace';
+ctx.fillText('(0,0)', 8, 20);
+
+// Plot some example points
+var points = [
+  { x: 100, y: 50,  label: '(100,50)' },
+  { x: 250, y: 150, label: '(250,150)' },
+  { x: 400, y: 100, label: '(400,100)' },
+  { x: 150, y: 250, label: '(150,250)' },
+];
+
+points.forEach(function(p) {
+  // Dot
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  // Label
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText(p.label, p.x + 8, p.y - 8);
+});
+
+// Axis labels
+ctx.fillStyle = '#3fb950';
+ctx.font = 'bold 12px monospace';
+ctx.fillText('x increases →', 380, 20);
+ctx.save();
+ctx.translate(15, 250);
+ctx.rotate(-Math.PI / 2);
+ctx.fillText('y increases →', 0, 0);
+ctx.restore();`;
+
+<CanvasRender
+  id="coord-system"
+  title="The Default Coordinate System"
+  width={500}
+  height={300}
+  code={coordSystemCode}
+/>
+
+<Concept variant="note">
+**Try this:** Add a new point to the `points` array, like `{ x: 300, y: 200, label: '(300,200)' }`. Hit Run and verify it appears where you expect on the grid.
+</Concept>
+
+## Why Transforms?
+
+<p>Imagine you're drawing on a sheet of graph paper taped to a table. Normally, to draw a square at position (200, 100), you'd carefully count grid lines and draw there. But there's another approach: <strong>slide the paper</strong> so that the (0,0) corner is at the position you want, then always draw at (0,0). The result on the paper is the same, but the second approach is much easier when you need to draw complex, repeated shapes.</p>
+
+<Concept>
+  <p><strong>The "moving the paper, not the pen" analogy:</strong></p>
+  <pre>{`  Method 1: Move the pen              Method 2: Move the paper
+  ┌─────────────────────┐             ┌─────────────────────┐
+  │                     │             │                     │
+  │     ▲ pen moves     │             │     paper slides    │
+  │     │ to (200,100)  │             │     under the pen   │
+  │     └──────●        │             │     ●───────────▶   │
+  │       draw here     │             │  pen stays at (0,0) │
+  │                     │             │                     │
+  └─────────────────────┘             └─────────────────────┘`}</pre>
+  <p>Transforms use Method 2. You <strong>transform the coordinate system</strong> (move/rotate/scale the "paper"), then draw at simple coordinates. This is especially powerful for rotation, since calculating rotated coordinates by hand requires trigonometry, but with transforms the canvas does the math for you.</p>
+</Concept>
+
+<p>There are three basic transforms: <code>translate</code> (slide), <code>rotate</code> (spin), and <code>scale</code> (resize). Let's learn each one.</p>
+
+## translate(x, y): Sliding the Origin
+
+<p><code>ctx.translate(x, y)</code> moves the origin point of the coordinate system. After calling <code>translate(200, 100)</code>, anything you draw at <code>(0, 0)</code> actually appears at pixel <code>(200, 100)</code> on the canvas.</p>
+
+<Concept>
+  <p><strong>Step by step: what translate does:</strong></p>
+  <pre>{`  Before translate(200, 100):       After translate(200, 100):
+  ┌────────────────────┐            ┌────────────────────┐
+  │(0,0)               │            │ old origin         │
+  │  ●                 │            │  ○                 │
+  │  │                 │            │       (0,0)        │
+  │  │                 │            │         ●          │
+  │  │                 │            │         │ new      │
+  │  │                 │            │         │ origin   │
+  └────────────────────┘            └────────────────────┘
+
+  Drawing at (50, 30) now appears at (250, 130) on screen.
+  The formula: screen_x = draw_x + 200
+               screen_y = draw_y + 100`}</pre>
+</Concept>
+
+export const translateBasicCode = `// Without translate: draw a rect at (50, 50)
+ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+ctx.fillRect(50, 50, 80, 60);
+ctx.fillStyle = '#00e5ff';
+ctx.font = '11px monospace';
+ctx.fillText('fillRect(50,50,80,60)', 50, 130);
+
+// With translate: move origin to (250, 50), then draw at (0,0)
+ctx.save();
+ctx.translate(250, 50);
+
+// Mark the new origin
+ctx.fillStyle = '#ff2d7b';
+ctx.beginPath();
+ctx.arc(0, 0, 4, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('new (0,0)', 8, -5);
+
+// Draw at (0,0) in the translated system
+ctx.fillStyle = 'rgba(255, 45, 123, 0.3)';
+ctx.fillRect(0, 0, 80, 60);
+ctx.fillStyle = '#ff2d7b';
+ctx.font = '11px monospace';
+ctx.fillText('fillRect(0,0,80,60)', 0, 80);
+ctx.fillText('after translate(250,50)', 0, 95);
+ctx.restore();
+
+// Explanation at bottom
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('Both rects are the same size: different position method', 30, 260);`;
+
+<CanvasRender
+  id="translate-basic"
+  title="translate: Moving the Origin"
+  width={500}
+  height={300}
+  code={translateBasicCode}
+/>
+
+<p>The real power of <code>translate</code> is that you can define a shape once (drawn at 0,0) and reuse it at any position. Here's the classic "stamp" pattern:</p>
+
+export const translateStampCode = `// Define a house shape that draws at the origin
+function drawHouse(color) {
+  // House body
+  ctx.fillStyle = '#1a1a2a';
+  ctx.fillRect(0, 30, 80, 60);
+  // Roof: triangle above the body
+  ctx.beginPath();
+  ctx.moveTo(-10, 30);
+  ctx.lineTo(40, 0);
+  ctx.lineTo(90, 30);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  // Door
+  ctx.fillStyle = '#d29922';
+  ctx.fillRect(30, 55, 20, 35);
+}
+
+// Now stamp the house at three positions
+var positions = [
+  { x: 40,  y: 100, color: '#00e5ff' },
+  { x: 200, y: 120, color: '#ff2d7b' },
+  { x: 360, y: 90,  color: '#3fb950' },
+];
+
+positions.forEach(function(pos) {
+  ctx.save();               // Save the clean state
+  ctx.translate(pos.x, pos.y); // Move origin
+  drawHouse(pos.color);     // Draw at (0,0)
+  ctx.restore();            // Restore clean state
+});
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Same drawHouse(): three different translate() calls', 50, 260);`;
+
+<CanvasRender
+  id="translate-stamp"
+  title="translate: Stamping a Shape at Multiple Positions"
+  width={500}
+  height={300}
+  code={translateStampCode}
+/>
+
+## rotate(angle): Spinning the Coordinate System
+
+<p>Before we learn <code>rotate()</code>, we need to talk about <strong>radians</strong>. Canvas measures all angles in radians, not degrees. This trips up almost every beginner.</p>
+
+<Concept>
+  <p><strong>Degrees vs Radians, a quick conversion chart:</strong></p>
+  <pre>{`  Degrees │ Radians          │ In code
+  ────────┼──────────────────┼──────────────────────
+     0°   │ 0                │ 0
+    30°   │ PI / 6  ≈ 0.524  │ Math.PI / 6
+    45°   │ PI / 4  ≈ 0.785  │ Math.PI / 4
+    60°   │ PI / 3  ≈ 1.047  │ Math.PI / 3
+    90°   │ PI / 2  ≈ 1.571  │ Math.PI / 2
+   120°   │ 2*PI/3  ≈ 2.094  │ 2 * Math.PI / 3
+   180°   │ PI      ≈ 3.142  │ Math.PI
+   270°   │ 3*PI/2  ≈ 4.712  │ 3 * Math.PI / 2
+   360°   │ 2 * PI  ≈ 6.283  │ Math.PI * 2
+
+  To convert: radians = degrees * (Math.PI / 180)
+              degrees = radians * (180 / Math.PI)`}</pre>
+</Concept>
+
+<p><code>ctx.rotate(angle)</code> spins the coordinate system around the <strong>current origin</strong>. Positive angles go <strong>clockwise</strong> (because y points down). This is opposite to math class!</p>
+
+<p>Several demos in this lesson use <code>ctx.globalAlpha</code> to make shapes semi-transparent. Setting <code>globalAlpha</code> to a value between 0 (fully transparent) and 1 (fully opaque) affects all subsequent drawing until you change it back or call <code>restore()</code>.</p>
+
+<Concept>
+  <p><strong>The Canvas unit circle (y-axis is flipped!):</strong></p>
+  <pre>{`                  270° (-PI/2)
+                        │
+                        │  ↺ negative
+                        │    (counter-clockwise)
+                        │
+  180° (PI) ────────────●──────────── 0° (0)
+                        │
+                        │  ↻ positive
+                        │    (clockwise)
+                        │
+                    90° (PI/2)
+
+  NOTE: In Canvas, positive rotation = clockwise
+  (opposite of standard math, because Y points down)`}</pre>
+</Concept>
+
+export const rotateBasicCode = `// Helper to convert degrees to radians
+function toRad(deg) { return deg * Math.PI / 180; }
+
+var cx = 250;
+var cy = 175;
+
+// Draw reference: un-rotated rectangle
+ctx.save();
+ctx.translate(cx, cy);
+ctx.strokeStyle = '#484f58';
+ctx.lineWidth = 2;
+ctx.setLineDash([5, 5]);
+ctx.strokeRect(20, -15, 100, 30);
+ctx.setLineDash([]);
+ctx.fillStyle = '#484f58';
+ctx.font = '11px monospace';
+ctx.fillText('0° (original)', 30, 5);
+ctx.restore();
+
+// Draw rotated rectangles at various angles
+var angles = [30, 60, 90, 135];
+var colors = ['#00e5ff', '#3fb950', '#d29922', '#ff2d7b'];
+
+angles.forEach(function(deg, i) {
+  ctx.save();
+  ctx.translate(cx, cy);        // 1. Move origin to center
+  ctx.rotate(toRad(deg));       // 2. Rotate
+  ctx.fillStyle = colors[i];
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(20, -15, 100, 30); // 3. Draw
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = colors[i];
+  ctx.font = '11px monospace';
+  ctx.fillText(deg + '°', 50, 5);
+  ctx.restore();
+});
+
+// Center dot
+ctx.fillStyle = '#c8c8d0';
+ctx.beginPath();
+ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('pivot point', cx + 8, cy - 8);
+ctx.fillText('All rects: translate to center → rotate → draw', 80, 340);`;
+
+<CanvasRender
+  id="rotate-basic"
+  title="rotate: How Rotation Works"
+  width={500}
+  height={350}
+  code={rotateBasicCode}
+/>
+
+<Concept>
+  <p><strong>Critical pattern: rotating around a specific point.</strong> Rotation always happens around the <em>current</em> origin. So the pattern is always: (1) <code>translate</code> to the center of what you want to rotate, (2) <code>rotate</code>, (3) draw centered at (0,0). If you rotate without translating first, everything spins around the top-left corner of the canvas!</p>
+</Concept>
+
+export const rotateFanCode = `var cx = 250;
+var cy = 175;
+
+// Draw 12 colored bars radiating from center
+for (var i = 0; i < 12; i++) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(i * Math.PI / 6);  // 30 degrees each step
+
+  // Colored bar
+  ctx.fillStyle = 'hsl(' + (i * 30) + ', 70%, 60%)';
+  ctx.globalAlpha = 0.7;
+  ctx.fillRect(60, -10, 80, 20);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+// Center dot
+ctx.fillStyle = '#c8c8d0';
+ctx.beginPath();
+ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('12 rectangles, each rotated 30° more', 115, 335);`;
+
+<CanvasRender
+  id="rotate-fan"
+  title="rotate: A Fan of Lines from a Center Point"
+  width={500}
+  height={350}
+  code={rotateFanCode}
+/>
+
+## scale(sx, sy): Resizing the Coordinate System
+
+<p><code>ctx.scale(sx, sy)</code> stretches or shrinks the coordinate system. <code>scale(2, 2)</code> makes everything drawn after it <strong>twice as large</strong>. <code>scale(0.5, 0.5)</code> makes it <strong>half size</strong>. You can scale x and y independently to create stretching effects.</p>
+
+export const scaleBasicCode = `// Draw a star shape helper
+function drawStar(size) {
+  ctx.beginPath();
+  for (var i = 0; i < 10; i++) {
+    var r = i % 2 === 0 ? size : size * 0.4;
+    var a = (i * Math.PI / 5) - Math.PI / 2;
+    if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+    else ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Normal size (scale 1.0)
+ctx.save();
+ctx.translate(80, 100);
+ctx.fillStyle = '#00e5ff';
+drawStar(30);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('scale(1, 1)', -25, 50);
+ctx.restore();
+
+// Scaled up (1.5x)
+ctx.save();
+ctx.translate(200, 100);
+ctx.scale(1.5, 1.5);         // Everything 50% bigger
+ctx.fillStyle = '#ff2d7b';
+drawStar(30);                 // Same size param = bigger on screen
+ctx.restore();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('scale(1.5, 1.5)', 165, 170);
+
+// Scaled down (0.5x)
+ctx.save();
+ctx.translate(340, 100);
+ctx.scale(0.5, 0.5);         // Everything half size
+ctx.fillStyle = '#3fb950';
+drawStar(30);
+ctx.restore();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('scale(0.5, 0.5)', 315, 135);
+
+// Stretched (different x and y)
+ctx.save();
+ctx.translate(450, 100);
+ctx.scale(0.7, 2);           // Narrow but tall
+ctx.fillStyle = '#d29922';
+drawStar(30);
+ctx.restore();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('scale(0.7, 2)', 415, 175);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Same drawStar(30) call: only the scale changes', 60, 265);`;
+
+<CanvasRender
+  id="scale-basic"
+  title="scale: Growing and Shrinking"
+  width={500}
+  height={300}
+  code={scaleBasicCode}
+/>
+
+### Negative Scaling: Mirroring and Flipping
+
+<p>A negative scale value <strong>flips</strong> the coordinate system along that axis. <code>scale(-1, 1)</code> mirrors horizontally (like looking in a mirror), and <code>scale(1, -1)</code> flips vertically. This is incredibly useful for game sprites; draw a character facing right once, then flip it when they walk left.</p>
+
+export const scaleMirrorCode = `// Draw a simple arrow pointing right
+function drawArrow() {
+  ctx.beginPath();
+  ctx.moveTo(0, -15);
+  ctx.lineTo(50, -15);
+  ctx.lineTo(50, -30);
+  ctx.lineTo(80, 0);
+  ctx.lineTo(50, 30);
+  ctx.lineTo(50, 15);
+  ctx.lineTo(0, 15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#0a0a0f';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+// Normal
+ctx.save();
+ctx.translate(70, 75);
+ctx.fillStyle = '#00e5ff';
+drawArrow();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Normal', -10, 45);
+ctx.restore();
+
+// Flipped horizontally: scale(-1, 1)
+ctx.save();
+ctx.translate(280, 75);
+ctx.scale(-1, 1);            // Flip the x axis
+ctx.fillStyle = '#ff2d7b';
+drawArrow();
+ctx.restore();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('scale(-1, 1)', 220, 120);
+
+// Flipped vertically: scale(1, -1)
+ctx.save();
+ctx.translate(70, 210);
+ctx.scale(1, -1);            // Flip the y axis
+ctx.fillStyle = '#3fb950';
+drawArrow();
+ctx.restore();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('scale(1, -1)', 60, 255);
+
+// Flipped both: scale(-1, -1): same as 180° rotation
+ctx.save();
+ctx.translate(280, 210);
+ctx.scale(-1, -1);
+ctx.fillStyle = '#d29922';
+drawArrow();
+ctx.restore();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('scale(-1, -1)', 220, 255);`;
+
+<CanvasRender
+  id="scale-mirror"
+  title="Negative Scale: Mirroring"
+  width={500}
+  height={300}
+  code={scaleMirrorCode}
+/>
+
+## save() and restore(): The State Stack
+
+<p><code>ctx.save()</code> takes a snapshot of the current state and pushes it onto a stack. <code>ctx.restore()</code> pops the most recent snapshot and restores everything. The "state" includes: transforms, fill/stroke styles, font, globalAlpha, clipping region, line width/dash, shadow settings, and more.</p>
+
+<Concept>
+  <p><strong>Think of it like an undo stack:</strong></p>
+  <pre>{`   save()         save()         restore()       restore()
+     │               │               │               │
+     ▼               ▼               ▼               ▼
+  ┌───────┐      ┌───────┐      ┌───────┐      ┌───────┐
+  │State A│      │State B│      │       │      │       │
+  ├───────┤      ├───────┤      ├───────┤      ├───────┤
+  │       │      │State A│      │State A│      │       │
+  └───────┘      └───────┘      └───────┘      └───────┘
+   Stack: [A]    Stack: [A,B]   Stack: [A]     Stack: []
+                                (B popped)     (A popped)`}</pre>
+  <p><strong>Golden rule:</strong> Every <code>save()</code> MUST have a matching <code>restore()</code>. Unmatched pairs are the #1 source of transform bugs.</p>
+</Concept>
+
+export const saveRestoreCode = `// WITHOUT save/restore: transforms accumulate (bad!)
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '14px monospace';
+ctx.fillText('WITHOUT save/restore (transforms leak):', 20, 25);
+
+ctx.save(); // Preserve DPR scaling
+ctx.translate(50, 60);
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(0, 0, 60, 40);
+ctx.font = '11px monospace';
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText('1st', 5, 25);
+
+ctx.translate(100, 0);         // Adds to previous translate!
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(0, 0, 60, 40);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText('2nd', 5, 25);
+
+ctx.translate(100, 0);         // Adds AGAIN!
+ctx.fillStyle = '#3fb950';
+ctx.fillRect(0, 0, 60, 40);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText('3rd', 5, 25);
+
+ctx.restore(); // Restore DPR scaling (instead of setTransform which would nuke it)
+
+// WITH save/restore: each transform is independent (good!)
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '14px monospace';
+ctx.fillText('WITH save/restore (each independent):', 20, 155);
+
+var items = [
+  { x: 50,  color: '#00e5ff' },
+  { x: 200, color: '#ff2d7b' },
+  { x: 350, color: '#3fb950' },
+];
+
+items.forEach(function(item, i) {
+  ctx.save();
+  ctx.translate(item.x, 180);
+  ctx.rotate(i * 0.3);
+  ctx.fillStyle = item.color;
+  ctx.fillRect(0, 0, 60, 40);
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '13px monospace';
+  ctx.fillText((i + 1) + '', 25, 25);
+  ctx.restore();               // Back to clean state!
+});
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Top row: translates stacked. Bottom: each isolated.', 30, 310);`;
+
+<CanvasRender
+  id="save-restore"
+  title="save/restore: Preventing Transform Leaks"
+  width={500}
+  height={350}
+  code={saveRestoreCode}
+/>
+
+## Transform Order Matters!
+
+<p>This is the single most confusing thing about transforms: <strong>the order you apply transforms changes the result</strong>. "Translate then rotate" is NOT the same as "rotate then translate." Think of each transform as acting on the <em>already-transformed</em> coordinate system.</p>
+
+<Concept>
+  <p><strong>Visualizing transform order:</strong></p>
+  <pre>{`  Translate-then-Rotate:            Rotate-then-Translate:
+  1. Move origin to (200, 100)      1. Rotate axes 45°
+  2. Rotate axes 45°                2. Move along NEW rotated axes
+  3. Draw                           3. Draw
+
+  ┌────────────────────┐            ┌────────────────────┐
+  │                    │            │     ◇              │
+  │        ◇           │            │    ╱               │
+  │     tilted at      │            │   ╱ moved along    │
+  │     (200,100)      │            │  ╱  rotated axis   │
+  │                    │            │ ╱                  │
+  └────────────────────┘            └────────────────────┘
+
+  The difference: "translate" moves along the CURRENT axes.
+  After a rotate, the axes point in a different direction!`}</pre>
+</Concept>
+
+export const transformOrderCode = `var angle = Math.PI / 6;  // 30 degrees
+
+// Show origin
+ctx.fillStyle = '#d29922';
+ctx.beginPath();
+ctx.arc(0, 0, 6, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#d29922';
+ctx.font = '11px monospace';
+ctx.fillText('origin (0,0)', 10, 20);
+
+// Method 1: Translate THEN Rotate
+ctx.save();
+ctx.translate(130, 150);       // Step 1: move origin
+ctx.rotate(angle);             // Step 2: rotate
+ctx.fillStyle = 'rgba(0, 229, 255, 0.6)';
+ctx.fillRect(-40, -25, 80, 50);
+ctx.fillStyle = '#00e5ff';
+ctx.font = '11px monospace';
+ctx.fillText('translate', -30, -5);
+ctx.fillText('then rotate', -30, 10);
+ctx.restore();
+
+// Method 2: Rotate THEN Translate
+ctx.save();
+ctx.rotate(angle);             // Step 1: rotate axes
+ctx.translate(300, 80);        // Step 2: move along rotated axes
+ctx.fillStyle = 'rgba(255, 45, 123, 0.6)';
+ctx.fillRect(-40, -25, 80, 50);
+ctx.fillStyle = '#ff2d7b';
+ctx.font = '11px monospace';
+ctx.fillText('rotate', -25, -5);
+ctx.fillText('then translate', -25, 10);
+ctx.restore();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Same angle + distance, different order = different result', 30, 330);`;
+
+<CanvasRender
+  id="transform-order"
+  title="Transform Order: Same Operations, Different Results"
+  width={500}
+  height={350}
+  code={transformOrderCode}
+/>
+
+## setTransform() vs transform(): Reset vs Accumulate
+
+<p>Canvas gives you three lower-level transform methods:</p>
+<ul>
+  <li><code>ctx.transform(a, b, c, d, e, f)</code> multiplies the current transform by a new one (they <strong>accumulate</strong>)</li>
+  <li><code>ctx.setTransform(a, b, c, d, e, f)</code> <strong>replaces</strong> the current transform entirely (resets first)</li>
+  <li><code>ctx.getTransform()</code> returns the current transform as a <code>DOMMatrix</code> object (read-only)</li>
+</ul>
+
+<Concept>
+  <p><strong>The 2D transformation matrix:</strong></p>
+  <pre>{`  Canvas uses a 3x3 matrix internally, but you only set 6 values:
+
+  ┌          ┐     ┌                                ┐
+  │  a  c  e  │     │  scaleX   skewX    translateX  │
+  │  b  d  f  │  =  │  skewY    scaleY   translateY  │
+  │  0  0  1  │     │  0        0        1           │
+  └          ┘     └                                ┘
+
+  The default (identity) matrix: a=1, b=0, c=0, d=1, e=0, f=0
+  ctx.setTransform(1, 0, 0, 1, 0, 0) resets to default.
+
+  What the convenient methods do internally:
+    translate(tx, ty)  →  transform(1, 0, 0, 1, tx, ty)
+    rotate(angle)      →  transform(cos, sin, -sin, cos, 0, 0)
+    scale(sx, sy)      →  transform(sx, 0, 0, sy, 0, 0)`}</pre>
+</Concept>
+
+export const setTransformCode = `// Demonstrate transform() accumulation
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('transform() accumulates:', 20, 25);
+
+ctx.save(); // Preserve DPR scaling around the entire setTransform demo
+
+// First transform: translate right
+ctx.transform(1, 0, 0, 1, 50, 50);
+ctx.fillStyle = 'rgba(0, 229, 255, 0.5)';
+ctx.fillRect(0, 0, 40, 40);
+ctx.fillStyle = '#00e5ff';
+ctx.font = '10px monospace';
+ctx.fillText('1st', 10, 25);
+
+// Second transform: adds to first
+ctx.transform(1, 0, 0, 1, 70, 0);
+ctx.fillStyle = 'rgba(63, 185, 80, 0.5)';
+ctx.fillRect(0, 0, 40, 40);
+ctx.fillStyle = '#3fb950';
+ctx.fillText('2nd', 10, 25);
+
+// Third transform: adds to both
+ctx.transform(1, 0, 0, 1, 70, 0);
+ctx.fillStyle = 'rgba(255, 45, 123, 0.5)';
+ctx.fillRect(0, 0, 40, 40);
+ctx.fillStyle = '#ff2d7b';
+ctx.fillText('3rd', 10, 25);
+
+// Now use setTransform to REPLACE (reset + set)
+ctx.setTransform(1, 0, 0, 1, 0, 0);  // Back to identity
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('setTransform() replaces entirely:', 20, 155);
+
+// setTransform with a skew: replaces everything
+ctx.setTransform(1, 0, 0.3, 1, 50, 170);
+ctx.fillStyle = 'rgba(210, 153, 34, 0.5)';
+ctx.fillRect(0, 0, 100, 40);
+ctx.fillStyle = '#d29922';
+ctx.font = '11px monospace';
+ctx.fillText('Skewed!', 10, 25);
+
+ctx.restore(); // Restore DPR scaling (setTransform calls above are now harmless)
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('setTransform ignores all previous transforms', 50, 265);`;
+
+<CanvasRender
+  id="set-transform"
+  title="setTransform vs transform: Reset vs Accumulate"
+  width={500}
+  height={300}
+  code={setTransformCode}
+/>
+
+## Common Transform Mistakes
+
+<p>Every beginner hits these. Learn them now so you can spot them immediately.</p>
+
+<Concept>
+  <p><strong>Mistake #1, forgetting save/restore:</strong> Transforms accumulate. If you translate(100, 0) in a loop without restoring, each iteration adds another 100px. Your shapes fly off-screen.</p>
+  <p><strong>Mistake #2, rotating without translating first:</strong> <code>rotate()</code> spins around the origin (0,0), which is the top-left corner by default. If you want to rotate a shape in-place, translate to its center first.</p>
+  <p><strong>Mistake #3, wrong transform order:</strong> Transforms apply to the <em>current</em> coordinate system. If you rotate first, then translate, the translation follows the rotated axes.</p>
+  <p><strong>Mistake #4, scale affects everything:</strong> <code>scale(2, 2)</code> doubles not just shapes, but also line widths, text sizes, and translations. If you <code>scale(2,2)</code> then <code>translate(50, 0)</code>, you actually move 100 pixels.</p>
+</Concept>
+
+export const mistakesCode = `// Wrong: rotate without translating to center
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('WRONG: rotate without translate', 20, 25);
+
+ctx.save();
+ctx.rotate(0.3);
+ctx.fillStyle = 'rgba(255, 45, 123, 0.4)';
+ctx.fillRect(100, 50, 80, 50);
+ctx.fillStyle = '#ff2d7b';
+ctx.font = '10px monospace';
+ctx.fillText('Spins around (0,0)!', 105, 80);
+ctx.restore();
+
+// Right: translate to center, then rotate
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('RIGHT: translate to center first', 20, 175);
+
+ctx.save();
+ctx.translate(140, 230);      // Move to center of where we want the rect
+ctx.rotate(0.3);
+ctx.fillStyle = 'rgba(63, 185, 80, 0.4)';
+ctx.fillRect(-40, -25, 80, 50);  // Draw centered at origin
+ctx.fillStyle = '#3fb950';
+ctx.font = '10px monospace';
+ctx.fillText('Spins in place!', -35, 5);
+ctx.restore();
+
+// Mark both pivot points
+ctx.fillStyle = '#d29922';
+ctx.beginPath();
+ctx.arc(0, 0, 5, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('pivot', 8, 10);
+
+ctx.fillStyle = '#d29922';
+ctx.beginPath();
+ctx.arc(140, 230, 5, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('pivot', 148, 228);`;
+
+<CanvasRender
+  id="mistakes"
+  title="Common Mistake: Rotate Without Translate"
+  width={500}
+  height={300}
+  code={mistakesCode}
+/>
+
+## Practical: Spinning Loading Indicator
+
+<p>Transforms are perfect for radial patterns. This loading spinner draws 12 lines at equal angles, with one highlighted to create the spinning effect. It uses <code>requestAnimationFrame</code> to run a loop that redraws each frame; the next lesson covers animation in full detail.</p>
+
+export const spinnerCode = `var cx = 150;
+var cy = 150;
+var numLines = 12;
+var frame = 0;
+
+function loop() {
+  ctx.clearRect(0, 0, 300, 300);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  for (var i = 0; i < numLines; i++) {
+    ctx.save();
+    ctx.rotate(i * (Math.PI * 2 / numLines));
+
+    // Opacity fades based on distance from the "active" line
+    var distance = (frame - i + numLines) % numLines;
+    var alpha = 1 - (distance / numLines) * 0.8;
+
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -30);
+    ctx.lineTo(0, -55);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+
+  // Advance every 5 frames for visible rotation
+  frame = (frame + 0.1) % numLines;
+
+  __raf = requestAnimationFrame(loop);
+}
+loop();`;
+
+<CanvasRender
+  id="spinner"
+  title="Loading Spinner: Transforms + Animation"
+  width={300}
+  height={300}
+  code={spinnerCode}
+/>
+
+## Practical: Solar System, Orbits Within Orbits
+
+<p>The real power of transforms shows when you <strong>nest</strong> them. Here, the Earth orbits the Sun, and the Moon orbits the Earth. Each orbit is just a <code>rotate</code> + <code>translate</code> inside the parent's coordinate system.</p>
+
+<p><em>Note: This demo advances by a fixed amount each frame for simplicity. On a 120Hz screen it will spin faster. Lesson 6 (Animation) teaches delta-time, the proper way to make motion frame-rate independent.</em></p>
+
+export const solarSystemCode = `var time = 0;
+
+function loop() {
+  ctx.clearRect(0, 0, 500, 400);
+
+  // Starfield background
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, 500, 400);
+
+  // Move to center of canvas (the Sun's position)
+  ctx.save();
+  ctx.translate(250, 200);
+
+  // Draw the Sun
+  ctx.fillStyle = '#d29922';
+  ctx.shadowColor = '#d29922';
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.arc(0, 0, 25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // --- Earth orbit ---
+  // Draw orbit path
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, 110, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Rotate for Earth's position in orbit
+  ctx.save();
+  ctx.rotate(time * 0.5);        // Earth orbital speed
+  ctx.translate(110, 0);         // Move to orbit radius
+
+  // Draw Earth
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(0, 0, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // --- Moon orbit (nested inside Earth's transform!) ---
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.beginPath();
+  ctx.arc(0, 0, 25, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.rotate(time * 3);          // Moon orbits faster
+  ctx.translate(25, 0);
+
+  // Draw Moon
+  ctx.fillStyle = '#7a7a8a';
+  ctx.beginPath();
+  ctx.arc(0, 0, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();  // End Moon
+  ctx.restore();  // End Earth
+
+  // --- Mars orbit ---
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.beginPath();
+  ctx.arc(0, 0, 170, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.rotate(time * 0.3);        // Mars is slower
+  ctx.translate(170, 0);
+
+  ctx.fillStyle = '#ff2d7b';
+  ctx.beginPath();
+  ctx.arc(0, 0, 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();  // End Mars
+
+  ctx.restore();  // End Sun/center
+
+  // Labels
+  ctx.fillStyle = '#484f58';
+  ctx.font = '11px monospace';
+  ctx.fillText('Nested transforms: Moon orbits Earth which orbits Sun', 60, 385);
+
+  time += 0.02;
+  __raf = requestAnimationFrame(loop);
+}
+loop();`;
+
+<CanvasRender
+  id="solar-system"
+  title="Solar System: Nested Transforms"
+  width={500}
+  height={400}
+  code={solarSystemCode}
+/>
+
+## Practical: Fractal Tree with Recursive Transforms
+
+<p>Recursion + transforms = fractals. Each branch translates to its end, rotates, scales down, and draws another branch. The tree emerges from simple rules repeated.</p>
+
+export const fractalTreeCode = `ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, 0, 500, 400);
+
+function drawBranch(depth, maxDepth) {
+  if (depth > maxDepth) return;
+
+  // Branch length gets shorter each level
+  var len = 80 * Math.pow(0.72, depth);
+
+  // Color shifts from brown to green
+  var green = Math.floor(80 + (depth / maxDepth) * 150);
+  ctx.strokeStyle = 'rgb(80, ' + green + ', 50)';
+  ctx.lineWidth = Math.max(1, 8 - depth);
+  ctx.lineCap = 'round';
+
+  // Draw this branch segment (going "up" in local coords)
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, -len);
+  ctx.stroke();
+
+  // Move to the end of this branch
+  ctx.translate(0, -len);
+
+  // Left branch
+  ctx.save();
+  ctx.rotate(-0.4 - Math.random() * 0.2);  // Slight randomness
+  ctx.scale(0.85, 0.85);
+  drawBranch(depth + 1, maxDepth);
+  ctx.restore();
+
+  // Right branch
+  ctx.save();
+  ctx.rotate(0.4 + Math.random() * 0.2);
+  ctx.scale(0.85, 0.85);
+  drawBranch(depth + 1, maxDepth);
+  ctx.restore();
+}
+
+// Start from bottom center
+ctx.save();
+ctx.translate(250, 390);
+drawBranch(0, 8);
+ctx.restore();
+
+ctx.fillStyle = '#484f58';
+ctx.font = '11px monospace';
+ctx.fillText('Each branch: translate to end, rotate, scale down, recurse', 55, 15);`;
+
+<CanvasRender
+  id="fractal-tree"
+  title="Fractal Tree: Recursive Transforms"
+  width={500}
+  height={400}
+  code={fractalTreeCode}
+/>
+
+## Practical: Tiling Pattern
+
+<p>Transforms make it easy to create repeating patterns. Define a tile at the origin, then translate to stamp it across a grid. Add rotation for visual interest.</p>
+
+export const tilingCode = `var tileSize = 50;
+
+function drawTile(row, col) {
+  // Alternating pattern
+  var isEven = (row + col) % 2 === 0;
+  var hue = (row * 30 + col * 45) % 360;
+
+  ctx.save();
+  ctx.translate(col * tileSize + tileSize / 2,
+                row * tileSize + tileSize / 2);
+
+  // Background square
+  ctx.fillStyle = isEven ? '#12121a' : '#1a1a2a';
+  ctx.fillRect(-tileSize / 2, -tileSize / 2, tileSize, tileSize);
+
+  // Rotated diamond shape inside
+  ctx.rotate(Math.PI / 4);     // 45 degrees
+  ctx.fillStyle = 'hsla(' + hue + ', 60%, 50%, 0.4)';
+  ctx.fillRect(-15, -15, 30, 30);
+
+  // Smaller rotated square
+  ctx.rotate(Math.PI / 6);
+  ctx.fillStyle = 'hsla(' + hue + ', 70%, 60%, 0.5)';
+  ctx.fillRect(-8, -8, 16, 16);
+
+  ctx.restore();
+}
+
+// Draw 7 x 10 grid of tiles
+for (var row = 0; row < 7; row++) {
+  for (var col = 0; col < 10; col++) {
+    drawTile(row, col);
+  }
+}`;
+
+<CanvasRender
+  id="tiling"
+  title="Tiling Pattern with Transforms"
+  width={500}
+  height={350}
+  code={tilingCode}
+/>
+
+## Transform Sandbox: Step-by-Step Visualization
+
+<p>This demo shows how a sequence of transforms builds up. Each colored rectangle shows the coordinate system after one more transform is applied. Watch how the origin (dot) moves and the axes rotate.</p>
+
+export const sandboxCode = `// We'll show 4 steps of transforms
+// Step 0: Original state
+// Step 1: translate(150, 200)
+// Step 2: rotate(30°)
+// Step 3: scale(1.5, 0.8)
+
+function drawAxes(len, label) {
+  // X axis
+  ctx.strokeStyle = '#ff2d7b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(len, 0);
+  ctx.stroke();
+  // Arrow
+  ctx.beginPath();
+  ctx.moveTo(len - 6, -4);
+  ctx.lineTo(len, 0);
+  ctx.lineTo(len - 6, 4);
+  ctx.stroke();
+
+  // Y axis
+  ctx.strokeStyle = '#3fb950';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, len);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-4, len - 6);
+  ctx.lineTo(0, len);
+  ctx.lineTo(4, len - 6);
+  ctx.stroke();
+
+  // Origin dot
+  ctx.fillStyle = '#d29922';
+  ctx.beginPath();
+  ctx.arc(0, 0, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Label
+  if (label) {
+    ctx.fillStyle = '#c8c8d0';
+    ctx.font = '10px monospace';
+    ctx.fillText(label, 6, -8);
+  }
+}
+
+// Step 0: default axes
+ctx.globalAlpha = 0.3;
+drawAxes(60, '');
+ctx.globalAlpha = 1;
+ctx.fillStyle = '#484f58';
+ctx.font = '10px monospace';
+ctx.fillText('Step 0: default', 8, 75);
+
+// Step 1: translate
+ctx.save();
+ctx.translate(150, 200);
+ctx.globalAlpha = 0.5;
+drawAxes(60, 'Step 1');
+ctx.globalAlpha = 1;
+ctx.fillStyle = '#484f58';
+ctx.font = '10px monospace';
+ctx.fillText('translate(150,200)', 8, 75);
+
+// Step 2: rotate 30°
+ctx.rotate(Math.PI / 6);
+ctx.globalAlpha = 0.7;
+drawAxes(60, 'Step 2');
+ctx.globalAlpha = 1;
+ctx.fillStyle = '#484f58';
+ctx.font = '10px monospace';
+ctx.fillText('+ rotate(30°)', 8, 75);
+
+// Step 3: scale
+ctx.scale(1.5, 0.8);
+ctx.globalAlpha = 1;
+drawAxes(60, 'Step 3');
+ctx.fillStyle = '#484f58';
+ctx.font = '10px monospace';
+ctx.fillText('+ scale(1.5, 0.8)', 8, 75);
+
+// Draw a shape in the final coordinate system
+ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+ctx.fillRect(20, 20, 60, 40);
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 1;
+ctx.strokeRect(20, 20, 60, 40);
+
+ctx.restore();
+
+// Legend
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Red axis = X, Green axis = Y, Dot = origin', 100, 385);
+ctx.fillText('Each step transforms the CURRENT coordinate system', 80, 370);`;
+
+<CanvasRender
+  id="sandbox"
+  title="Transform Pipeline: Visualizing Each Step"
+  width={500}
+  height={400}
+  code={sandboxCode}
+/>
+
+## Practical: Analog Clock
+
+<p>Let's combine everything into a detailed clock face. This uses <code>translate</code> for centering, <code>rotate</code> for each hour/minute mark, and <code>save/restore</code> to keep each element independent.</p>
+
+export const clockCode = `var cx = 200;
+var cy = 200;
+var radius = 150;
+
+ctx.save();
+ctx.translate(cx, cy);  // Center everything
+
+// --- Clock face background ---
+ctx.fillStyle = '#12121a';
+ctx.beginPath();
+ctx.arc(0, 0, radius + 10, 0, Math.PI * 2);
+ctx.fill();
+
+// --- Outer ring ---
+ctx.beginPath();
+ctx.arc(0, 0, radius, 0, Math.PI * 2);
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 4;
+ctx.stroke();
+
+// --- Hour marks (thick) ---
+for (var h = 0; h < 12; h++) {
+  ctx.save();
+  ctx.rotate(h * Math.PI / 6);    // 30° per hour
+  ctx.fillStyle = '#c8c8d0';
+  ctx.fillRect(-3, -radius + 10, 6, 20);
+  ctx.restore();
+}
+
+// --- Minute marks (thin) ---
+for (var m = 0; m < 60; m++) {
+  if (m % 5 === 0) continue;      // Skip hour positions
+  ctx.save();
+  ctx.rotate(m * Math.PI / 30);   // 6° per minute
+  ctx.fillStyle = '#1a1a2a';
+  ctx.fillRect(-1, -radius + 15, 2, 10);
+  ctx.restore();
+}
+
+// --- Hour numbers ---
+ctx.font = 'bold 20px sans-serif';
+ctx.fillStyle = '#7a7a8a';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+for (var n = 1; n <= 12; n++) {
+  var angle = (n * Math.PI / 6) - Math.PI / 2;
+  var numRadius = radius - 35;
+  ctx.fillText(
+    n.toString(),
+    numRadius * Math.cos(angle),
+    numRadius * Math.sin(angle)
+  );
+}
+
+// --- Hour hand (pointing to 10 o'clock) ---
+ctx.save();
+ctx.rotate((10 / 12) * Math.PI * 2 - Math.PI / 2);
+ctx.fillStyle = '#c8c8d0';
+ctx.beginPath();
+ctx.moveTo(-5, 10);
+ctx.lineTo(0, -80);
+ctx.lineTo(5, 10);
+ctx.closePath();
+ctx.fill();
+ctx.restore();
+
+// --- Minute hand (pointing to 50 minutes) ---
+ctx.save();
+ctx.rotate((50 / 60) * Math.PI * 2 - Math.PI / 2);
+ctx.fillStyle = '#00e5ff';
+ctx.beginPath();
+ctx.moveTo(-3, 10);
+ctx.lineTo(0, -110);
+ctx.lineTo(3, 10);
+ctx.closePath();
+ctx.fill();
+ctx.restore();
+
+// --- Second hand (pointing to 30 seconds) ---
+ctx.save();
+ctx.rotate((30 / 60) * Math.PI * 2 - Math.PI / 2);
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 1.5;
+ctx.beginPath();
+ctx.moveTo(0, 15);
+ctx.lineTo(0, -120);
+ctx.stroke();
+ctx.restore();
+
+// --- Center cap ---
+ctx.fillStyle = '#ff2d7b';
+ctx.beginPath();
+ctx.arc(0, 0, 6, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.restore();`;
+
+<CanvasRender
+  id="clock"
+  title="Analog Clock: Putting It All Together"
+  width={400}
+  height={400}
+  code={clockCode}
+/>
+
+<Concept>
+  <p><strong>What you learned in this lesson:</strong></p>
+  <ul>
+    <li><strong>Coordinate system:</strong> Origin at top-left, y goes down, x goes right</li>
+    <li><strong>translate(x, y):</strong> Slides the origin, the "moving the paper" concept</li>
+    <li><strong>rotate(radians):</strong> Spins the coordinate system around the current origin (clockwise = positive)</li>
+    <li><strong>scale(sx, sy):</strong> Stretches/shrinks; negative values mirror/flip</li>
+    <li><strong>save()/restore():</strong> Stack-based state management; always pair them</li>
+    <li><strong>Transform order matters:</strong> Each transform acts on the already-transformed system</li>
+    <li><strong>setTransform() vs transform():</strong> Reset-and-set vs accumulate</li>
+    <li><strong>The 2x3 matrix:</strong> [scaleX, skewY, skewX, scaleY, translateX, translateY]</li>
+    <li><strong>Nested transforms:</strong> Inner coordinate systems ride on outer ones (solar system pattern)</li>
+    <li><strong>Recursive transforms:</strong> Fractals emerge from repeated translate+rotate+scale</li>
+  </ul>
+</Concept>
+
+<LessonNav
+  prev={{ href: '/wiki/canvas-lab/04-text-images', title: 'Text & Images' }}
+  next={{ href: '/wiki/canvas-lab/06-animation', title: 'Animation' }}
+/>

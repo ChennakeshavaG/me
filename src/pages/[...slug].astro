@@ -23,24 +23,16 @@ const { type, title, description, createdAt, updatedAt, tags } = entry.data;
 
 <ContentLayout
   title={title}
+  description={description}
+  type={type}
   date={createdAt.toISOString().split('T')[0]}
+  updatedAt={updatedAt ? updatedAt.toISOString().split('T')[0] : undefined}
   tags={tags}
+  draft={type === 'blog' && entry.data.draft}
+  category={type === 'wiki' ? entry.data.category : undefined}
+  status={type === 'project' ? entry.data.status : undefined}
+  url={type === 'project' ? entry.data.url : undefined}
+  repo={type === 'project' ? entry.data.repo : undefined}
 >
-  {type === 'wiki' && entry.data.category && (
-    <p class="category">Category: {entry.data.category}</p>
-  )}
-  {type === 'project' && (
-    <div class="project-meta">
-      <span class="status">{entry.data.status}</span>
-      {entry.data.url && <a href={entry.data.url}>Live Site</a>}
-      {entry.data.repo && <a href={entry.data.repo}>Repository</a>}
-    </div>
-  )}
-  {type === 'blog' && entry.data.draft && (
-    <p class="draft-badge">Draft</p>
-  )}
-  {updatedAt && (
-    <p class="updated">Updated: {updatedAt.toISOString().split('T')[0]}</p>
-  )}
   <Content />
 </ContentLayout>

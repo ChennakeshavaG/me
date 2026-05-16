@@ -26,7 +26,7 @@ See `docs/project-system.md` for full structure. Key entry points: `src/layouts/
 
 ## Content
 
-Never create `.mdx` files manually — always use `npm run create`. See `docs/content-system.md` for usage. For Mermaid diagrams in MDX, see `docs/mermaid-system.md`.
+Never create `.mdx` files manually — always use `npm run create`. See `docs/content-system.md` for usage. For Mermaid diagrams in MDX, see `docs/mermaid-system.md`. For prose styling rules, width tiers, spacing rhythm, and color tokens, see `docs/content-styles.md`.
 
 ## SPA Navigation
 

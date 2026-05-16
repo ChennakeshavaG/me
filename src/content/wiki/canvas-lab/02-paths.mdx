@@ -1,0 +1,1369 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Paths & Shapes"
+description: "Draw any shape you can imagine using paths, arcs, and curves."
+createdAt: 2026-05-14
+tags: [canvas, javascript, graphics, tutorial]
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={2} />
+
+Rectangles are useful for prototyping, but real graphics need triangles, circles, stars, and freeform shapes. This lesson introduces the **path system**: Canvas's way of describing any shape you can imagine. By the end, you will draw polygons, smooth curves, and combine them into complex figures.
+
+## The "Pen" Metaphor
+
+<p>In Lesson 1, we drew rectangles, but the real world isn't made of rectangles. To draw triangles, circles, arrows, speech bubbles, or any custom shape, we need <strong>paths</strong>.</p>
+
+<p>Imagine you're holding an invisible pen over a piece of paper:</p>
+
+<Concept>
+  <p><strong>Drawing with an invisible pen:</strong></p>
+  <pre>{`    1. Pick up the pen and place it somewhere
+       --> moveTo(x, y)         "Move without drawing"
+
+    2. Drag the pen to draw a line
+       --> lineTo(x, y)         "Draw a straight line to here"
+
+    3. Draw a curve
+       --> arc(x, y, r, startAngle, endAngle)
+       --> bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+
+    4. Go back to where you started
+       --> closePath()           "Connect back to start"
+
+    5. Fill in the shape or trace its outline
+       --> fill() or stroke()   "Apply the ink"
+
+    The pen REMEMBERS where it is after each command.
+    Every new command starts from where the last one ended.`}</pre>
+</Concept>
+
+<p>The key insight: <strong>path commands don't draw anything visible</strong>. They build up an invisible outline. Only when you call <code>fill()</code> or <code>stroke()</code> does the shape actually appear on the canvas.</p>
+
+## Why beginPath() is Critical
+
+<p><code>beginPath()</code> starts a brand new path, throwing away whatever path was being built before. This is the <strong>single most common source of canvas bugs for beginners</strong>: forgetting <code>beginPath()</code>.</p>
+
+export const beginpathBugCode = `// ---- BUG: No beginPath() between shapes ----
+// The left side shows what happens when you FORGET beginPath()
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('BUG: forgot beginPath()', 20, 25);
+
+ctx.beginPath();
+ctx.moveTo(50, 50);
+ctx.lineTo(150, 50);
+ctx.lineTo(100, 130);
+ctx.closePath();
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Oops! No beginPath() here: the old triangle is still in the path!
+ctx.moveTo(50, 160);
+ctx.lineTo(150, 160);
+ctx.lineTo(100, 240);
+ctx.closePath();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+// BOTH triangles get stroked blue!
+
+// ---- FIX: Always use beginPath() ----
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('FIX: use beginPath()', 280, 25);
+
+ctx.beginPath();  // fresh start
+ctx.moveTo(310, 50);
+ctx.lineTo(410, 50);
+ctx.lineTo(360, 130);
+ctx.closePath();
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+ctx.beginPath();  // another fresh start!
+ctx.moveTo(310, 160);
+ctx.lineTo(410, 160);
+ctx.lineTo(360, 240);
+ctx.closePath();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+// Each triangle has its own color, correct!`;
+
+<CanvasRender
+  id="beginpath-bug"
+  title="The beginPath() Bug"
+  width={500}
+  height={300}
+  code={beginpathBugCode}
+/>
+
+<Concept variant="note">
+**Try this:** Delete the second `ctx.beginPath()` call and hit Run. Both triangles turn cyan because `stroke()` redraws the entire accumulated path. Add it back to see the fix.
+</Concept>
+
+<Concept>
+  <p><strong>Rule of thumb:</strong> Call <code>beginPath()</code> every time you start a new shape. Without it, every shape you've drawn since the last <code>beginPath()</code> is still part of the current path, and <code>fill()</code> or <code>stroke()</code> will apply to ALL of them.</p>
+</Concept>
+
+## moveTo and lineTo: Straight Lines
+
+<p><code>moveTo(x, y)</code> picks up the pen and places it at a new position without drawing. <code>lineTo(x, y)</code> draws a straight line from wherever the pen currently is to the new point.</p>
+
+export const linesCode = `// Draw a simple triangle
+ctx.beginPath();
+ctx.moveTo(250, 30);    // start at top center
+ctx.lineTo(100, 250);   // line down to bottom-left
+ctx.lineTo(400, 250);   // line across to bottom-right
+ctx.closePath();         // line back to start (top center)
+
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+// Label the points
+ctx.fillStyle = '#ff2d7b';
+ctx.font = '12px monospace';
+ctx.fillText('moveTo(250, 30)', 255, 30);
+ctx.fillText('lineTo(100, 250)', 10, 265);
+ctx.fillText('lineTo(400, 250)', 350, 265);
+
+// Show the pen path with dotted arrows
+ctx.setLineDash([4, 4]);
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(250, 15);
+ctx.lineTo(250, 30);
+ctx.stroke();
+ctx.setLineDash([]);`;
+
+<CanvasRender
+  id="lines"
+  title="moveTo + lineTo Basics"
+  width={500}
+  height={300}
+  code={linesCode}
+/>
+
+## closePath: Connecting Back to Start
+
+<p><code>closePath()</code> draws a straight line from the current pen position back to the very first point of the current path (where you called <code>moveTo()</code> initially). It's how you close a shape cleanly.</p>
+
+export const closePathCode = `// WITHOUT closePath: notice the gap at bottom-left
+ctx.beginPath();
+ctx.moveTo(50, 50);
+ctx.lineTo(200, 50);
+ctx.lineTo(200, 200);
+ctx.lineTo(50, 200);
+// no closePath: the bottom-left corner is open!
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('no closePath()', 60, 240);
+ctx.fillText('gap here!', 10, 140);
+// Arrow pointing to gap
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(55, 135);
+ctx.lineTo(48, 115);
+ctx.stroke();
+
+// WITH closePath: clean closed shape
+ctx.beginPath();
+ctx.moveTo(280, 50);
+ctx.lineTo(430, 50);
+ctx.lineTo(430, 200);
+ctx.lineTo(280, 200);
+ctx.closePath();         // draws line back to (280,50)
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('with closePath()', 290, 240);`;
+
+<CanvasRender
+  id="close-path"
+  title="With and Without closePath"
+  width={500}
+  height={300}
+  code={closePathCode}
+/>
+
+<Concept>
+  <p><strong>Important note:</strong> <code>fill()</code> automatically closes the path for you (it has to, since you can't fill an open shape). But <code>stroke()</code> does NOT auto-close. So if you're stroking a shape and you want it closed, always call <code>closePath()</code> before <code>stroke()</code>.</p>
+</Concept>
+
+## fill() vs stroke(): Filling vs Outlining
+
+<p>After building a path, you have two choices for making it visible:</p>
+<ul>
+  <li><code>fill()</code> colors in the entire interior of the shape</li>
+  <li><code>stroke()</code> draws just the outline</li>
+</ul>
+<p>You can use both on the same path!</p>
+
+export const fillVsStrokeCode = `// Helper: draw a pentagon at (cx, cy)
+function pentagon(cx, cy, r) {
+  ctx.beginPath();
+  for (var i = 0; i < 5; i++) {
+    var angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+    var px = cx + r * Math.cos(angle);
+    var py = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// FILL only
+pentagon(90, 140, 65);
+ctx.fillStyle = '#00e5ff';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('fill()', 55, 240);
+
+// STROKE only
+pentagon(250, 140, 65);
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 3;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('stroke()', 210, 240);
+
+// BOTH fill and stroke
+pentagon(410, 140, 65);
+ctx.fillStyle = '#3fb950';
+ctx.fill();
+ctx.strokeStyle = '#c8c8d0';
+ctx.lineWidth = 3;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('fill + stroke', 355, 240);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('Tip: call fill() BEFORE stroke(),', 120, 280);
+ctx.fillText('so the stroke appears on top of the fill.', 105, 296);`;
+
+<CanvasRender
+  id="fill-vs-stroke"
+  title="fill() vs stroke() vs Both"
+  width={500}
+  height={300}
+  code={fillVsStrokeCode}
+/>
+
+## Arcs and Circles
+
+<p><code>arc(x, y, radius, startAngle, endAngle, counterclockwise)</code> draws a circular arc (a portion of a circle, or the whole circle). Angles are in <strong>radians</strong>, not degrees.</p>
+
+<Concept>
+  <p><strong>Radians cheat sheet:</strong></p>
+  <pre>{`    Degrees     Radians            Position on clock
+    ───────     ─────────────      ──────────────────
+    0           0                  3 o'clock (right)
+    90          Math.PI / 2        6 o'clock (bottom)
+    180         Math.PI            9 o'clock (left)
+    270         Math.PI * 1.5      12 o'clock (top)
+    360         Math.PI * 2        full circle
+
+    Formula: radians = degrees * Math.PI / 180
+
+                    270 / PI*1.5
+                         │
+                         │
+    180 / PI  ───────────●─────────── 0 (start)
+                         │
+                         │
+                    90 / PI/2
+
+    REMEMBER: 0 radians points RIGHT, not up!
+    And angles go CLOCKWISE (Y is flipped in canvas).`}</pre>
+</Concept>
+
+export const arcsCode = `// Full circle
+ctx.beginPath();
+ctx.arc(80, 80, 50, 0, Math.PI * 2);
+ctx.fillStyle = '#00e5ff';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('full circle', 42, 145);
+ctx.fillText('0 to PI*2', 45, 160);
+
+// Half circle (top half, from PI to 0)
+ctx.beginPath();
+ctx.arc(220, 80, 50, Math.PI, 0);
+ctx.fillStyle = '#ff2d7b';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('semicircle', 182, 145);
+ctx.fillText('PI to 0', 195, 160);
+
+// Quarter arc (stroke only)
+ctx.beginPath();
+ctx.arc(360, 80, 50, 0, Math.PI / 2);
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 4;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('quarter arc', 322, 145);
+ctx.fillText('0 to PI/2', 330, 160);
+
+// Pac-man: use moveTo to center, then arc, then closePath
+ctx.beginPath();
+ctx.moveTo(80, 250);
+ctx.arc(80, 250, 50, 0.3, Math.PI * 2 - 0.3);
+ctx.closePath();
+ctx.fillStyle = '#d29922';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('pac-man', 48, 320);
+
+// Ring (thick stroked circle)
+ctx.beginPath();
+ctx.arc(220, 250, 40, 0, Math.PI * 2);
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 10;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('ring (thick', 180, 310);
+ctx.fillText('stroke)', 195, 325);
+
+// Smiley face
+ctx.beginPath();
+ctx.arc(380, 250, 50, 0, Math.PI * 2);
+ctx.fillStyle = '#d29922';
+ctx.fill();
+ctx.fillStyle = '#0a0a0f';
+ctx.beginPath();
+ctx.arc(365, 240, 6, 0, Math.PI * 2);
+ctx.fill();
+ctx.beginPath();
+ctx.arc(395, 240, 6, 0, Math.PI * 2);
+ctx.fill();
+ctx.beginPath();
+ctx.arc(380, 260, 22, 0.2, Math.PI - 0.2);
+ctx.strokeStyle = '#0a0a0f';
+ctx.lineWidth = 3;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('combine arcs', 340, 320);`;
+
+<CanvasRender
+  id="arcs"
+  title="arc(): Circles and Partial Arcs"
+  width={500}
+  height={350}
+  code={arcsCode}
+/>
+
+## Arc Direction: Clockwise vs Counterclockwise
+
+<p>The last parameter of <code>arc()</code> is <code>counterclockwise</code> (default: <code>false</code> = clockwise). This controls <em>which way</em> the arc sweeps from the start angle to the end angle.</p>
+
+export const arcDirectionCode = `var startAngle = 0;
+var endAngle = Math.PI * 1.2;
+
+// Clockwise (default, counterclockwise = false)
+ctx.beginPath();
+ctx.arc(140, 130, 80, startAngle, endAngle, false);
+ctx.lineTo(140, 130);   // line to center
+ctx.closePath();
+ctx.fillStyle = '#00e5ff';
+ctx.fill();
+ctx.strokeStyle = '#c8c8d0';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('clockwise (default)', 52, 240);
+ctx.fillText('false', 110, 260);
+
+// Counterclockwise (counterclockwise = true)
+ctx.beginPath();
+ctx.arc(360, 130, 80, startAngle, endAngle, true);
+ctx.lineTo(360, 130);   // line to center
+ctx.closePath();
+ctx.fillStyle = '#ff2d7b';
+ctx.fill();
+ctx.strokeStyle = '#c8c8d0';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('counterclockwise', 285, 240);
+ctx.fillText('true', 340, 260);
+
+// Show the start/end angles
+ctx.fillStyle = '#3fb950';
+ctx.font = '11px monospace';
+ctx.fillText('Same start & end angles,', 140, 20);
+ctx.fillText('different sweep direction!', 140, 36);`;
+
+<CanvasRender
+  id="arc-direction"
+  title="Clockwise vs Counterclockwise"
+  width={500}
+  height={280}
+  code={arcDirectionCode}
+/>
+
+<Concept>
+  <p><strong>When does direction matter?</strong> For a full circle (0 to PI*2), it doesn't matter. But for partial arcs (pie charts, gauges, pac-man), the direction determines which "slice" of the circle you get. Same start and end angle, but clockwise gives you the big slice while counterclockwise gives the small slice (or vice versa).</p>
+</Concept>
+
+## rect(): Rectangle as a Path
+
+<p>We used <code>fillRect()</code> and <code>strokeRect()</code> in Lesson 1, but there's also <code>rect(x, y, width, height)</code> which adds a rectangle to the current <em>path</em> without drawing it immediately. This lets you combine rectangles with other path operations.</p>
+
+export const rectPathCode = `// Build a path with multiple rectangles
+ctx.beginPath();
+ctx.rect(30, 30, 100, 80);      // first rectangle
+ctx.rect(70, 70, 100, 80);      // second (overlapping)
+ctx.rect(110, 110, 100, 80);    // third (overlapping)
+
+// Fill them all at once (one path, one fill call)
+ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
+ctx.fill();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Compare with fillRect (which draws immediately, separate)
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(300, 30, 100, 80);
+ctx.fillRect(340, 70, 100, 80);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('rect() = part of a path', 30, 220);
+ctx.fillText('fillRect() = draws immediately', 260, 220);`;
+
+<CanvasRender
+  id="rect-path"
+  title="rect(): Add Rectangle to a Path"
+  width={500}
+  height={250}
+  code={rectPathCode}
+/>
+
+## ellipse(): Ovals and Rotated Circles
+
+<p><code>ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)</code> is like <code>arc()</code> but allows different horizontal and vertical radii, plus rotation. The egg example below also uses <code>save()</code>, <code>translate()</code>, <code>scale()</code>, and <code>restore()</code> to stretch a circle into an oval; these transform methods will be covered in a later lesson.</p>
+
+export const ellipseCode = `// A basic oval (wider than tall)
+ctx.beginPath();
+ctx.ellipse(100, 100, 70, 40, 0, 0, Math.PI * 2);
+ctx.fillStyle = '#00e5ff';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('radiusX=70', 55, 165);
+ctx.fillText('radiusY=40', 55, 180);
+
+// A tall oval
+ctx.beginPath();
+ctx.ellipse(260, 100, 35, 70, 0, 0, Math.PI * 2);
+ctx.fillStyle = '#ff2d7b';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('radiusX=35', 218, 185);
+ctx.fillText('radiusY=70', 218, 200);
+
+// A rotated ellipse (45 degrees)
+ctx.beginPath();
+ctx.ellipse(420, 100, 70, 30, Math.PI / 4, 0, Math.PI * 2);
+ctx.fillStyle = '#3fb950';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('rotated 45deg', 370, 185);
+
+// Egg shape: scale a circle to create an elliptical egg
+ctx.beginPath();
+ctx.save();
+ctx.translate(180, 260);
+ctx.scale(1, 1.3);
+ctx.arc(0, 0, 35, 0, Math.PI * 2);
+ctx.restore();
+ctx.fillStyle = '#c8c8d0';
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('egg (scaled arc)', 130, 255);`;
+
+<CanvasRender
+  id="ellipse"
+  title="ellipse(): Beyond Circles"
+  width={500}
+  height={300}
+  code={ellipseCode}
+/>
+
+## Quadratic Curves: One Control Point
+
+<p><code>quadraticCurveTo(cpx, cpy, endX, endY)</code> draws a curve from the current pen position, bending toward a <strong>control point</strong>, and ending at the endpoint.</p>
+
+<Concept>
+  <p><strong>The rubber band analogy:</strong></p>
+  <pre>{`    Imagine a rubber band pinned at START and END.
+    The control point is a finger pulling the band sideways.
+
+    control point (cpx, cpy)
+         ●
+        / \\
+       /   \\         The curve bends TOWARD
+      /     \\        the control point but
+     /       \\       never actually touches it
+    ●─────────●      (usually).
+   START      END
+
+    The further the control point is from
+    the straight line, the more the curve bends.`}</pre>
+</Concept>
+
+export const quadraticCode = `var startX = 50, startY = 250;
+var cpX = 250, cpY = 30;      // control point
+var endX = 450, endY = 250;
+
+// Draw the curve
+ctx.beginPath();
+ctx.moveTo(startX, startY);
+ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+// Show control point and guide lines (dashed)
+ctx.setLineDash([5, 5]);
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(startX, startY);
+ctx.lineTo(cpX, cpY);
+ctx.lineTo(endX, endY);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Label the three points
+ctx.fillStyle = '#3fb950';
+ctx.beginPath(); ctx.arc(startX, startY, 6, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI * 2); ctx.fill();
+ctx.fillStyle = '#ff2d7b';
+ctx.beginPath(); ctx.arc(cpX, cpY, 6, 0, Math.PI * 2); ctx.fill();
+
+ctx.font = '12px monospace';
+ctx.fillStyle = '#3fb950';
+ctx.fillText('start', startX - 5, startY + 20);
+ctx.fillText('end', endX - 15, endY + 20);
+ctx.fillStyle = '#ff2d7b';
+ctx.fillText('control point', cpX - 35, cpY - 12);
+ctx.fillText('(pulls the curve)', cpX - 45, cpY + 20);`;
+
+<CanvasRender
+  id="quadratic"
+  title="quadraticCurveTo: One Control Point"
+  width={500}
+  height={300}
+  code={quadraticCode}
+/>
+
+## Bezier Curves: Two Control Points
+
+<p><code>bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY)</code> is the more powerful cousin of quadratic curves. With <strong>two</strong> control points, you can make S-curves, loops, and the smooth curves used in fonts and vector graphics.</p>
+
+<Concept>
+  <p><strong>How two control points shape a curve:</strong></p>
+  <pre>{`    CP1 controls the      CP2 controls the
+    START of the curve    END of the curve
+        ●                     ●
+       ╱                       ╲
+      ╱   The curve leaves      ╲
+     ╱    START heading          ╲
+    ●     toward CP1, then   ────●
+   START  bends to arrive       END
+          from CP2's direction
+
+    Think of it as: CP1 says "leave this way"
+                    CP2 says "arrive this way"
+
+    S-curve (control points on opposite sides):
+     ● CP1
+      ╲
+       ╲    ╱────╲
+    ●───╲──╱      ╲──●
+   START            END
+                  ╱
+                 ╱
+                ● CP2`}</pre>
+</Concept>
+
+export const bezierCode = `var sx = 50, sy = 150;       // start point
+var cp1x = 150, cp1y = 30;   // control point 1
+var cp2x = 350, cp2y = 280;  // control point 2
+var ex = 450, ey = 150;      // end point
+
+// The S-curve
+ctx.beginPath();
+ctx.moveTo(sx, sy);
+ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, ex, ey);
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+// Guide lines from start->cp1 and end->cp2
+ctx.setLineDash([5, 5]);
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(sx, sy);
+ctx.lineTo(cp1x, cp1y);
+ctx.stroke();
+ctx.beginPath();
+ctx.moveTo(ex, ey);
+ctx.lineTo(cp2x, cp2y);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Label all four points
+ctx.fillStyle = '#3fb950';
+ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fill();
+ctx.fillStyle = '#ff2d7b';
+ctx.beginPath(); ctx.arc(cp1x, cp1y, 5, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.arc(cp2x, cp2y, 5, 0, Math.PI * 2); ctx.fill();
+
+ctx.font = '12px monospace';
+ctx.fillStyle = '#3fb950';
+ctx.fillText('start', sx - 5, sy - 12);
+ctx.fillText('end', ex - 10, ey - 12);
+ctx.fillStyle = '#ff2d7b';
+ctx.fillText('cp1 (pulls start)', cp1x + 8, cp1y);
+ctx.fillText('cp2 (pulls end)', cp2x + 8, cp2y);`;
+
+<CanvasRender
+  id="bezier"
+  title="bezierCurveTo: Two Control Points"
+  width={500}
+  height={300}
+  code={bezierCode}
+/>
+
+## Fill Rules: nonzero vs evenodd
+
+<p>When paths overlap or have holes, how does Canvas decide what's "inside" the shape? That's the <strong>fill rule</strong>. You pass it to <code>fill()</code>.</p>
+
+export const fillRulesCode = `// Draw the same star shape twice with different fill rules
+
+// Helper: draw a 5-pointed star (overlapping lines)
+function star(cx, cy, r) {
+  ctx.beginPath();
+  for (var i = 0; i < 5; i++) {
+    // Connect every other point of a pentagon = star
+    var angle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+    var px = cx + r * Math.cos(angle);
+    var py = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// LEFT: nonzero (default): fills everything
+star(140, 150, 100);
+ctx.fillStyle = '#00e5ff';
+ctx.fill('nonzero');
+ctx.strokeStyle = '#c8c8d0';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText("fill('nonzero')", 62, 275);
+ctx.fillText('fills everything', 62, 293);
+
+// RIGHT: evenodd: center is "outside" (creates hole)
+star(360, 150, 100);
+ctx.fillStyle = '#ff2d7b';
+ctx.fill('evenodd');
+ctx.strokeStyle = '#c8c8d0';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText("fill('evenodd')", 285, 275);
+ctx.fillText('center has a hole!', 278, 293);`;
+
+<CanvasRender
+  id="fill-rules"
+  title="nonzero vs evenodd Fill Rules"
+  width={500}
+  height={300}
+  code={fillRulesCode}
+/>
+
+<Concept>
+  <p><strong>When to use each:</strong></p>
+  <pre>{`    nonzero (default):
+    - Fills everything enclosed by the path
+    - Use for simple shapes, most of the time
+
+    evenodd:
+    - Counts how many times a ray crosses the path
+    - Odd crossings = inside (filled)
+    - Even crossings = outside (not filled)
+    - Use for shapes with holes (donuts, stars, etc.)`}</pre>
+</Concept>
+
+## Practical Shape: Rounded Rectangle
+
+<p>Rounded rectangles are everywhere in UI design (buttons, cards, tooltips). Modern browsers support <code>ctx.roundRect(x, y, width, height, radii)</code> (since 2023), but building one yourself from lines and arcs is great practice for learning path primitives.</p>
+
+export const roundedRectCode = `// Rounded rectangle function
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  // Start at top-left, after the corner radius
+  ctx.moveTo(x + r, y);
+  // Top edge + top-right corner
+  ctx.lineTo(x + w - r, y);
+  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+  // Right edge + bottom-right corner
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+  // Bottom edge + bottom-left corner
+  ctx.lineTo(x + r, y + h);
+  ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+  // Left edge + top-left corner
+  ctx.lineTo(x, y + r);
+  ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+  ctx.closePath();
+}
+
+// Small radius
+roundRect(20, 20, 200, 80, 5);
+ctx.fillStyle = '#1a1a2a';
+ctx.fill();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('radius = 5', 70, 65);
+
+// Medium radius
+roundRect(20, 120, 200, 80, 20);
+ctx.fillStyle = '#1a1a2a';
+ctx.fill();
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('radius = 20', 65, 165);
+
+// Large radius (pill shape)
+roundRect(20, 220, 200, 60, 30);
+ctx.fillStyle = '#1a1a2a';
+ctx.fill();
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('radius = 30 (pill)', 40, 255);
+
+// Button example
+roundRect(280, 40, 180, 50, 12);
+ctx.fillStyle = '#238636';
+ctx.fill();
+ctx.fillStyle = '#ffffff';
+ctx.font = 'bold 16px sans-serif';
+ctx.fillText('Click Me', 325, 72);
+
+// Card example
+roundRect(280, 120, 180, 150, 16);
+ctx.fillStyle = '#12121a';
+ctx.fill();
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 1;
+ctx.stroke();
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 14px sans-serif';
+ctx.fillText('Card Title', 300, 155);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px sans-serif';
+ctx.fillText('Some content goes', 300, 180);
+ctx.fillText('here in the card.', 300, 198);`;
+
+<CanvasRender
+  id="rounded-rect"
+  title="Building a Rounded Rectangle"
+  width={500}
+  height={300}
+  code={roundedRectCode}
+/>
+
+## Practical Shape: Speech Bubble
+
+<p>A speech bubble is a rounded rectangle with a triangular tail, combining lines, arcs, and curves in one path.</p>
+
+export const speechBubbleCode = `// Speech bubble with tail
+function speechBubble(x, y, w, h, r, tailX, tailY) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+
+  // Bottom edge with tail
+  ctx.lineTo(tailX + 20, y + h);
+  ctx.lineTo(tailX, tailY);          // tip of tail
+  ctx.lineTo(tailX - 10, y + h);
+
+  ctx.lineTo(x + r, y + h);
+  ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+  ctx.lineTo(x, y + r);
+  ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+  ctx.closePath();
+}
+
+// Draw a speech bubble
+speechBubble(50, 30, 300, 100, 15, 120, 170);
+ctx.fillStyle = '#1a1a2a';
+ctx.fill();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Add text inside
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '16px sans-serif';
+ctx.fillText('Hello! I am a speech', 75, 70);
+ctx.fillText('bubble made of paths!', 75, 95);
+
+// Second bubble (right side, different tail position)
+speechBubble(200, 170, 260, 80, 12, 400, 285);
+ctx.fillStyle = '#12121a';
+ctx.fill();
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '14px sans-serif';
+ctx.fillText('The tail is just lineTo()', 220, 205);
+ctx.fillText('calls in the middle of the path.', 220, 225);`;
+
+<CanvasRender
+  id="speech-bubble"
+  title="Speech Bubble Shape"
+  width={500}
+  height={300}
+  code={speechBubbleCode}
+/>
+
+## Practical Shape: Arrows
+
+<p>Arrows are useful for diagrams, flowcharts, and UI. Here's how to build them from paths.</p>
+
+export const arrowsCode = `// Simple arrow function
+function arrow(fromX, fromY, toX, toY, headLen) {
+  var dx = toX - fromX;
+  var dy = toY - fromY;
+  var angle = Math.atan2(dy, dx);
+  headLen = headLen || 15;
+
+  // Arrow shaft
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  ctx.stroke();
+
+  // Arrow head
+  ctx.beginPath();
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(
+    toX - headLen * Math.cos(angle - Math.PI / 6),
+    toY - headLen * Math.sin(angle - Math.PI / 6)
+  );
+  ctx.lineTo(
+    toX - headLen * Math.cos(angle + Math.PI / 6),
+    toY - headLen * Math.sin(angle + Math.PI / 6)
+  );
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Horizontal arrow
+ctx.strokeStyle = '#00e5ff';
+ctx.fillStyle = '#00e5ff';
+ctx.lineWidth = 3;
+arrow(30, 50, 200, 50, 18);
+
+// Diagonal arrow
+ctx.strokeStyle = '#ff2d7b';
+ctx.fillStyle = '#ff2d7b';
+arrow(30, 100, 180, 200, 18);
+
+// Vertical arrow
+ctx.strokeStyle = '#3fb950';
+ctx.fillStyle = '#3fb950';
+arrow(250, 30, 250, 250, 18);
+
+// Curved idea: label the arrows
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('horizontal', 60, 40);
+ctx.fillText('diagonal', 50, 130);
+ctx.fillText('vertical', 260, 140);
+
+// A thick block arrow (filled polygon)
+ctx.beginPath();
+ctx.moveTo(320, 100);
+ctx.lineTo(430, 100);
+ctx.lineTo(430, 80);
+ctx.lineTo(480, 130);   // arrow tip
+ctx.lineTo(430, 180);
+ctx.lineTo(430, 160);
+ctx.lineTo(320, 160);
+ctx.closePath();
+ctx.fillStyle = '#d29922';
+ctx.fill();
+ctx.strokeStyle = '#c8c8d0';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+ctx.fillStyle = '#0a0a0f';
+ctx.font = 'bold 14px monospace';
+ctx.fillText('NEXT', 350, 135);`;
+
+<CanvasRender
+  id="arrows"
+  title="Drawing Arrows"
+  width={500}
+  height={300}
+  code={arrowsCode}
+/>
+
+## Practical Shape: Regular Polygons
+
+<p>With a simple loop, you can draw any regular polygon (triangle, pentagon, hexagon, octagon...) by computing points around a circle.</p>
+
+export const polygonsCode = `// Draw a regular polygon with n sides
+function polygon(cx, cy, radius, sides) {
+  ctx.beginPath();
+  for (var i = 0; i < sides; i++) {
+    // Start from the top (-PI/2 rotates it upright)
+    var angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
+    var px = cx + radius * Math.cos(angle);
+    var py = cy + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+var shapes = [
+  { cx: 70,  cy: 80, r: 45, sides: 3, color: '#ff2d7b', label: '3 sides' },
+  { cx: 180, cy: 80, r: 45, sides: 5, color: '#00e5ff', label: '5 sides' },
+  { cx: 290, cy: 80, r: 45, sides: 6, color: '#3fb950', label: '6 sides' },
+  { cx: 400, cy: 80, r: 45, sides: 8, color: '#d29922', label: '8 sides' },
+  { cx: 125, cy: 220, r: 50, sides: 10, color: '#ff2d7b', label: '10 sides' },
+  { cx: 270, cy: 220, r: 50, sides: 16, color: '#bc8cff', label: '16 sides' },
+  { cx: 410, cy: 220, r: 50, sides: 32, color: '#7a7a8a', label: '32 (circle!)' }
+];
+
+shapes.forEach(function(s) {
+  polygon(s.cx, s.cy, s.r, s.sides);
+  ctx.fillStyle = s.color;
+  ctx.fill();
+  ctx.strokeStyle = '#c8c8d0';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '11px monospace';
+  ctx.fillText(s.label, s.cx - 25, s.cy + s.r + 18);
+});`;
+
+<CanvasRender
+  id="polygons"
+  title="Regular Polygons from a Function"
+  width={500}
+  height={300}
+  code={polygonsCode}
+/>
+
+<Concept>
+  <p><strong>Notice:</strong> As the number of sides increases, the polygon starts looking like a circle! In fact, <code>arc()</code> is just a polygon with so many sides you can't see the edges. This is how computers draw circles; they approximate them with many tiny straight lines.</p>
+</Concept>
+
+## Practical Shape: Gear
+
+<p>A gear combines the polygon idea with alternating inner and outer radii, the same approach as the star in the fill rules demo, but with more teeth.</p>
+
+export const gearCode = `// Draw a gear with n teeth
+function gear(cx, cy, outerR, innerR, teeth) {
+  var points = teeth * 2;
+  ctx.beginPath();
+  for (var i = 0; i < points; i++) {
+    var r = (i % 2 === 0) ? outerR : innerR;
+    var angle = (i * Math.PI / teeth) - Math.PI / 2;
+    var px = cx + r * Math.cos(angle);
+    var py = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// Large gear
+gear(170, 170, 130, 100, 12);
+ctx.fillStyle = '#1a1a2a';
+ctx.fill();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Center hole
+ctx.beginPath();
+ctx.arc(170, 170, 30, 0, Math.PI * 2);
+ctx.fillStyle = '#0a0a0f';
+ctx.fill();
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Small gear (meshed)
+gear(340, 120, 60, 45, 8);
+ctx.fillStyle = '#1a1a2a';
+ctx.fill();
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Center hole
+ctx.beginPath();
+ctx.arc(340, 120, 12, 0, Math.PI * 2);
+ctx.fillStyle = '#0a0a0f';
+ctx.fill();
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Labels
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('12 teeth', 140, 330);
+ctx.fillText('8 teeth', 310, 210);
+ctx.fillText('Same approach as', 300, 270);
+ctx.fillText('regular polygons,', 300, 288);
+ctx.fillText('alternating radius!', 300, 306);`;
+
+<CanvasRender
+  id="gear"
+  title="Gear Shape"
+  width={500}
+  height={350}
+  code={gearCode}
+/>
+
+## Preview: isPointInPath() for Hit Testing
+
+<p>Canvas doesn't have built-in "click on a shape" like DOM elements. But <code>isPointInPath(x, y)</code> tells you whether a point is inside the current path. This is the foundation for making shapes interactive (covered fully in Lesson 7).</p>
+
+export const hitTestCode = `// Draw a circle that responds to clicks
+var circleX = 250, circleY = 150, circleR = 80;
+var message = 'Click anywhere!';
+var messageColor = '#7a7a8a';
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 300);
+
+  // Draw the circle
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, circleR, 0, Math.PI * 2);
+  ctx.fillStyle = '#00e5ff';
+  ctx.fill();
+  ctx.strokeStyle = '#c8c8d0';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Label
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText('Click me!', circleX - 45, circleY + 6);
+
+  // Message at the bottom
+  ctx.fillStyle = messageColor;
+  ctx.font = '14px monospace';
+  ctx.fillText(message, 20, 280);
+}
+
+draw();
+
+// Listen for clicks on the canvas
+addListener(canvas, 'click', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var mx = e.clientX - rect.left;
+  var my = e.clientY - rect.top;
+
+  // Build the circle path again for hit testing
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, circleR, 0, Math.PI * 2);
+
+  if (ctx.isPointInPath(mx, my)) {
+    message = 'HIT! You clicked inside the circle!';
+    messageColor = '#3fb950';
+  } else {
+    message = 'MISS! Click was at (' + Math.round(mx) + ', ' + Math.round(my) + ')';
+    messageColor = '#ff2d7b';
+  }
+  draw();
+});`;
+
+<CanvasRender
+  id="hit-test"
+  title="isPointInPath(): Click Detection Preview"
+  width={500}
+  height={300}
+  code={hitTestCode}
+/>
+
+<Concept>
+  <p><strong>How it works:</strong> After building a path (but before or after drawing it), call <code>ctx.isPointInPath(x, y)</code>. It returns <code>true</code> if the point is inside the path, <code>false</code> otherwise. This works for ANY shape: circles, polygons, custom paths, even bezier curves!</p>
+</Concept>
+
+## Putting It All Together: A Complete Scene
+
+<p>Let's combine everything from this lesson into a single drawing that uses lines, arcs, curves, and custom shapes.</p>
+
+export const combinedSceneCode = `// Sky gradient (faked with horizontal stripes)
+var skyColors = ['#0a1628','#0d1f3c','#102850','#1a3a6a','#2a5a8a','#3a7aaa'];
+for (var i = 0; i < skyColors.length; i++) {
+  ctx.fillStyle = skyColors[i];
+  ctx.fillRect(0, i * 35, 500, 35);
+}
+
+// Sun (circle)
+ctx.beginPath();
+ctx.arc(400, 80, 35, 0, Math.PI * 2);
+ctx.fillStyle = '#d29922';
+ctx.fill();
+
+// Sun rays
+ctx.strokeStyle = '#d29922';
+ctx.lineWidth = 2;
+for (var i = 0; i < 12; i++) {
+  var angle = i * Math.PI / 6;
+  ctx.beginPath();
+  ctx.moveTo(400 + 42 * Math.cos(angle), 80 + 42 * Math.sin(angle));
+  ctx.lineTo(400 + 55 * Math.cos(angle), 80 + 55 * Math.sin(angle));
+  ctx.stroke();
+}
+
+// Mountain 1 (back, larger)
+ctx.beginPath();
+ctx.moveTo(0, 250);
+ctx.lineTo(180, 100);
+ctx.lineTo(360, 250);
+ctx.closePath();
+ctx.fillStyle = '#2a3a4a';
+ctx.fill();
+
+// Snow cap on mountain 1
+ctx.beginPath();
+ctx.moveTo(155, 120);
+ctx.lineTo(180, 100);
+ctx.lineTo(205, 120);
+ctx.quadraticCurveTo(180, 130, 155, 120);
+ctx.fillStyle = '#c8c8d0';
+ctx.fill();
+
+// Mountain 2 (front, smaller)
+ctx.beginPath();
+ctx.moveTo(200, 250);
+ctx.lineTo(350, 140);
+ctx.lineTo(500, 250);
+ctx.closePath();
+ctx.fillStyle = '#1a2a3a';
+ctx.fill();
+
+// Snow cap on mountain 2
+ctx.beginPath();
+ctx.moveTo(330, 155);
+ctx.lineTo(350, 140);
+ctx.lineTo(370, 155);
+ctx.quadraticCurveTo(350, 165, 330, 155);
+ctx.fillStyle = '#c8c8d0';
+ctx.fill();
+
+// Lake (ellipse)
+ctx.beginPath();
+ctx.ellipse(250, 290, 220, 40, 0, 0, Math.PI * 2);
+ctx.fillStyle = 'rgba(42, 90, 138, 0.7)';
+ctx.fill();
+
+// Lake reflection shimmer
+ctx.strokeStyle = 'rgba(200, 200, 208, 0.15)';
+ctx.lineWidth = 1;
+for (var i = 0; i < 8; i++) {
+  ctx.beginPath();
+  var lx = 80 + i * 45;
+  ctx.moveTo(lx, 280 + Math.random() * 15);
+  ctx.lineTo(lx + 20 + Math.random() * 15, 280 + Math.random() * 15);
+  ctx.stroke();
+}
+
+// Ground
+ctx.fillStyle = '#1a3a1a';
+ctx.fillRect(0, 310, 500, 40);
+
+// Pine trees (triangles + rectangles)
+function tree(x, y, size) {
+  // Trunk
+  ctx.fillStyle = '#5d3a1a';
+  ctx.fillRect(x - size * 0.1, y, size * 0.2, size * 0.4);
+  // Canopy (3 triangles stacked)
+  ctx.fillStyle = '#1a5a2a';
+  for (var level = 0; level < 3; level++) {
+    var w = size * (0.6 - level * 0.1);
+    var h = size * 0.35;
+    var ty = y - level * h * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(x, ty - h);
+    ctx.lineTo(x - w / 2, ty);
+    ctx.lineTo(x + w / 2, ty);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+tree(40, 300, 50);
+tree(80, 305, 35);
+tree(450, 300, 45);
+tree(480, 308, 30);
+
+// Birds (simple bezier V shapes)
+ctx.strokeStyle = '#0a0a0f';
+ctx.lineWidth = 2;
+var birds = [[120,50],[160,35],[300,55],[340,70]];
+birds.forEach(function(b) {
+  ctx.beginPath();
+  ctx.moveTo(b[0] - 10, b[1] + 5);
+  ctx.quadraticCurveTo(b[0], b[1] - 5, b[0] + 2, b[1] + 3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(b[0] + 2, b[1] + 3);
+  ctx.quadraticCurveTo(b[0] + 5, b[1] - 5, b[0] + 12, b[1] + 5);
+  ctx.stroke();
+});`;
+
+<CanvasRender
+  id="combined-scene"
+  layout="stack"
+  title="Paths in Action: Mountains and Lake"
+  width={500}
+  height={350}
+  code={combinedSceneCode}
+/>
+
+## Challenges
+
+<Concept>
+  <p><strong>Challenge 1: Draw a House with Paths</strong></p>
+  <pre>{`    Use paths (not fillRect) to draw:
+    - A triangular roof (moveTo + lineTo + closePath + fill)
+    - A rectangular wall (rect or 4 lineTo calls)
+    - A circular window (arc)
+    - An arched doorway (lineTo + arc)
+
+    This practices combining different path types.`}</pre>
+</Concept>
+
+<Concept>
+  <p><strong>Challenge 2: Draw a Pie Chart</strong></p>
+  <pre>{`    Given data like: var data = [30, 20, 25, 15, 10];
+    Draw a pie chart:
+
+    - Each slice is an arc (use moveTo to center, then arc)
+    - Calculate angles: slice / total * Math.PI * 2
+    - Use closePath() + fill() for each slice
+    - Different color per slice
+
+    Hint:
+      var total = 100;
+      var startAngle = 0;
+      data.forEach(function(value) {
+        var sliceAngle = (value / total) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fill();
+        startAngle += sliceAngle;
+      });`}</pre>
+</Concept>
+
+<Concept>
+  <p><strong>Challenge 3: Draw Your Initials</strong></p>
+  <pre>{`    Use lineTo and bezierCurveTo to draw your initials
+    as custom letter shapes (not ctx.fillText).
+
+    For example, the letter "S" could be two arcs:
+      ctx.beginPath();
+      ctx.arc(x, y1, r, Math.PI, 0);       // top curve
+      ctx.arc(x, y2, r, 0, Math.PI);       // bottom curve (reversed)
+      ctx.stroke();
+
+    For straight letters (L, T, H), use lineTo.
+    For curved letters (S, C, O), use arc or bezierCurveTo.`}</pre>
+</Concept>
+
+<Concept>
+  <p><strong>What you learned in this lesson:</strong></p>
+  <pre>{`    Concept                How to do it
+    ────────────────────── ─────────────────────────────────────
+    Start a new path       ctx.beginPath()
+    Move pen (no drawing)  ctx.moveTo(x, y)
+    Straight line          ctx.lineTo(x, y)
+    Close the shape        ctx.closePath()
+    Fill the shape         ctx.fill()  or  ctx.fill('evenodd')
+    Outline the shape      ctx.stroke()
+    Circle/arc             ctx.arc(x, y, r, start, end, ccw?)
+    Oval                   ctx.ellipse(x, y, rx, ry, rot, s, e)
+    Rectangle path         ctx.rect(x, y, w, h)
+    Simple curve           ctx.quadraticCurveTo(cpx, cpy, x, y)
+    Complex curve          ctx.bezierCurveTo(c1x,c1y,c2x,c2y,x,y)
+    Hit testing            ctx.isPointInPath(x, y)
+
+    Key ideas:
+    - ALWAYS call beginPath() before a new shape
+    - Path commands are invisible: fill()/stroke() makes them real
+    - fill() auto-closes paths; stroke() does not
+    - Angles are in RADIANS (PI = 180 degrees)
+    - Combine line, arc, and curve calls in one path for complex shapes`}</pre>
+</Concept>
+
+<LessonNav
+  prev={{ href: "/wiki/canvas-lab/01-basics", title: "Basics" }}
+  next={{ href: "/wiki/canvas-lab/03-colors", title: "Colors & Styles" }}
+/>

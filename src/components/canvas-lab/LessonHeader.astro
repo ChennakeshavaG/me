@@ -1,0 +1,12 @@
+---
+interface Props {
+  number: number;
+  total?: number;
+}
+
+const { number, total = 9 } = Astro.props;
+---
+
+<div class="cl-lesson-header">
+  <div class="cl-lesson-number">Lesson {number} of {total}</div>
+</div>

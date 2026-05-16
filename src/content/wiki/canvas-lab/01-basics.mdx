@@ -1,0 +1,592 @@
+---
+type: blog
+title: "Basics"
+description: "Drawing your first shapes with fillRect, strokeRect, and clearRect."
+createdAt: 2026-05-14
+tags: [canvas]
+category: "Learn Canvas"
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={1} />
+
+<p>In the <a href="/wiki/canvas-lab/00-foundation">Foundation lesson</a> you learned what Canvas is, how the coordinate system works, and what the <code>ctx</code> object does. Now it's time to draw. This lesson covers the three rectangle methods, the simplest way to put shapes on screen, plus colors, draw order, and practical examples.</p>
+
+## fillRect: Drawing Filled Rectangles
+
+<p>The simplest drawing command is <code>fillRect(x, y, width, height)</code>. It fills a rectangle with the current <code>fillStyle</code> color. You'll also see <code>ctx.fillText(text, x, y)</code> used in many demos to add labels; it draws a string at the given position using the current <code>ctx.font</code> and <code>fillStyle</code>.</p>
+
+<Concept>
+<p><strong>fillRect parameters:</strong></p>
+<pre>{`    ctx.fillRect(x, y, width, height)
+                 │  │    │       │
+                 │  │    │       └── how tall (in pixels)
+                 │  │    └────────── how wide (in pixels)
+                 │  └─────────────── Y of the top-left corner
+                 └────────────────── X of the top-left corner
+
+    Example: ctx.fillRect(50, 30, 200, 100)
+
+    (50,30) ─────────── 200px ──────────┐
+       │                               │
+      100px                            │
+       │                               │
+       └───────────────────────────────┘
+                                 (250,130)`}</pre>
+</Concept>
+
+export const fillRectCode = `// First, set the fill color
+ctx.fillStyle = '#00e5ff';
+// Draw a rectangle at (50,50), 200 wide, 100 tall
+ctx.fillRect(50, 50, 200, 100);
+
+// Change color and draw another
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(150, 100, 200, 100);
+
+// Semi-transparent rectangle (the 0.6 means 60% opacity)
+ctx.fillStyle = 'rgba(63, 185, 80, 0.6)';
+ctx.fillRect(250, 50, 200, 150);
+
+// Label the first rectangle
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '12px monospace';
+ctx.fillText('fillRect(50, 50, 200, 100)', 55, 95);`;
+
+<CanvasRender
+  id="fill-rect"
+  title="fillRect(x, y, width, height)"
+  width={500}
+  height={300}
+  code={fillRectCode}
+/>
+
+<Concept variant="note">
+**Try this:** Change the first rectangle's color to `'#ff2d7b'` and make its width `300`. Hit Run. Notice how the second rectangle draws on top, and its `rgba` transparency lets the first one show through.
+</Concept>
+
+## fillStyle: Color Formats Explained
+
+<p>Before drawing, you set the color with <code>ctx.fillStyle</code>. Canvas accepts many color formats. Here are the most common ones:</p>
+
+export const colorFormatsCode = `var y = 20;
+var swatchSize = 40;
+
+function swatch(color, label, description) {
+  ctx.fillStyle = color;
+  ctx.fillRect(20, y, swatchSize, swatchSize);
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(20, y, swatchSize, swatchSize);
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText(label, 75, y + 18);
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText(description, 75, y + 35);
+  y += 55;
+}
+
+swatch('tomato', "'tomato'", 'Named color (140+ built-in names)');
+swatch('#00e5ff', "'#00e5ff'", 'Hex: #RRGGBB (most common on web)');
+swatch('#f0f', "'#f0f'", 'Hex shorthand: #RGB (same as #ff00ff)');
+swatch('rgb(210, 153, 34)', "'rgb(210, 153, 34)'", 'RGB: values 0-255 for Red, Green, Blue');
+swatch('rgba(0, 229, 255, 0.5)', "'rgba(0,229,255,0.5)'", 'RGBA: like RGB but with alpha (0=invisible, 1=solid)');
+swatch('hsl(280, 70%, 60%)', "'hsl(280, 70%, 60%)'", 'HSL: Hue (0-360), Saturation %, Lightness %');`;
+
+<CanvasRender
+  id="color-formats"
+  title="Color Formats Visual Reference"
+  width={500}
+  height={350}
+  code={colorFormatsCode}
+/>
+
+<Concept>
+<p><strong>Which format should I use?</strong> For beginners, <strong>named colors</strong> (like <code>'red'</code>, <code>'dodgerblue'</code>) are easiest. For precise control, use <strong>hex codes</strong> (<code>'#00e5ff'</code>). When you need transparency, use <strong>rgba</strong>. The <code>fillStyle</code> stays set until you change it; it's like dipping your brush in paint.</p>
+</Concept>
+
+## strokeRect: Outlined Rectangles
+
+<p><code>strokeRect(x, y, width, height)</code> draws just the <strong>outline</strong> of a rectangle, without filling the inside. You control the outline color with <code>strokeStyle</code>, thickness with <code>lineWidth</code>, and pattern with <code>setLineDash([dashLength, gapLength])</code> for dashed or dotted lines.</p>
+
+export const strokeRectCode = `// Thin outline (2px)
+ctx.strokeStyle = '#00e5ff';
+ctx.lineWidth = 2;
+ctx.strokeRect(30, 30, 120, 80);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('lineWidth = 2', 40, 135);
+
+// Medium outline (5px)
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 5;
+ctx.strokeRect(180, 30, 120, 80);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('lineWidth = 5', 190, 135);
+
+// Thick outline (10px)
+ctx.strokeStyle = '#3fb950';
+ctx.lineWidth = 10;
+ctx.strokeRect(330, 30, 120, 80);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('lineWidth = 10', 340, 135);
+
+// Dashed outline
+ctx.strokeStyle = '#d29922';
+ctx.lineWidth = 3;
+ctx.setLineDash([10, 5]);
+ctx.strokeRect(30, 170, 200, 80);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('setLineDash([10, 5])', 40, 275);
+ctx.setLineDash([]);
+
+// Dotted outline
+ctx.strokeStyle = '#bc8cff';
+ctx.lineWidth = 3;
+ctx.setLineDash([3, 6]);
+ctx.strokeRect(260, 170, 200, 80);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('setLineDash([3, 6])', 270, 275);
+ctx.setLineDash([]);`;
+
+<CanvasRender
+  id="stroke-rect"
+  title="strokeRect with Different Line Widths"
+  width={500}
+  height={300}
+  code={strokeRectCode}
+/>
+
+<Concept>
+<p><strong>How lineWidth works:</strong> The stroke is centered on the edge of the rectangle. A <code>lineWidth</code> of 10 means 5 pixels inside the edge and 5 pixels outside. This is why thick outlines can look like they're "growing" the rectangle.</p>
+<pre>{`    lineWidth = 10
+
+       5px outside
+    ──────████████████──────
+          █          █
+          █  inside  █    5px inside
+          █          █
+    ──────████████████──────
+       5px outside
+
+    The stroke sits ON the boundary line,
+    half in, half out.`}</pre>
+</Concept>
+
+## clearRect: Erasing Pixels
+
+<p><code>clearRect(x, y, width, height)</code> makes a rectangular area fully transparent. It erases whatever was drawn there. Think of it as a rectangular eraser.</p>
+
+export const clearRectCode = `// Fill the entire canvas with cyan
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(0, 0, 500, 300);
+
+// Cut rectangular holes to reveal the background
+ctx.clearRect(50, 50, 100, 80);
+ctx.clearRect(200, 100, 150, 100);
+ctx.clearRect(380, 30, 80, 250);
+
+// You can draw on top of cleared areas
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(60, 60, 30, 30);
+
+// Label
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '12px monospace';
+ctx.fillText('cleared areas become transparent', 50, 290);`;
+
+<CanvasRender
+  id="clear-rect"
+  title="clearRect: Cutting Holes"
+  width={500}
+  height={300}
+  code={clearRectCode}
+/>
+
+<p>The most common use of <code>clearRect</code> is clearing the <strong>entire</strong> canvas before redrawing (for animation):</p>
+
+<Concept>
+<pre>{`    // Clear everything:
+    ctx.clearRect(0, 0, canvas.width, canvas.height);`}</pre>
+</Concept>
+
+## Draw Order: What Happens When Shapes Overlap
+
+<p>Canvas works like painting on paper with opaque paint: the last thing you draw covers everything before it. This is called the <strong>painter's algorithm</strong>. Just like a real painter, the newest layer goes on top.</p>
+
+export const drawOrderCode = `// Draw three overlapping rectangles
+// The ORDER you draw them determines what's on top
+
+// First: red (drawn first = on the bottom)
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(50, 50, 180, 150);
+
+// Second: green (covers part of red)
+ctx.fillStyle = '#3fb950';
+ctx.fillRect(130, 90, 180, 150);
+
+// Third: cyan (covers parts of both)
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(210, 40, 180, 150);
+
+// Labels showing draw order
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 14px monospace';
+ctx.fillText('1st', 120, 130);
+ctx.fillText('2nd', 200, 175);
+ctx.fillText('3rd', 280, 125);
+
+// Explanation on the right
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Drawn first', 410, 60);
+ctx.fillText('= on bottom', 410, 78);
+ctx.fillText('Drawn last', 410, 180);
+ctx.fillText('= on top', 410, 198);`;
+
+<CanvasRender
+  id="draw-order"
+  title="Draw Order Matters!"
+  width={500}
+  height={300}
+  code={drawOrderCode}
+/>
+
+<Concept>
+<p><strong>Key insight:</strong> Canvas has no "layers" and no "z-index." If you want shape A behind shape B, draw A first. If you want to change the order later, you have to clear the canvas and redraw everything in the new order. This is why animation always follows the pattern: <strong>clear -> draw everything -> repeat</strong>.</p>
+</Concept>
+
+## Practical Example: Drawing a Robot
+
+<p>Let's use everything we've learned to draw something fun: a robot made entirely from rectangles!</p>
+
+export const robotCode = `// Background
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, 0, 500, 400);
+
+// Main body (torso)
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(190, 140, 120, 140);
+
+// Head
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(200, 50, 100, 80);
+
+// Antenna
+ctx.fillStyle = '#7a7a8a';
+ctx.fillRect(245, 20, 10, 30);
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(240, 10, 20, 15);
+
+// Eyes
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(220, 70, 25, 20);
+ctx.fillRect(255, 70, 25, 20);
+
+// Pupils
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(230, 75, 10, 10);
+ctx.fillRect(262, 75, 10, 10);
+
+// Mouth
+ctx.fillStyle = '#3fb950';
+ctx.fillRect(225, 105, 50, 8);
+
+// Chest panel
+ctx.fillStyle = '#12121a';
+ctx.fillRect(210, 160, 80, 60);
+
+// Chest lights
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(220, 170, 15, 15);
+ctx.fillStyle = '#d29922';
+ctx.fillRect(243, 170, 15, 15);
+ctx.fillStyle = '#3fb950';
+ctx.fillRect(266, 170, 15, 15);
+
+// Arms
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(150, 150, 35, 100);
+ctx.fillRect(315, 150, 35, 100);
+
+// Hands
+ctx.fillStyle = '#7a7a8a';
+ctx.fillRect(155, 250, 25, 25);
+ctx.fillRect(320, 250, 25, 25);
+
+// Legs
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(205, 285, 35, 80);
+ctx.fillRect(260, 285, 35, 80);
+
+// Feet
+ctx.fillStyle = '#7a7a8a';
+ctx.fillRect(195, 365, 55, 20);
+ctx.fillRect(250, 365, 55, 20);
+
+// Ground shadow
+ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
+ctx.fillRect(170, 385, 160, 10);`;
+
+<CanvasRender
+  id="robot"
+  title="Robot Made of Rectangles"
+  width={500}
+  height={400}
+  code={robotCode}
+/>
+
+## Practical Example: A Simple House
+
+<p>Another example using mostly rectangles. Notice how <em>draw order</em> matters for the windows and door (they need to be drawn <em>after</em> the wall). The roof uses <code>beginPath()</code>, <code>moveTo()</code>, <code>lineTo()</code>, and <code>fill()</code> to draw a triangle, and the moon uses <code>arc()</code> to draw a circle. These are path commands covered fully in Lesson 2.</p>
+
+export const houseCode = `// Sky gradient (faked with rectangles)
+var skyColors = ['#0a0a0f', '#0d1520', '#102030', '#1a3050', '#2a4a6a'];
+for (var i = 0; i < skyColors.length; i++) {
+  ctx.fillStyle = skyColors[i];
+  ctx.fillRect(0, i * 50, 500, 50);
+}
+
+// Ground
+ctx.fillStyle = '#1a3a1a';
+ctx.fillRect(0, 250, 500, 100);
+
+// Grass detail
+ctx.fillStyle = '#2a5a2a';
+ctx.fillRect(0, 250, 500, 8);
+
+// House wall
+ctx.fillStyle = '#8b6914';
+ctx.fillRect(120, 130, 200, 120);
+
+// Roof (triangle: a path, sneak preview!)
+ctx.beginPath();
+ctx.moveTo(100, 130);
+ctx.lineTo(220, 50);
+ctx.lineTo(340, 130);
+ctx.closePath();
+ctx.fillStyle = '#c0392b';
+ctx.fill();
+
+// Door
+ctx.fillStyle = '#5d3a1a';
+ctx.fillRect(195, 180, 40, 70);
+ctx.fillStyle = '#d29922';
+ctx.fillRect(225, 218, 6, 6);
+
+// Windows
+ctx.fillStyle = '#d29922';
+ctx.fillRect(140, 160, 35, 35);
+ctx.fillRect(265, 160, 35, 35);
+
+// Window cross-bars
+ctx.fillStyle = '#5d3a1a';
+ctx.fillRect(140, 175, 35, 3);
+ctx.fillRect(155, 160, 3, 35);
+ctx.fillRect(265, 175, 35, 3);
+ctx.fillRect(280, 160, 3, 35);
+
+// Chimney
+ctx.fillStyle = '#7a3a1a';
+ctx.fillRect(280, 60, 30, 70);
+
+// Moon
+ctx.beginPath();
+ctx.arc(420, 60, 25, 0, Math.PI * 2);
+ctx.fillStyle = '#c8c8d0';
+ctx.fill();
+
+// Stars
+ctx.fillStyle = '#c8c8d0';
+var stars = [[50,30],[100,70],[350,40],[300,20],[450,90],[80,120],[400,130]];
+stars.forEach(function(s) {
+  ctx.fillRect(s[0], s[1], 2, 2);
+});`;
+
+<CanvasRender
+  id="house"
+  title="House with Rectangles (and one triangle)"
+  width={500}
+  height={350}
+  code={houseCode}
+/>
+
+## Putting It All Together: Night Cityscape
+
+<p>Here's a more complex scene showing how many simple rectangles combine into something impressive. Study the code; it's all <code>fillRect</code>, <code>strokeRect</code>, and <code>clearRect</code>!</p>
+
+export const cityscapeCode = `// Sky
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, 0, 500, 350);
+
+// Ground
+ctx.fillStyle = '#1a3a1a';
+ctx.fillRect(0, 260, 500, 90);
+
+// Road
+ctx.fillStyle = '#12121a';
+ctx.fillRect(0, 280, 500, 70);
+ctx.fillStyle = '#d29922';
+for (var i = 0; i < 10; i++) {
+  ctx.fillRect(10 + i * 52, 312, 30, 4);
+}
+
+// Building 1 (tall, left)
+ctx.fillStyle = '#12121a';
+ctx.fillRect(20, 80, 80, 180);
+for (var row = 0; row < 6; row++) {
+  for (var col = 0; col < 2; col++) {
+    if (Math.random() > 0.3) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#d29922' : '#00e5ff';
+      ctx.fillRect(32 + col * 35, 95 + row * 27, 18, 18);
+    }
+  }
+}
+
+// Building 2 (medium, center-left)
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(120, 140, 100, 120);
+ctx.fillStyle = '#00e5ff';
+for (var row = 0; row < 3; row++) {
+  for (var col = 0; col < 3; col++) {
+    if (Math.random() > 0.25) {
+      ctx.fillRect(132 + col * 30, 155 + row * 35, 18, 22);
+    }
+  }
+}
+
+// Building 3 (wide, center)
+ctx.fillStyle = '#1a1a2a';
+ctx.fillRect(240, 170, 120, 90);
+for (var row = 0; row < 2; row++) {
+  for (var col = 0; col < 4; col++) {
+    ctx.fillStyle = Math.random() > 0.4 ? '#d29922' : '#12121a';
+    ctx.fillRect(250 + col * 28, 182 + row * 35, 18, 22);
+  }
+}
+
+// Building 4 (tallest, right)
+ctx.fillStyle = '#12121a';
+ctx.fillRect(380, 50, 90, 210);
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(420, 30, 6, 20);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillRect(423, 20, 1, 10);
+for (var row = 0; row < 7; row++) {
+  for (var col = 0; col < 3; col++) {
+    if (Math.random() > 0.2) {
+      ctx.fillStyle = Math.random() > 0.6 ? '#00e5ff' : '#d29922';
+      ctx.fillRect(392 + col * 25, 62 + row * 27, 15, 18);
+    }
+  }
+}
+
+// Moon
+ctx.fillStyle = '#c8c8d0';
+ctx.beginPath();
+ctx.arc(450, 45, 20, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#0a0a0f';
+ctx.beginPath();
+ctx.arc(460, 38, 18, 0, Math.PI * 2);
+ctx.fill();
+
+// Stars
+ctx.fillStyle = '#c8c8d0';
+for (var i = 0; i < 20; i++) {
+  var sx = Math.random() * 500;
+  var sy = Math.random() * 60;
+  ctx.fillRect(sx, sy, 1.5, 1.5);
+}`;
+
+<CanvasRender
+  id="cityscape"
+  layout="stack"
+  title="Night Cityscape: Only Rectangles!"
+  width={500}
+  height={350}
+  code={cityscapeCode}
+/>
+
+## Challenges
+
+<p>Try these exercises to practice what you've learned. You can open your browser's console (F12) and create your own canvas, or modify the demo code above by looking at the patterns.</p>
+
+<Concept>
+<p><strong>Challenge 1: Traffic Light</strong></p>
+<pre>{`    Draw a traffic light:
+    - A tall dark rectangle for the housing
+    - Three circles (red, yellow, green) stacked vertically
+    - A pole (thin rectangle) below
+
+    Hint: You know fillRect for the housing and pole.
+    For circles, use:
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    (We'll cover arcs fully in Lesson 2!)`}</pre>
+</Concept>
+
+<Concept>
+<p><strong>Challenge 2: Checkerboard</strong></p>
+<pre>{`    Draw an 8x8 checkerboard pattern:
+    - Use a nested for loop (row and column)
+    - Alternate colors based on (row + col) % 2
+    - Each square should be 40x40 pixels
+
+    Hint:
+      for (var row = 0; row < 8; row++) {
+        for (var col = 0; col < 8; col++) {
+          if ((row + col) % 2 === 0) {
+            ctx.fillStyle = '#c8c8d0';
+          } else {
+            ctx.fillStyle = '#1a1a2a';
+          }
+          ctx.fillRect(col * 40, row * 40, 40, 40);
+        }
+      }`}</pre>
+</Concept>
+
+<Concept>
+<p><strong>Challenge 3: Bar Chart</strong></p>
+<pre>{`    Draw a bar chart from an array of data:
+      var data = [80, 150, 60, 200, 120];
+
+    - Each bar is 50px wide with 20px gaps
+    - Bar height = the data value
+    - Bars grow UP from the bottom (y = canvasHeight - value)
+    - Different color for each bar
+    - Labels underneath each bar
+
+    This is a common real-world use of Canvas!`}</pre>
+</Concept>
+
+<Concept>
+<p><strong>What you learned in this lesson:</strong></p>
+<pre>{`    Concept              How to do it
+    ──────────────────── ───────────────────────────────
+    Set fill color       ctx.fillStyle = '#ff0000'
+    Set stroke color     ctx.strokeStyle = '#00ff00'
+    Fill a rectangle     ctx.fillRect(x, y, w, h)
+    Outline a rectangle  ctx.strokeRect(x, y, w, h)
+    Erase an area        ctx.clearRect(x, y, w, h)
+    Set line thickness   ctx.lineWidth = 5
+    Make dashed lines    ctx.setLineDash([dash, gap])
+
+    Key ideas:
+    - (0,0) is top-left. Y goes DOWN.
+    - Canvas size != CSS size. Use HTML attributes.
+    - Later draws cover earlier draws (painter's algorithm).
+    - fillStyle/strokeStyle persist until you change them.`}</pre>
+</Concept>
+
+<LessonNav
+  prev={{ href: "/wiki/canvas-lab/00-foundation", title: "Foundation" }}
+  next={{ href: "/wiki/canvas-lab/02-paths", title: "Paths & Shapes" }}
+/>

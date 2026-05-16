@@ -1,11 +1,8 @@
 ---
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
-import '../styles/atelier.css';
-import '../styles/about.css';
-import '../styles/home.css';
 
-const { title, description = '' } = Astro.props;
+const { title, description = '', ogType = 'website' } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
@@ -14,10 +11,16 @@ const currentPath = Astro.url.pathname;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {description && <meta name="description" content={description} />}
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={Astro.url.href} />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href={Astro.url.href} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" />
     <script is:inline>
       (function() {
@@ -31,13 +34,13 @@ const currentPath = Astro.url.pathname;
       });
     </script>
     <ClientRouter />
-    <title>{title}</title>
+    <title>{title === 'Home' ? 'gck.sh' : `${title} | gck.sh`}</title>
   </head>
   <body>
     <canvas class="grid-glow" id="grid-glow" transition:persist></canvas>
-    <header class="site-header glass glow-edge glow-edge--bottom scroll-hide--up" transition:persist>
+    <header class="site-header glass scroll-hide--up" transition:persist>
       <nav>
-        <a href="/" class="logo pulse-glow">gck.sh</a>
+        <a href="/" class="logo">gck.sh</a>
         <div class="nav-links">
           <a href="/" aria-current={currentPath === '/' ? 'page' : undefined}>Home</a>
           <a href="/atelier" aria-current={currentPath.startsWith('/atelier') ? 'page' : undefined}>Atelier</a>
@@ -60,18 +63,11 @@ const currentPath = Astro.url.pathname;
     <main class="page-width" transition:animate="fade">
       <slot />
     </main>
-    <footer class="glass glow-edge glow-edge--top scroll-hide--down" transition:persist>
-      <p class="footer-name">
-        &copy; {new Date().getFullYear()} <strong>G</strong>udapalli <strong>C</strong>henna<strong>k</strong>eshava
-      </p>
-      <div class="footer-links">
-        <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="mailto:">Email</a>
-      </div>
-    </footer>
     <script>
+      let __navAC;
       function init() {
+        if (__navAC) __navAC.abort();
+        __navAC = new AbortController();
         // Update nav active state (header persists across navigations)
         const path = window.location.pathname;
         document.querySelectorAll('.nav-links a[href]').forEach(a => {
@@ -93,28 +89,7 @@ const currentPath = Astro.url.pathname;
           });
         }
 
-        // rehype-mermaid generates <picture> with <source media="(prefers-color-scheme: dark)">
-        // for dark SVG and <img> fallback for light SVG. Since we use data-theme attribute
-        // (not OS prefers-color-scheme), we swap source.media to show/hide the dark variant.
-        function syncMermaidTheme() {
-          var theme = document.documentElement.getAttribute('data-theme');
-          document.querySelectorAll('picture > source').forEach(function(source) {
-            // First call: detect mermaid sources by their original media query and mark them.
-            // Needed because we overwrite media below, losing the original string for future calls.
-            if (!source.dataset.mermaid) {
-              if (source.media && source.media.includes('prefers-color-scheme')) {
-                source.dataset.mermaid = 'dark'; // labels this <source> as the dark-theme SVG
-              } else return; // not a mermaid source, skip
-            }
-            // Show dark source when theme is dark, hide it (falling back to light <img>) otherwise
-            source.media = theme === 'dark' ? 'all' : 'not all';
-          });
-        }
-        syncMermaidTheme();
-        window.addEventListener('theme-change', syncMermaidTheme);
-
         const header = document.querySelector('.site-header');
-        const footer = document.querySelector('footer');
         let lastY = window.scrollY;
         let ticking = false;
         function onScroll() {
@@ -123,23 +98,17 @@ const currentPath = Astro.url.pathname;
           requestAnimationFrame(() => {
             const y = window.scrollY;
             const atTop = y <= 50;
-            const atBottom = y + window.innerHeight >= document.documentElement.scrollHeight - 50;
             const goingDown = y > lastY;
             if (atTop || !goingDown) {
               header?.classList.remove('hidden');
             } else {
               header?.classList.add('hidden');
             }
-            if (atBottom || goingDown) {
-              footer?.classList.remove('hidden');
-            } else {
-              footer?.classList.add('hidden');
-            }
             lastY = y;
             ticking = false;
           });
         }
-        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('scroll', onScroll, { passive: true, signal: __navAC.signal });
         onScroll();
       }
 
@@ -166,7 +135,7 @@ const currentPath = Astro.url.pathname;
       const UNIT = SPACING * 10;
       const RADIUS = 150;
       const PI2 = Math.PI * 2;
-      const LABEL_FONT = '600 10px Orbitron, sans-serif';
+      const LABEL_FONT = '500 10px Chakra Petch, sans-serif';
 
       const MAIN_ALPHA  = 0.45;
       const MAJOR_ALPHA = 0.15;
@@ -183,15 +152,19 @@ const currentPath = Astro.url.pathname;
       let mouseX = -1000, mouseY = -1000, curX = -1000, curY = -1000;
       let glowFrame = 0;
       let gridDirty = true;
-      let cachedR = 0, cachedG = 229, cachedB = 255;
+      let cachedR = 120, cachedG = 120, cachedB = 120;
+      let glowR = 34, glowG = 211, glowB = 238;
       let originX = 0, originY = 0;
       let lastW = 0, lastH = 0;
 
       function updateColors() {
         const light = document.documentElement.getAttribute('data-theme') === 'light';
-        cachedR = light ? 230 : 0;
-        cachedG = light ? 26 : 229;
-        cachedB = light ? 110 : 255;
+        cachedR = light ? 160 : 100;
+        cachedG = light ? 160 : 100;
+        cachedB = light ? 160 : 100;
+        glowR = light ? 8 : 34;
+        glowG = light ? 145 : 211;
+        glowB = light ? 178 : 238;
       }
 
       function resizeCanvas() {
@@ -323,7 +296,7 @@ const currentPath = Astro.url.pathname;
         const ox = originX;
         const oy = originY;
         const r = RADIUS;
-        const rgb = `${cachedR},${cachedG},${cachedB}`;
+        const gRgb = `${glowR},${glowG},${glowB}`;
 
         // Full clear of glow canvas — avoids partial-clear artifacts on HiDPI
         glowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -343,7 +316,7 @@ const currentPath = Astro.url.pathname;
         ];
 
         for (const t of tiers) {
-          glowCtx.strokeStyle = `rgba(${rgb},${t.glow})`;
+          glowCtx.strokeStyle = `rgba(${gRgb},${t.glow})`;
           glowCtx.lineWidth = t.width;
           glowCtx.beginPath();
           const sc = Math.floor((left - ox) / t.step) * t.step + ox;
@@ -366,7 +339,7 @@ const currentPath = Astro.url.pathname;
         }
 
         // Main (axes) glow
-        glowCtx.strokeStyle = `rgba(${rgb},${MAIN_GLOW})`;
+        glowCtx.strokeStyle = `rgba(${gRgb},${MAIN_GLOW})`;
         glowCtx.lineWidth = MAIN_WIDTH;
         glowCtx.beginPath();
         if (ox >= left && ox <= right) {
@@ -381,7 +354,7 @@ const currentPath = Astro.url.pathname;
 
         // Glow labels
         glowCtx.font = LABEL_FONT;
-        glowCtx.fillStyle = `rgba(${rgb},${MAIN_GLOW})`;
+        glowCtx.fillStyle = `rgba(${gRgb},${MAIN_GLOW})`;
 
         const startUnitX = Math.floor((left - ox) / UNIT) * UNIT + ox;
         const startUnitY = Math.floor((top - oy) / UNIT) * UNIT + oy;

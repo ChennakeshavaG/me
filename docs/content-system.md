@@ -153,6 +153,29 @@ Single source of truth in `src/models/`:
 
 Used by `src/content.config.js` (validation) and `scripts/create.js` (scaffolding).
 
+## Canvas Lab Wiki (Custom Components)
+
+The `wiki/canvas-lab/` section contains 9 interactive HTML Canvas lessons migrated from a standalone site. It uses custom Astro components importable in MDX:
+
+| Component | File | Purpose |
+|---|---|---|
+| `CanvasRender` | `src/components/canvas-lab/CanvasRender.astro` | Live code playground — editable textarea + canvas with Run/Reset |
+| `Concept` | `src/components/canvas-lab/Concept.astro` | Styled callout block for key concepts |
+| `LessonNav` | `src/components/canvas-lab/LessonNav.astro` | Prev/next lesson navigation |
+| `LessonHeader` | `src/components/canvas-lab/LessonHeader.astro` | Lesson number badge + description |
+
+Styles live in `src/styles/canvas-lab.css` (all classes prefixed `cl-`). Canvas demo backgrounds are forced-dark so hardcoded canvas drawing colors render correctly in both themes.
+
+Structure:
+```
+src/content/wiki/canvas-lab/
+  index.mdx              ← wiki (landing with lesson list)
+  00-foundation.mdx      ← blog (lesson, nested in wiki)
+  01-basics.mdx          ← blog
+  ...
+  08-particle-system.mdx ← blog
+```
+
 ## Adding a New Content Type
 
 1. Create `src/models/<type>.js` (schema, template, meta)

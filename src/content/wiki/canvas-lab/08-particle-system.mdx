@@ -1,0 +1,1540 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Particle System"
+description: "Capstone: build a complete particle system combining everything you've learned."
+createdAt: 2026-05-14
+tags: [canvas, javascript, graphics, tutorial]
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={8} />
+
+## What IS a Particle System?
+
+<p>A particle system is one of the most rewarding things you can build with Canvas. It manages hundreds or thousands of tiny objects called "particles" that move, change, and eventually disappear. Together, these particles create effects that look like fire, smoke, rain, sparks, confetti, stars, or magic dust.</p>
+
+<p>You have already seen particle systems everywhere, even if you did not know the name:</p>
+
+<Concept>
+  <p><strong>Real-world examples of particle systems:</strong></p>
+  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+    <li>Fireworks exploding in the sky</li>
+    <li>Snow falling in a video game</li>
+    <li>Sparks flying off a sword in an action game</li>
+    <li>The "confetti rain" when you win something online</li>
+    <li>Smoke rising from a campfire</li>
+    <li>The cursor trail on a flashy website</li>
+    <li>Stars streaming past in a space game</li>
+  </ul>
+  <p>The magic: each individual particle is <strong>dead simple</strong>, just a dot that moves. But hundreds of simple dots following simple rules create complex, organic-looking effects.</p>
+</Concept>
+
+## The Particle Lifecycle
+
+<p>Every particle system follows the same pattern, every single frame. Think of it like a factory assembly line:</p>
+
+<Concept>
+  <p><strong>The particle lifecycle, running 60 times per second:</strong></p>
+  <pre>{`  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+  │  BIRTH   │────→│  UPDATE  │────→│  DEATH   │────→│   DRAW   │
+  │          │     │          │     │          │     │          │
+  │ Create   │     │ Move it  │     │ Remove   │     │ Render   │
+  │ new      │     │ Apply    │     │ if life  │     │ surviving│
+  │ particle │     │ physics  │     │ is <= 0  │     │ particles│
+  │ with     │     │ (gravity,│     │          │     │          │
+  │ position │     │  wind,   │     │          │     │          │
+  │ velocity │     │  drag)   │     │          │     │          │
+  │ lifetime │     │ Age it   │     │          │     │          │
+  └──────────┘     └──────────┘     └──────────┘     └──────────┘
+       │                                                   │
+       └──────────── next frame ───────────────────────────┘`}</pre>
+</Concept>
+
+<p>A particle is just a plain JavaScript object with properties. Here is the anatomy of a typical particle:</p>
+
+<Concept>
+  <pre>{`  {
+    x: 250,          // position (where it is)
+    y: 200,
+    vx: 30,          // velocity (how fast it moves)
+    vy: -100,
+    life: 1.0,       // 1.0 = just born, 0.0 = dead
+    decay: 0.5,      // how fast it dies (per second)
+    r: 5,            // radius (size)
+    hue: 200,        // color
+  }`}</pre>
+</Concept>
+
+## Step 1: Your First Particles
+
+<p>Let's start with the simplest possible particle system: spawn particles at a fixed point, give them random velocities, apply gravity, fade them out, and remove dead ones. This is the foundation for everything else in this lesson.</p>
+
+export const basicParticlesCode = `var particles = [];                // the array holding all particles
+var last = performance.now();      // for delta time calculation
+
+// BIRTH: create new particles at a position
+function emit(x, y) {
+  for (var i = 0; i < 3; i++) {   // spawn 3 per call
+    particles.push({
+      x: x,                       // start position
+      y: y,
+      vx: (Math.random() - 0.5) * 100,  // random horizontal speed
+      vy: -100 - Math.random() * 100,    // upward speed
+      life: 1,                    // starts fully alive
+      decay: 0.3 + Math.random() * 0.5,  // random death speed
+      r: 3 + Math.random() * 4,  // random size
+      hue: 200 + Math.random() * 40,     // blue-ish color
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;   // seconds since last frame
+  last = now;
+
+  ctx.clearRect(0, 0, 500, 400);
+
+  // BIRTH: emit from center bottom
+  emit(250, 300);
+
+  // UPDATE: move each particle, apply gravity, age it
+  particles.forEach(function(p) {
+    p.vy += 200 * dt;            // gravity pulls down
+    p.x += p.vx * dt;           // move horizontally
+    p.y += p.vy * dt;           // move vertically
+    p.life -= p.decay * dt;     // age toward death
+  });
+
+  // DEATH: remove particles that have expired
+  particles = particles.filter(function(p) {
+    return p.life > 0;
+  });
+
+  // DRAW: render each surviving particle
+  particles.forEach(function(p) {
+    ctx.globalAlpha = p.life;    // fade as it dies
+    ctx.fillStyle = 'hsl(' + p.hue + ', 80%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Show particle count
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('particles: ' + particles.length, 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="basic-particles"
+  title="Falling Particles with Gravity"
+  width={500}
+  height={400}
+  code={basicParticlesCode}
+/>
+
+<Concept variant="note">
+**Try this:** Change how many particles spawn each frame: push 3 or 5 instead of 1. Then widen the velocity range to make particles spread further. Small tweaks here create very different visual effects.
+</Concept>
+
+<Concept>
+  <p><strong>Key takeaways from Step 1:</strong></p>
+  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+    <li><code>particles</code> is just a regular array, nothing fancy</li>
+    <li>Each frame: emit, update, filter dead, draw survivors</li>
+    <li><code>p.life</code> goes from 1 to 0; we use it for opacity AND size</li>
+    <li>Delta time (<code>dt</code>) makes movement speed-independent</li>
+  </ul>
+</Concept>
+
+## Step 2: Mouse-Driven Emission
+
+<p>Instead of a fixed spawn point, let's emit particles from wherever the mouse is. This instantly makes the effect feel interactive and alive. Notice how we use <code>Math.cos(angle)</code> and <code>Math.sin(angle)</code> to convert a random angle into horizontal and vertical velocity components; cosine gives the x-direction and sine gives the y-direction for any angle in radians.</p>
+
+export const mouseParticlesCode = `var particles = [];
+var mx = 250, my = 200;           // mouse position
+var last = performance.now();
+
+// Track mouse position
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+function emit(x, y, count) {
+  for (var i = 0; i < count; i++) {
+    var angle = Math.random() * Math.PI * 2;  // random direction
+    var speed = 50 + Math.random() * 150;     // random speed
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,  // velocity from angle
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.5 + Math.random() * 1,
+      r: 2 + Math.random() * 5,
+      hue: Math.random() * 360,     // fully random color
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+  ctx.clearRect(0, 0, 500, 400);
+
+  emit(mx, my, 5);                 // emit 5 particles at mouse
+
+  particles.forEach(function(p) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.98;                  // friction slows it down
+    p.vy *= 0.98;
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+
+  particles.forEach(function(p) {
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.fillStyle = 'hsl(' + p.hue + ', 80%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Move mouse here | particles: ' + particles.length, 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="mouse-particles"
+  title="Emit from Mouse Position"
+  width={500}
+  height={400}
+  code={mouseParticlesCode}
+/>
+
+## Emitter Patterns
+
+<p>So far we have emitted from a single point. But real effects need different emission shapes. An <strong>emitter</strong> defines where and how particles are born. Here are the most common patterns:</p>
+
+<Concept>
+  <p><strong>Common emitter shapes:</strong></p>
+  <pre>{`  POINT            LINE             CIRCLE           CONE
+  All from         Along a          Around a         Within an
+  one spot         segment          ring             angle range
+
+     ·              ─────            ╭───╮          · · ·
+    /|\\            ↓↓↓↓↓↓↓         ↗ · · ↖        · · · · ·
+   / | \\                            ↑     ↓       · · · · · · ·
+                                    ↙ · · ↘            ▲
+                                     ╰───╯          emitter`}</pre>
+</Concept>
+
+export const emitterPatternsCode = `var particles = [];
+var last = performance.now();
+var pattern = 0;
+var patterns = ['point', 'line', 'circle', 'cone'];
+
+addListener(canvas, 'click', function() {
+  pattern = (pattern + 1) % patterns.length;
+  particles = [];
+});
+
+function emitPoint() {
+  // All particles from a single point
+  for (var i = 0; i < 3; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 40 + Math.random() * 80;
+    particles.push({
+      x: 250, y: 200,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1, decay: 0.4 + Math.random() * 0.4,
+      r: 3 + Math.random() * 3, hue: 200,
+    });
+  }
+}
+
+function emitLine() {
+  // Particles along a horizontal line
+  for (var i = 0; i < 3; i++) {
+    var lx = 100 + Math.random() * 300;  // random X along line
+    particles.push({
+      x: lx, y: 200,
+      vx: (Math.random() - 0.5) * 20,
+      vy: -60 - Math.random() * 80,       // upward
+      life: 1, decay: 0.3 + Math.random() * 0.4,
+      r: 3 + Math.random() * 3, hue: 120,
+    });
+  }
+}
+
+function emitCircle() {
+  // Particles around a ring
+  for (var i = 0; i < 3; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var ringR = 80;                        // ring radius
+    var speed = 30 + Math.random() * 50;
+    particles.push({
+      x: 250 + Math.cos(angle) * ringR,
+      y: 200 + Math.sin(angle) * ringR,
+      vx: Math.cos(angle) * speed,         // outward from ring
+      vy: Math.sin(angle) * speed,
+      life: 1, decay: 0.4 + Math.random() * 0.4,
+      r: 3 + Math.random() * 3, hue: 300,
+    });
+  }
+}
+
+function emitCone() {
+  // Particles within a cone (angle range)
+  for (var i = 0; i < 3; i++) {
+    var baseAngle = -Math.PI / 2;          // pointing up
+    var spread = Math.PI / 4;              // 45 degree cone
+    var angle = baseAngle + (Math.random() - 0.5) * spread;
+    var speed = 80 + Math.random() * 120;
+    particles.push({
+      x: 250, y: 350,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1, decay: 0.3 + Math.random() * 0.3,
+      r: 3 + Math.random() * 3, hue: 40,
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+  ctx.clearRect(0, 0, 500, 400);
+
+  // Emit based on current pattern
+  if (patterns[pattern] === 'point') emitPoint();
+  else if (patterns[pattern] === 'line') emitLine();
+  else if (patterns[pattern] === 'circle') emitCircle();
+  else emitCone();
+
+  particles.forEach(function(p) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
+
+  particles.forEach(function(p) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = 'hsl(' + p.hue + ', 70%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '14px monospace';
+  ctx.fillText('Pattern: ' + patterns[pattern], 10, 25);
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Click to switch | ' + particles.length + ' particles', 10, 45);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="emitter-patterns"
+  layout="stack"
+  title="Emitter Patterns: Click to Switch"
+  width={500}
+  height={400}
+  code={emitterPatternsCode}
+/>
+
+## Forces: Gravity, Wind, and Turbulence
+
+<p>Particles that move in straight lines look boring. Real-world particles are affected by forces: gravity pulls them down, wind pushes them sideways, and turbulence makes them wobble randomly. Adding forces is simple: you just modify velocity each frame.</p>
+
+<Concept>
+  <p><strong>How forces modify velocity:</strong></p>
+  <pre>{`  Each frame:
+    p.vy += gravity * dt;                    // gravity: constant downward pull
+    p.vx += wind * dt;                       // wind: constant sideways push
+    p.vx += (random-0.5) * turbulence * dt;  // turbulence: random jitter
+    p.vy += (random-0.5) * turbulence * dt;
+    p.vx *= friction;                        // friction: gradual slowdown (0.98)
+    p.vy *= friction;
+
+  Think of velocity as "speed + direction".
+  Forces change the speed and direction a little bit each frame.
+  Over many frames, this creates natural-looking curves.`}</pre>
+</Concept>
+
+export const forcesCode = `var particles = [];
+var last = performance.now();
+var forceMode = 0;
+var forceNames = ['gravity', 'wind', 'turbulence', 'all combined'];
+
+addListener(canvas, 'click', function() {
+  forceMode = (forceMode + 1) % forceNames.length;
+  particles = [];
+});
+
+function emit() {
+  for (var i = 0; i < 3; i++) {
+    var angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+    var speed = 100 + Math.random() * 80;
+    particles.push({
+      x: 250, y: 350,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1, decay: 0.2 + Math.random() * 0.3,
+      r: 3 + Math.random() * 3,
+      hue: 200 + Math.random() * 40,
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+  ctx.fillRect(0, 0, 500, 400);
+
+  emit();
+
+  particles.forEach(function(p) {
+    // Apply forces based on mode
+    var gravity = 0, windX = 0, turb = 0;
+    if (forceMode === 0 || forceMode === 3) gravity = 150;
+    if (forceMode === 1 || forceMode === 3) windX = 80;
+    if (forceMode === 2 || forceMode === 3) turb = 300;
+
+    p.vy += gravity * dt;                           // gravity
+    p.vx += windX * dt;                             // wind
+    p.vx += (Math.random() - 0.5) * turb * dt;     // turbulence X
+    p.vy += (Math.random() - 0.5) * turb * dt;     // turbulence Y
+    p.vx *= 0.99;                                   // friction
+    p.vy *= 0.99;
+
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+  if (particles.length > 500) particles.splice(0, particles.length - 500);
+
+  particles.forEach(function(p) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = 'hsl(' + p.hue + ', 70%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '14px monospace';
+  ctx.fillText('Force: ' + forceNames[forceMode], 10, 25);
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Click to switch | ' + particles.length + ' particles', 10, 45);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="forces"
+  title="Forces Playground: Click to Switch"
+  width={500}
+  height={400}
+  code={forcesCode}
+/>
+
+## Attraction and Repulsion
+
+<p>One of the coolest forces is <strong>attraction</strong>, where particles are pulled toward a point (like gravity toward a planet). The opposite is <strong>repulsion</strong>, where particles are pushed away. The force gets stronger as particles get closer.</p>
+
+export const attractionCode = `var particles = [];
+var mx = 250, my = 200;
+var repel = false;
+var last = performance.now();
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+addListener(canvas, 'click', function() {
+  repel = !repel;  // toggle attract/repel
+});
+
+// Spawn particles across the canvas
+for (var i = 0; i < 200; i++) {
+  particles.push({
+    x: Math.random() * 500,
+    y: Math.random() * 400,
+    vx: 0, vy: 0,
+    r: 2 + Math.random() * 3,
+    hue: Math.random() * 360,
+  });
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+  ctx.clearRect(0, 0, 500, 400);
+
+  particles.forEach(function(p) {
+    // Vector from particle to mouse
+    var dx = mx - p.x;
+    var dy = my - p.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 1) {  // avoid division by zero
+      // Normalize direction, then apply force
+      var force = 300000 / (dist * dist + 100);  // stronger when close
+      var dirX = dx / dist;   // unit direction
+      var dirY = dy / dist;
+
+      if (repel) {
+        p.vx -= dirX * force;  // push away
+        p.vy -= dirY * force;
+      } else {
+        p.vx += dirX * force;  // pull toward
+        p.vy += dirY * force;
+      }
+    }
+
+    p.vx *= 0.95;             // friction
+    p.vy *= 0.95;
+
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+
+    // Wrap around screen edges
+    if (p.x < 0) p.x += 500;
+    if (p.x > 500) p.x -= 500;
+    if (p.y < 0) p.y += 400;
+    if (p.y > 400) p.y -= 400;
+  });
+
+  // Draw particles
+  particles.forEach(function(p) {
+    var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    ctx.fillStyle = 'hsl(' + p.hue + ', 70%, ' + Math.min(80, 40 + speed * 5) + '%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Mouse indicator
+  ctx.strokeStyle = repel ? '#ff2d7b' : '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(mx, my, 15, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '13px monospace';
+  ctx.fillText('Mode: ' + (repel ? 'REPEL' : 'ATTRACT'), 10, 25);
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Move mouse | Click to toggle', 10, 45);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="attraction"
+  layout="stack"
+  title="Mouse Attracts / Click to Toggle Repulsion"
+  width={500}
+  height={400}
+  code={attractionCode}
+/>
+
+## Explosion on Click
+
+<p>Click to trigger a burst of particles. Each explosion sends particles in all directions with fade trails for a dramatic look.</p>
+
+export const explosionCode = `var particles = [];
+var last = performance.now();
+
+function explode(x, y) {
+  var hue = Math.random() * 360;     // each explosion gets a color
+  for (var i = 0; i < 60; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 100 + Math.random() * 300;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.4 + Math.random() * 0.8,
+      r: 2 + Math.random() * 4,
+      hue: hue + (Math.random() - 0.5) * 30,
+    });
+  }
+}
+
+addListener(canvas, 'click', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var x = (e.clientX - rect.left) * (500 / rect.width);
+  var y = (e.clientY - rect.top) * (400 / rect.height);
+  explode(x, y);
+});
+
+// Initial explosion
+explode(250, 200);
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  // Fade trail (don't fully clear: leaves ghost trails)
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+  ctx.fillRect(0, 0, 500, 400);
+
+  particles.forEach(function(p) {
+    p.vy += 150 * dt;           // gravity
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.99;               // air resistance
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+
+  particles.forEach(function(p) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = 'hsl(' + p.hue + ', 80%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Click anywhere to explode! | ' + particles.length + ' particles', 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="explosion"
+  title="Click for Explosions"
+  width={500}
+  height={400}
+  code={explosionCode}
+/>
+
+## Connecting Particles with Lines (Constellation Effect)
+
+<p>One of the most popular web effects: particles drift gently, and when two particles are close enough, a line is drawn between them. The closer they are, the brighter the line. The result looks like a constellation or neural network.</p>
+
+<Concept>
+  <p><strong>The algorithm:</strong></p>
+  <pre>{`  For each pair of particles (i, j):
+    distance = sqrt((xi-xj)^2 + (yi-yj)^2)
+    if distance < threshold:
+      opacity = 1 - (distance / threshold)
+      draw a line between them with that opacity
+
+  Note: checking every pair is O(n²). With 100 particles,
+  that is 4,950 checks per frame : fine for Canvas.
+  With 1000 particles, it would be 499,500: too slow!
+  Keep particle count moderate for this effect.`}</pre>
+</Concept>
+
+export const constellationCode = `var particles = [];
+var mx = 250, my = 200;
+var numParticles = 80;
+var connectDist = 100;           // max distance to draw lines
+
+// Create particles with gentle drift
+for (var i = 0; i < numParticles; i++) {
+  particles.push({
+    x: Math.random() * 500,
+    y: Math.random() * 400,
+    vx: (Math.random() - 0.5) * 30,
+    vy: (Math.random() - 0.5) * 30,
+    r: 2 + Math.random() * 2,
+  });
+}
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+var last = performance.now();
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+  ctx.clearRect(0, 0, 500, 400);
+
+  // Update positions
+  particles.forEach(function(p) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+
+    // Bounce off edges
+    if (p.x < 0 || p.x > 500) p.vx *= -1;
+    if (p.y < 0 || p.y > 400) p.vy *= -1;
+    p.x = Math.max(0, Math.min(500, p.x));
+    p.y = Math.max(0, Math.min(400, p.y));
+  });
+
+  // Draw connecting lines between nearby particles
+  for (var i = 0; i < particles.length; i++) {
+    for (var j = i + 1; j < particles.length; j++) {
+      var dx = particles[i].x - particles[j].x;
+      var dy = particles[i].y - particles[j].y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < connectDist) {
+        var alpha = 1 - dist / connectDist;  // closer = brighter
+        ctx.strokeStyle = 'rgba(0, 229, 255, ' + (alpha * 0.4) + ')';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+      }
+    }
+
+    // Also connect to mouse
+    var mdx = particles[i].x - mx;
+    var mdy = particles[i].y - my;
+    var mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+    if (mdist < connectDist * 1.5) {
+      var malpha = 1 - mdist / (connectDist * 1.5);
+      ctx.strokeStyle = 'rgba(255, 45, 123, ' + (malpha * 0.6) + ')';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(particles[i].x, particles[i].y);
+      ctx.lineTo(mx, my);
+      ctx.stroke();
+    }
+  }
+
+  // Draw particles
+  particles.forEach(function(p) {
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Mouse dot
+  ctx.fillStyle = '#ff2d7b';
+  ctx.beginPath();
+  ctx.arc(mx, my, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Move mouse to interact | ' + numParticles + ' particles', 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="constellation"
+  layout="stack"
+  title="Interactive Constellation"
+  width={500}
+  height={400}
+  code={constellationCode}
+/>
+
+## Blending Modes (globalCompositeOperation)
+
+<p>By default, new drawings cover what is beneath them. But Canvas supports <strong>blending modes</strong> that combine overlapping colors in interesting ways. The most useful for particle effects is <code>'lighter'</code>, which <em>adds</em> colors together, creating a glowing effect where particles overlap.</p>
+
+<Concept>
+  <p><strong>Key blending modes for particles:</strong></p>
+  <pre>{`  'source-over' → Default. New covers old.
+  'lighter'     → Additive. Colors add up → bright overlaps.
+  'multiply'    → Colors darken where they overlap.
+  'screen'      → Opposite of multiply, lightens.
+
+  'lighter' is the secret ingredient for:
+    - Glowing fire/spark effects
+    - Neon trails
+    - Energy/magic effects
+    - Laser beams
+
+  Usage:
+    ctx.globalCompositeOperation = 'lighter';
+    // draw glowy things
+    ctx.globalCompositeOperation = 'source-over';  // reset`}</pre>
+</Concept>
+
+export const blendingCode = `var particles = [];
+var mx = 250, my = 200;
+var last = performance.now();
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+function emit(x, y) {
+  for (var i = 0; i < 5; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 20 + Math.random() * 60;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.5 + Math.random() * 0.5,
+      r: 10 + Math.random() * 20,     // bigger particles for glow
+      hue: 10 + Math.random() * 30,   // warm orange/red
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  // Dark background (fully clear for black)
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, 500, 400);
+
+  emit(mx, my);
+
+  particles.forEach(function(p) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
+
+  // ADDITIVE BLENDING: this is the magic!
+  ctx.globalCompositeOperation = 'lighter';
+
+  particles.forEach(function(p) {
+    var size = p.r * p.life;
+    ctx.globalAlpha = p.life * 0.3;  // low alpha, but they ADD up
+
+    // Radial gradient for soft glow
+    var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+    grad.addColorStop(0, 'hsl(' + p.hue + ', 100%, 60%)');
+    grad.addColorStop(0.5, 'hsl(' + p.hue + ', 90%, 40%)');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Reset blending mode!
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Additive blending | particles: ' + particles.length, 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="blending"
+  title="Additive Blending (lighter): Move Mouse"
+  width={500}
+  height={400}
+  code={blendingCode}
+/>
+
+## Fire Effect
+
+<p>Fire combines upward velocity, warm colors (orange/yellow), size decay, turbulence, and fade trails. The additive blending from the previous section makes it glow. This demo also uses <code>ctx.createRadialGradient()</code> to give each particle a soft, glowing edge. A radial gradient transitions colors outward from a center point to an outer radius, which is ideal for simulating light falloff.</p>
+
+export const fireCode = `var particles = [];
+var last = performance.now();
+
+function emit(x, y) {
+  for (var i = 0; i < 4; i++) {
+    particles.push({
+      x: x + (Math.random() - 0.5) * 40,  // spread at base
+      y: y,
+      vx: (Math.random() - 0.5) * 30,
+      vy: -80 - Math.random() * 120,       // upward
+      life: 1,
+      decay: 0.6 + Math.random() * 0.8,
+      r: 8 + Math.random() * 12,
+      hue: 15 + Math.random() * 30,        // orange-yellow
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  // Fade trail for motion blur effect
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+  ctx.fillRect(0, 0, 500, 400);
+
+  // Emit from the base
+  emit(250, 370);
+  emit(250, 370);
+
+  particles.forEach(function(p) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx += (Math.random() - 0.5) * 50 * dt;  // turbulence
+    p.vy -= 20 * dt;                            // accelerate upward
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+
+  particles.forEach(function(p) {
+    var size = p.r * p.life;
+    ctx.globalAlpha = p.life * 0.7;
+
+    // Radial gradient for soft glow
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+    g.addColorStop(0, 'hsl(' + (p.hue + 20) + ', 100%, 70%)');
+    g.addColorStop(0.4, 'hsl(' + p.hue + ', 90%, 50%)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Glow at the base
+  var baseGlow = ctx.createRadialGradient(250, 380, 5, 250, 380, 60);
+  baseGlow.addColorStop(0, 'rgba(255, 150, 50, 0.3)');
+  baseGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = baseGlow;
+  ctx.fillRect(180, 320, 140, 80);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="fire"
+  title="Fire Particle Effect"
+  width={500}
+  height={400}
+  code={fireCode}
+/>
+
+## Snow and Rain
+
+<p>Weather effects use the same particle system with different parameters: snow falls slowly and drifts sideways, rain falls fast in straight lines.</p>
+
+export const snowRainCode = `var particles = [];
+var last = performance.now();
+var isSnow = true;
+
+addListener(canvas, 'click', function() {
+  isSnow = !isSnow;
+  particles = [];
+});
+
+function emit() {
+  var count = isSnow ? 2 : 5;
+  for (var i = 0; i < count; i++) {
+    if (isSnow) {
+      particles.push({
+        x: Math.random() * 520 - 10,     // slightly wider than canvas
+        y: -10,
+        vx: (Math.random() - 0.5) * 20,  // gentle drift
+        vy: 30 + Math.random() * 40,      // slow fall
+        r: 2 + Math.random() * 4,
+        wobble: Math.random() * Math.PI * 2,  // for sine wave drift
+        wobbleSpeed: 1 + Math.random() * 2,
+      });
+    } else {
+      particles.push({
+        x: Math.random() * 520 - 10,
+        y: -10,
+        vx: -20,                          // slight wind angle
+        vy: 300 + Math.random() * 200,    // fast fall
+        r: 1,
+        length: 10 + Math.random() * 15,  // rain drop length
+      });
+    }
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  // Background
+  if (isSnow) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, 500, 400);
+  } else {
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
+    ctx.fillRect(0, 0, 500, 400);
+  }
+
+  emit();
+
+  particles.forEach(function(p) {
+    if (isSnow) {
+      p.wobble += p.wobbleSpeed * dt;
+      p.x += Math.sin(p.wobble) * 20 * dt + p.vx * dt;  // sine drift
+      p.y += p.vy * dt;
+    } else {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  });
+
+  // Remove off-screen particles
+  particles = particles.filter(function(p) {
+    return p.y < 410 && p.x > -20 && p.x < 520;
+  });
+  if (particles.length > 600) particles.splice(0, particles.length - 600);
+
+  // Draw
+  if (isSnow) {
+    particles.forEach(function(p) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else {
+    ctx.strokeStyle = 'rgba(150, 200, 255, 0.4)';
+    ctx.lineWidth = 1;
+    particles.forEach(function(p) {
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + p.vx * 0.3, p.y + p.length);
+      ctx.stroke();
+    });
+  }
+
+  // Ground line
+  ctx.fillStyle = isSnow ? '#0a0a0f' : '#12121a';
+  ctx.fillRect(0, 380, 500, 20);
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText((isSnow ? 'Snow' : 'Rain') + ' | Click to toggle | ' + particles.length, 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="snow-rain"
+  title="Snow / Rain: Click to Toggle"
+  width={500}
+  height={400}
+  code={snowRainCode}
+/>
+
+## Confetti Celebration
+
+<p>Confetti uses rectangular particles that rotate as they fall. The rotation is what makes it look like real paper confetti tumbling through the air. We vary the colors and sizes for a festive look. This demo uses <code>ctx.save()</code>, <code>ctx.translate()</code>, and <code>ctx.rotate()</code> from the transforms lesson to spin each confetti piece around its own center, then <code>ctx.restore()</code> to reset the transform before drawing the next piece.</p>
+
+export const confettiCode = `var particles = [];
+var last = performance.now();
+var confettiColors = ['#ff2d7b','#f0883e','#d29922','#3fb950','#00e5ff','#bc8cff','#ff2d7b'];
+
+function burst(x, y) {
+  for (var i = 0; i < 80; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 100 + Math.random() * 400;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 200,  // bias upward
+      w: 6 + Math.random() * 8,           // width of confetti piece
+      h: 4 + Math.random() * 6,           // height
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 10,  // spin speed
+      color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+      life: 1,
+      decay: 0.15 + Math.random() * 0.2,
+    });
+  }
+}
+
+addListener(canvas, 'click', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var x = (e.clientX - rect.left) * (500 / rect.width);
+  var y = (e.clientY - rect.top) * (400 / rect.height);
+  burst(x, y);
+});
+
+// Initial burst
+burst(250, 200);
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  ctx.clearRect(0, 0, 500, 400);
+
+  particles.forEach(function(p) {
+    p.vy += 300 * dt;            // gravity
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.98;               // air resistance
+    p.rotation += p.rotSpeed * dt;  // spin!
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+
+  particles.forEach(function(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.globalAlpha = Math.min(1, p.life * 2);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Click for confetti! | ' + particles.length, 10, 20);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="confetti"
+  title="Click for Confetti Burst!"
+  width={500}
+  height={400}
+  code={confettiCode}
+/>
+
+## Starfield (Flying Through Space)
+
+<p>The classic starfield effect simulates flying forward through space. Stars start small at the center and grow larger as they fly outward, creating a sense of depth and speed.</p>
+
+export const starfieldCode = `var stars = [];
+var cx = 250, cy = 200;           // center point (vanishing point)
+var mx = 250, my = 200;           // mouse position for steering
+var numStars = 150;
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+// Initialize stars at random depths
+for (var i = 0; i < numStars; i++) {
+  stars.push({
+    x: (Math.random() - 0.5) * 2,   // -1 to 1 (normalized)
+    y: (Math.random() - 0.5) * 2,
+    z: Math.random(),                 // depth: 0 = far, 1 = close
+  });
+}
+
+var last = performance.now();
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, 500, 400);
+
+  // Smoothly move center toward mouse
+  cx += (mx - cx) * 0.02;
+  cy += (my - cy) * 0.02;
+
+  stars.forEach(function(s) {
+    // Move star closer (increase z)
+    s.z += dt * 0.5;
+
+    // Reset star when it passes the camera
+    if (s.z >= 1) {
+      s.z = 0.001;
+      s.x = (Math.random() - 0.5) * 2;
+      s.y = (Math.random() - 0.5) * 2;
+    }
+
+    // Project 3D position to 2D screen
+    var scale = 1 / (1 - s.z);        // perspective divide
+    var screenX = cx + s.x * scale * 200;
+    var screenY = cy + s.y * scale * 200;
+
+    // Size and brightness increase with depth
+    var size = s.z * 3;
+    var brightness = s.z;
+
+    // Draw star
+    ctx.fillStyle = 'rgba(255, 255, 255, ' + brightness + ')';
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw trail line (from previous position to current)
+    var prevScale = 1 / (1 - s.z + dt * 0.5);
+    var prevX = cx + s.x * prevScale * 200;
+    var prevY = cy + s.y * prevScale * 200;
+    ctx.strokeStyle = 'rgba(255, 255, 255, ' + (brightness * 0.3) + ')';
+    ctx.lineWidth = size * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(prevX, prevY);
+    ctx.lineTo(screenX, screenY);
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('Move mouse to steer through space', 130, 390);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="starfield"
+  title="Starfield: Move Mouse to Steer"
+  width={500}
+  height={400}
+  code={starfieldCode}
+/>
+
+## Object Pooling (Performance Concept)
+
+<p>When you spawn thousands of particles, creating <code>new</code> objects every frame and letting garbage collection clean up dead ones can cause performance stutters. <strong>Object pooling</strong> solves this by reusing dead particles instead of creating new ones.</p>
+
+<Concept>
+  <p><strong>How object pooling works:</strong></p>
+  <pre>{`  Without pooling:
+  emit() → push new object  → GC cleans up dead objects
+  emit() → push new object  → GC cleans up (STUTTER!)
+  emit() → push new object  → ...
+
+  With pooling:
+  ┌────────────────────────────────────────────┐
+  │ Pool: [particle, particle, particle, ...]  │
+  │                                            │
+  │ emit() → find a dead particle in pool      │
+  │        → reset its properties              │
+  │        → it is "alive" again               │
+  │                                            │
+  │ No new objects created!                    │
+  │ No garbage collection needed!              │
+  └────────────────────────────────────────────┘`}</pre>
+</Concept>
+
+export const poolingCode = `// Pre-allocate a pool of 1000 particles
+var POOL_SIZE = 1000;
+var pool = [];
+for (var i = 0; i < POOL_SIZE; i++) {
+  pool.push({
+    alive: false,                   // dead particles are reusable
+    x: 0, y: 0, vx: 0, vy: 0,
+    life: 0, decay: 0, r: 0, hue: 0
+  });
+}
+var activeCount = 0;
+var mx = 250, my = 200;
+var last = performance.now();
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+// Find a dead particle and reuse it
+function emit(x, y) {
+  for (var i = 0; i < pool.length; i++) {
+    var p = pool[i];
+    if (!p.alive) {                 // found a dead one!
+      var angle = Math.random() * Math.PI * 2;
+      var speed = 50 + Math.random() * 150;
+      p.alive = true;              // bring it back to life
+      p.x = x; p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.life = 1;
+      p.decay = 0.5 + Math.random() * 1;
+      p.r = 2 + Math.random() * 4;
+      p.hue = Math.random() * 360;
+      return;                       // only spawn one per call
+    }
+  }
+  // If no dead particles found, pool is full: skip
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+  ctx.clearRect(0, 0, 500, 400);
+
+  // Emit several particles per frame
+  for (var e = 0; e < 8; e++) emit(mx, my);
+
+  // Update all alive particles
+  activeCount = 0;
+  for (var i = 0; i < pool.length; i++) {
+    var p = pool[i];
+    if (!p.alive) continue;
+
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 100 * dt;             // gravity
+    p.vx *= 0.99;
+    p.life -= p.decay * dt;
+
+    if (p.life <= 0) {
+      p.alive = false;            // mark as dead (reusable!)
+      continue;
+    }
+
+    activeCount++;
+
+    // Draw
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = 'hsl(' + p.hue + ', 70%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '12px monospace';
+  ctx.fillText('Active: ' + activeCount + ' / Pool: ' + POOL_SIZE, 10, 20);
+  ctx.fillStyle = '#7a7a8a';
+  ctx.fillText('No new objects created: all recycled from pool', 10, 40);
+  ctx.fillText('Move mouse to emit', 10, 60);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="pooling"
+  title="Object Pooling: 1000 Particle Pool"
+  width={500}
+  height={400}
+  code={poolingCode}
+/>
+
+## The Complete System
+
+<p>Here is a full particle system with multiple switchable effects, gravity, trails, and mouse interaction. This combines everything from this lesson. Click to switch between effects.</p>
+
+export const completeCode = `var particles = [];
+var mode = 0;
+var modes = ['fountain', 'fireworks', 'vortex'];
+var last = performance.now();
+var mx = 250, my = 200;
+
+addListener(canvas, 'click', function() {
+  mode = (mode + 1) % modes.length;
+  particles = [];
+});
+
+addListener(canvas, 'mousemove', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  mx = (e.clientX - rect.left) * (500 / rect.width);
+  my = (e.clientY - rect.top) * (400 / rect.height);
+});
+
+function emitFountain() {
+  for (var i = 0; i < 3; i++) {
+    particles.push({
+      x: 250, y: 380,
+      vx: (Math.random() - 0.5) * 80,
+      vy: -200 - Math.random() * 200,
+      life: 1, decay: 0.3 + Math.random() * 0.4,
+      r: 3 + Math.random() * 4,
+      hue: 190 + Math.random() * 40,
+    });
+  }
+}
+
+function emitFireworks() {
+  if (Math.random() < 0.03) {
+    var ex = 100 + Math.random() * 300;
+    var ey = 50 + Math.random() * 200;
+    var hue = Math.random() * 360;
+    for (var i = 0; i < 40; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = 50 + Math.random() * 200;
+      particles.push({
+        x: ex, y: ey, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 1, decay: 0.5 + Math.random() * 0.5,
+        r: 2 + Math.random() * 3, hue: hue + (Math.random()-0.5)*20,
+      });
+    }
+  }
+}
+
+function emitVortex() {
+  for (var i = 0; i < 2; i++) {
+    var a = Math.random() * Math.PI * 2;
+    var dist = 80 + Math.random() * 80;
+    particles.push({
+      x: mx + Math.cos(a) * dist,
+      y: my + Math.sin(a) * dist,
+      vx: 0, vy: 0,
+      life: 1, decay: 0.3 + Math.random() * 0.3,
+      r: 2 + Math.random() * 4,
+      hue: (a * 180 / Math.PI + performance.now() * 0.005) % 360,
+      angle: a, dist: dist, cx: mx, cy: my,
+    });
+  }
+}
+
+function loop(now) {
+  var dt = (now - last) / 1000;
+  last = now;
+
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+  ctx.fillRect(0, 0, 500, 400);
+
+  if (modes[mode] === 'fountain') emitFountain();
+  else if (modes[mode] === 'fireworks') emitFireworks();
+  else emitVortex();
+
+  particles.forEach(function(p) {
+    if (modes[mode] === 'vortex' && p.angle !== undefined) {
+      p.angle += 3 * dt;
+      p.dist -= 40 * dt;
+      p.x = p.cx + Math.cos(p.angle) * Math.max(0, p.dist);
+      p.y = p.cy + Math.sin(p.angle) * Math.max(0, p.dist);
+    } else {
+      p.vy += 150 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.99;
+    }
+    p.life -= p.decay * dt;
+  });
+
+  particles = particles.filter(function(p) { return p.life > 0; });
+  if (particles.length > 500) particles.splice(0, particles.length - 500);
+
+  particles.forEach(function(p) {
+    ctx.globalAlpha = Math.max(0, p.life * 0.8);
+    ctx.fillStyle = 'hsl(' + p.hue + ', 80%, 60%)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '14px monospace';
+  ctx.fillText('Mode: ' + modes[mode] + ' (click to switch)', 10, 25);
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText(particles.length + ' particles', 10, 45);
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="complete"
+  title="Complete Particle System: Click to Switch Effects"
+  width={500}
+  height={400}
+  code={completeCode}
+/>
+
+## Performance Tips
+
+<Concept>
+  <p><strong>How to keep your particle system fast:</strong></p>
+  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+    <li><strong>Limit particle count.</strong> Set a max (e.g. 500-1000) and stop emitting or remove oldest when you hit it.</li>
+    <li><strong>Use object pooling</strong> (shown above) for high-throughput systems to avoid garbage collection pauses.</li>
+    <li><strong>Avoid per-particle gradients</strong> when possible. Flat circles are 5-10x faster than radial gradient circles.</li>
+    <li><strong>Use <code>fillRect</code> instead of <code>arc</code></strong> for square particles; it skips the path building step.</li>
+    <li><strong>Batch draws.</strong> Build one big path with many arcs, then fill once, instead of fill() per particle.</li>
+    <li><strong>Skip offscreen particles.</strong> Do not draw particles that are outside the canvas bounds.</li>
+    <li><strong>Reduce particle count on mobile.</strong> Check <code>navigator.hardwareConcurrency</code> or test frame rate.</li>
+    <li><strong>Use <code>OffscreenCanvas</code></strong> in a Web Worker for heavy particle systems that should not block the UI thread.</li>
+  </ul>
+</Concept>
+
+<Concept>
+  <p><strong>What you learned in this lesson:</strong></p>
+  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+    <li>A particle system manages arrays of short-lived objects with position, velocity, and lifetime</li>
+    <li>The lifecycle: birth (emit) → update (physics) → death (filter) → draw</li>
+    <li>Emitter patterns: point, line, circle, and cone shapes</li>
+    <li>Forces: gravity, wind, turbulence, attraction, and repulsion</li>
+    <li>Additive blending (<code>globalCompositeOperation = 'lighter'</code>) for glowing effects</li>
+    <li>Connecting nearby particles creates a constellation/network effect</li>
+    <li>Object pooling recycles dead particles to avoid garbage collection</li>
+    <li>Real effects: fire, snow, rain, confetti, starfield, explosions</li>
+  </ul>
+</Concept>
+
+## Where to Go Next
+
+<p>Congratulations. You have built a complete particle system from scratch and learned the core Canvas 2D API! Here are directions to explore next:</p>
+
+<ul style="color: var(--color-muted); margin-left: 1.5rem;">
+  <li><strong>Sprite sheets:</strong> animate characters using <code>drawImage()</code> source cropping instead of drawing shapes</li>
+  <li><strong>Tile maps:</strong> build game levels from grid data, combine with keyboard controls from <a href="/wiki/canvas-lab/07-interaction">Lesson 7</a></li>
+  <li><strong>Physics engines:</strong> <a href="https://brm.io/matter-js/" style="color: var(--color-accent);">Matter.js</a> adds rigid body physics (bouncing, stacking, constraints)</li>
+  <li><strong>Canvas game frameworks:</strong> <a href="https://phaser.io/" style="color: var(--color-accent);">Phaser</a>, <a href="https://pixijs.com/" style="color: var(--color-accent);">PixiJS</a>, <a href="https://konvajs.org/" style="color: var(--color-accent);">Konva</a> for production-grade games</li>
+  <li><strong>WebGL / Three.js:</strong> 3D graphics using the GPU, orders of magnitude more particles possible</li>
+  <li><strong>OffscreenCanvas:</strong> render in a Web Worker for better performance on the main thread</li>
+  <li><strong>Shader-based particles:</strong> move particle physics to the GPU with GLSL shaders for millions of particles</li>
+  <li><strong>Procedural generation:</strong> generate terrain, trees, caves using noise functions and Canvas</li>
+</ul>
+
+<Concept>
+  <p><strong>You now have all the building blocks for Canvas graphics.</strong> Every game, visualization, and creative coding project uses some combination of what you learned in these 8 lessons: shapes, color, transforms, text, images, animation, interaction, and particle systems. Go build something amazing.</p>
+</Concept>
+
+<LessonNav
+  prev={{ href: '/wiki/canvas-lab/07-interaction', title: 'Interaction' }}
+/>

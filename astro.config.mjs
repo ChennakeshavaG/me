@@ -14,11 +14,21 @@ export default defineConfig({
     remarkPlugins: [remarkMath],
     rehypePlugins: [
       rehypeKatex,
-      [rehypeMermaid, { strategy: 'img-svg', dark: true }],
+      [rehypeMermaid, {
+        strategy: 'inline-svg',
+        mermaidConfig: {
+          theme: 'dark',
+          fontFamily: '"Chakra Petch", sans-serif',
+        },
+      }],
     ],
     syntaxHighlight: {
       type: 'shiki',
       excludeLangs: ['mermaid'],
+      themes: {
+        light: 'nord',
+        dark: 'nord',
+      },
     },
   },
 });

@@ -1,0 +1,1448 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Colors & Styles"
+description: "A deep dive into color theory, gradients, patterns, transparency, compositing, line styles, and shadows on the Canvas."
+createdAt: 2026-05-14
+tags: [canvas, javascript, graphics, tutorial]
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={3} />
+
+## How Computers Represent Color
+
+<p>Before we paint anything, let's understand how color works on screens. Your monitor has millions of tiny lights, each made of <strong>three sub-pixels</strong>: one red, one green, and one blue. By mixing these three colors of light at different intensities, your screen can create virtually any color you can see.</p>
+
+<p>This is called the <strong>RGB color model</strong>. Each channel (Red, Green, Blue) ranges from 0 (off) to 255 (full brightness). That gives us 256 x 256 x 256 = over 16 million possible colors.</p>
+
+<Concept>
+  <p><strong>Think of it like stage lighting.</strong> Imagine three spotlights in a dark theater: one red, one green, one blue. Point them all at the same spot on the wall:</p>
+  <pre>{`  Red only       Green only     Blue only      Red + Green    All three
+  +------+       +------+       +------+       +------+       +------+
+  | R    |       |    G |       |      |       | R  G |       | R  G |
+  |  **  |       |  **  |       |  **  |       |  **  |       |  **  |
+  | RED  |       | GRN  |       |   B  |       | YLW  |       |   B  |
+  +------+       +------+       +------+       +------+       +------+
+  (255,0,0)      (0,255,0)      (0,0,255)     (255,255,0)   (255,255,255)
+                                                 = Yellow       = White!`}</pre>
+  <p>Key insight: mixing <em>light</em> is <strong>additive</strong>. Adding more light makes things brighter. This is the opposite of mixing paint, where adding more paint makes things darker.</p>
+</Concept>
+
+<p>The demos below use <code>beginPath()</code> and <code>arc()</code> from Lesson 2 to draw circles. Here, we focus on <em>color</em> rather than shape.</p>
+
+export const rgbMixingCode = `// Draw three overlapping circles to show additive color mixing
+// Just like three colored spotlights on a stage
+
+var centerX = 250;  // center of the canvas
+var centerY = 160;  // vertical center for the circles
+var radius = 90;    // how big each circle is
+var spread = 60;    // how far apart the centers are
+
+// Enable "lighter" blending (a composite mode covered later in this lesson)
+// that simulates real light mixing
+ctx.globalCompositeOperation = 'lighter';
+
+// Red spotlight (top-left position)
+ctx.fillStyle = 'rgb(255, 0, 0)';
+ctx.beginPath();
+ctx.arc(centerX - spread, centerY - 30, radius, 0, Math.PI * 2);
+ctx.fill();
+
+// Green spotlight (top-right position)
+ctx.fillStyle = 'rgb(0, 255, 0)';
+ctx.beginPath();
+ctx.arc(centerX + spread, centerY - 30, radius, 0, Math.PI * 2);
+ctx.fill();
+
+// Blue spotlight (bottom-center position)
+ctx.fillStyle = 'rgb(0, 0, 255)';
+ctx.beginPath();
+ctx.arc(centerX, centerY + 50, radius, 0, Math.PI * 2);
+ctx.fill();
+
+// Reset compositing mode
+ctx.globalCompositeOperation = 'source-over';
+
+// Labels
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.textAlign = 'center';
+ctx.fillText('Red + Green = Yellow', 250, 310);
+ctx.fillText('Red + Blue = Magenta     Green + Blue = Cyan', 250, 330);
+ctx.fillText('All three = White', 250, 350);
+ctx.textAlign = 'left';`;
+
+<CanvasRender
+  id="rgb-mixing"
+  title="RGB Color Mixing: Additive Light"
+  width={500}
+  height={380}
+  code={rgbMixingCode}
+/>
+
+<Concept variant="note">
+**Try this:** Change the `globalAlpha` values from `0.6` to `0.3` for subtle blending, or `0.9` for near-solid layers. Watch how the overlap colors shift.
+</Concept>
+
+## Color Formats Canvas Understands
+
+<p>Canvas accepts any color format that CSS understands. Let's explore each one so you know your options.</p>
+
+<Concept>
+  <p><strong>Named Colors:</strong> CSS has 140+ built-in color names like <code>crimson</code>, <code>cornflowerblue</code>, <code>salmon</code>. Easy to read, but limited palette.</p>
+  <p><strong>Hex (#rrggbb):</strong> Each pair of hex digits represents a channel: <code>#ff0000</code> = red 255, green 0, blue 0. Compact, widely used.</p>
+  <p><strong>RGB (r, g, b):</strong> <code>rgb(255, 0, 0)</code>, same as hex but easier to read. Values 0-255 per channel.</p>
+  <p><strong>RGBA (r, g, b, a):</strong> Like RGB but with an alpha (opacity) channel from 0.0 (invisible) to 1.0 (solid).</p>
+  <p><strong>HSL (h, s%, l%):</strong> Hue (0-360 degrees on a color wheel), Saturation (0-100%), Lightness (0-100%). Often more intuitive; we'll explore this next.</p>
+</Concept>
+
+export const colorFormatsCode = `// Each color format paints the same kind of rectangle
+// so you can see how they all work
+
+var formats = [
+  { val: 'crimson',                   label: "Named:  'crimson'" },
+  { val: '#00e5ff',                   label: "Hex:    '#00e5ff'" },
+  { val: 'rgb(63, 185, 80)',          label: "RGB:    rgb(63, 185, 80)" },
+  { val: 'rgba(247, 120, 186, 0.7)',  label: "RGBA:   rgba(247,120,186, 0.7)" },
+  { val: 'hsl(210, 100%, 60%)',       label: "HSL:    hsl(210, 100%, 60%)" },
+  { val: 'hsla(45, 100%, 50%, 0.8)',  label: "HSLA:   hsla(45, 100%, 50%, 0.8)" },
+];
+
+formats.forEach(function(c, i) {
+  var y = 15 + i * 53;
+
+  // Draw the color swatch
+  ctx.fillStyle = c.val;
+  ctx.fillRect(20, y, 160, 40);
+
+  // Draw a thin border so you can see translucent colors
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(20, y, 160, 40);
+
+  // Label on the right
+  ctx.fillStyle = '#c8c8d0';
+  ctx.font = '12px monospace';
+  ctx.fillText(c.label, 195, y + 25);
+});`;
+
+<CanvasRender
+  id="color-formats"
+  title="All Color Formats Side by Side"
+  width={500}
+  height={340}
+  code={colorFormatsCode}
+/>
+
+## The HSL Color Model: Your Secret Weapon
+
+<p>RGB is how computers think about color. <strong>HSL is how humans think about color.</strong> Instead of mixing red/green/blue channels, you describe color using three intuitive properties:</p>
+
+<Concept>
+  <p><strong>Hue</strong>: "What color?" A position on the color wheel, measured in degrees (0-360).</p>
+  <p><strong>Saturation</strong>: "How vivid?" 0% = gray, 100% = pure vibrant color.</p>
+  <p><strong>Lightness</strong>: "How bright?" 0% = black, 50% = normal, 100% = white.</p>
+  <pre>{`            The Hue Color Wheel (degrees)
+
+                    0/360 = Red
+                       |
+            330       |       30
+       Magenta  \\     |     /  Orange
+                 \\    |    /
+        300 ------+-------+----- 60
+        Violet    |   *   |    Yellow
+                 /    |    \\
+            270 /     |     \\ 90
+       Blue-Violet    |      Yellow-Green
+                      |
+                  180 = Cyan
+                   (turquoise)
+
+  Saturation: center (gray) ────> edge (vivid)
+  Lightness:  separate axis: 0% black, 100% white`}</pre>
+</Concept>
+
+<p>HSL is incredibly useful in code because you can generate harmonious color schemes just by shifting the hue angle, and you can create tints and shades by adjusting lightness.</p>
+
+export const hslWheelCode = `// Draw a visual hue wheel by painting thin slices
+var centerX = 170;
+var centerY = 190;
+var outerRadius = 140;
+var innerRadius = 80;
+
+// Draw 360 slices, one per degree of hue
+for (var angle = 0; angle < 360; angle++) {
+  var startRad = (angle - 90) * Math.PI / 180;  // start at top
+  var endRad = (angle - 89) * Math.PI / 180;
+
+  ctx.fillStyle = 'hsl(' + angle + ', 100%, 50%)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, outerRadius, startRad, endRad);
+  ctx.arc(centerX, centerY, innerRadius, endRad, startRad, true);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Labels for key hues
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '12px monospace';
+ctx.textAlign = 'center';
+ctx.fillText('0 Red', centerX, centerY - outerRadius - 8);
+ctx.fillText('180 Cyan', centerX, centerY + outerRadius + 16);
+ctx.fillText('90', centerX + outerRadius + 18, centerY + 4);
+ctx.fillText('270', centerX - outerRadius - 18, centerY + 4);
+
+// Show saturation/lightness variations on the right
+var startX = 350;
+ctx.textAlign = 'left';
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Saturation:', startX, 30);
+
+// Same hue (210 = blue), varying saturation
+for (var s = 0; s <= 100; s += 20) {
+  var x = startX + (s / 100) * 120;
+  ctx.fillStyle = 'hsl(210, ' + s + '%, 50%)';
+  ctx.fillRect(x, 40, 22, 22);
+}
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('0%              100%', startX, 76);
+
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Lightness:', startX, 105);
+
+// Same hue, varying lightness
+for (var l = 0; l <= 100; l += 10) {
+  var lx = startX + (l / 100) * 120;
+  ctx.fillStyle = 'hsl(210, 100%, ' + l + '%)';
+  ctx.fillRect(lx, 115, 13, 22);
+}
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('0%              100%', startX, 151);
+
+// Show a complementary color scheme
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Complementary:', startX, 185);
+ctx.fillText('(hue + 180)', startX, 200);
+
+var baseHue = 210;
+ctx.fillStyle = 'hsl(' + baseHue + ', 80%, 55%)';
+ctx.fillRect(startX, 215, 50, 35);
+ctx.fillStyle = 'hsl(' + (baseHue + 180) + ', 80%, 55%)';
+ctx.fillRect(startX + 65, 215, 50, 35);
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '10px monospace';
+ctx.fillText('210', startX + 15, 265);
+ctx.fillText('30', startX + 80, 265);
+
+// Triadic scheme
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('Triadic:', startX, 295);
+ctx.fillText('(hue +120 each)', startX, 310);
+
+for (var t = 0; t < 3; t++) {
+  ctx.fillStyle = 'hsl(' + (baseHue + t * 120) + ', 80%, 55%)';
+  ctx.fillRect(startX + t * 45, 320, 35, 35);
+}
+ctx.textAlign = 'left';`;
+
+<CanvasRender
+  id="hsl-wheel"
+  title="The Hue Wheel: All 360 Degrees"
+  width={500}
+  height={400}
+  code={hslWheelCode}
+/>
+
+export const hslProgrammaticCode = `// HSL makes it easy to generate color palettes programmatically
+
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 14px sans-serif';
+ctx.fillText('Rainbow in one loop: just change hue:', 20, 25);
+
+// Draw a rainbow bar by looping through hue values
+for (var h = 0; h < 360; h++) {
+  ctx.fillStyle = 'hsl(' + h + ', 90%, 55%)';
+  ctx.fillRect(20 + h * 1.3, 35, 2, 40);
+}
+
+ctx.fillText('Monochromatic palette: just change lightness:', 20, 105);
+
+// Same hue, different lightness = professional-looking palette
+var baseHue = 210;
+for (var i = 0; i < 8; i++) {
+  var lightness = 15 + i * 10;
+  ctx.fillStyle = 'hsl(' + baseHue + ', 70%, ' + lightness + '%)';
+  ctx.fillRect(20 + i * 58, 115, 50, 40);
+  ctx.fillStyle = lightness > 50 ? '#0a0a0f' : '#c8c8d0';
+  ctx.font = '10px monospace';
+  ctx.fillText(lightness + '%', 28 + i * 58, 140);
+}
+
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 14px sans-serif';
+ctx.fillText('Evenly spaced hues: automatic harmony:', 20, 195);
+
+// Divide the color wheel evenly
+var count = 12;
+for (var j = 0; j < count; j++) {
+  var hue = (j / count) * 360;
+  ctx.fillStyle = 'hsl(' + hue + ', 75%, 55%)';
+  ctx.fillRect(20 + j * 39, 205, 34, 40);
+}
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('hsl(hue, 75%, 55%) where hue = i * 30', 20, 270);`;
+
+<CanvasRender
+  id="hsl-programmatic"
+  title="Why HSL is Powerful in Code"
+  width={500}
+  height={300}
+  code={hslProgrammaticCode}
+/>
+
+## fillStyle and strokeStyle
+
+<p>Every shape you draw on Canvas uses two style properties. Think of them like choosing your art supplies:</p>
+
+<Concept>
+  <p><strong>fillStyle</strong>: the paint color that fills the inside of shapes. Like choosing which paint to pour into a bucket.</p>
+  <p><strong>strokeStyle</strong>: the pen color for outlines. Like choosing which marker to trace edges with.</p>
+  <p>Both accept any color format. Once set, they stay set until you change them, like picking up a new paintbrush.</p>
+</Concept>
+
+export const fillVsStrokeCode = `// fillStyle = interior color (the paint)
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(30, 30, 120, 100);
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '13px sans-serif';
+ctx.fillText('fillStyle', 55, 85);
+
+// strokeStyle = outline color (the pen)
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineWidth = 4;
+ctx.strokeRect(190, 30, 120, 100);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText('strokeStyle', 207, 85);
+
+// Both together
+ctx.fillStyle = '#3fb950';
+ctx.fillRect(350, 30, 120, 100);
+ctx.strokeStyle = '#d29922';
+ctx.lineWidth = 4;
+ctx.strokeRect(350, 30, 120, 100);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText('both', 390, 85);
+
+// Styles persist until changed
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '13px monospace';
+ctx.fillText('Styles persist! Once set, every shape uses', 30, 175);
+ctx.fillText('that style until you explicitly change it.', 30, 195);
+
+// Show persistence
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(30, 220, 40, 40);  // blue
+ctx.fillRect(80, 220, 40, 40);  // still blue!
+ctx.fillRect(130, 220, 40, 40); // still blue!
+ctx.fillStyle = '#ff2d7b';      // NOW we change it
+ctx.fillRect(180, 220, 40, 40); // pink
+ctx.fillRect(230, 220, 40, 40); // still pink
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('fillStyle = blue', 30, 280);
+ctx.fillText('change!', 180, 280);`;
+
+<CanvasRender
+  id="fill-vs-stroke"
+  title="fillStyle vs strokeStyle"
+  width={500}
+  height={300}
+  code={fillVsStrokeCode}
+/>
+
+## Transparency and Opacity
+
+<p>Transparency lets you see through shapes to whatever is behind them. Canvas gives you two ways to control this.</p>
+
+<Concept>
+  <p><strong>Analogy: Glass Windows.</strong> Imagine stacking colored glass windows:</p>
+  <pre>{`  alpha = 1.0         alpha = 0.5          alpha = 0.0
+  (fully opaque)      (semi-transparent)   (invisible)
+  +──────────+        +──────────+         +──────────+
+  │##########│        │# # # # # │         │          │
+  │##########│        │ # # # #  │         │          │
+  │## SOLID ##│        │# SEMI  # │         │ NOTHING  │
+  │##########│        │ # # # #  │         │          │
+  +──────────+        +──────────+         +──────────+
+  Like a wall.        Like tinted          Like clear
+  Blocks everything   glass. Lets some     glass. Fully
+  behind it.          light through.       transparent.`}</pre>
+  <p><strong>Method 1:</strong> <code>ctx.globalAlpha = 0.5</code> affects ALL subsequent draws. Remember to reset it to 1.0!</p>
+  <p><strong>Method 2:</strong> <code>rgba(r, g, b, alpha)</code> or <code>hsla(h, s%, l%, alpha)</code> for per-color transparency. More precise control.</p>
+</Concept>
+
+export const alphaComparisonCode = `// === Left side: globalAlpha ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('globalAlpha (affects everything)', 20, 25);
+
+// Draw a base shape
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(30, 40, 180, 60);
+
+// Now draw overlapping shapes with decreasing alpha
+var alphas = [0.8, 0.5, 0.3, 0.1];
+alphas.forEach(function(a, i) {
+  ctx.globalAlpha = a;
+  ctx.fillStyle = '#ff2d7b';
+  ctx.fillRect(50 + i * 35, 60, 80, 120);
+  // Even the label text is affected by globalAlpha!
+});
+
+ctx.globalAlpha = 1; // ALWAYS reset!
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('0.8   0.5   0.3   0.1', 55, 200);
+
+// === Right side: RGBA per-color ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('RGBA (per-color control)', 280, 25);
+
+// Base shape
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(290, 40, 180, 60);
+
+// Overlapping with per-color alpha: labels stay fully opaque!
+var rgbaAlphas = [0.8, 0.5, 0.3, 0.1];
+rgbaAlphas.forEach(function(a, i) {
+  ctx.fillStyle = 'rgba(247, 120, 186, ' + a + ')';
+  ctx.fillRect(310 + i * 35, 60, 80, 120);
+});
+// Notice: no need to reset anything!
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('0.8   0.5   0.3   0.1', 315, 200);
+
+// Warning note
+ctx.fillStyle = '#d29922';
+ctx.font = 'bold 12px sans-serif';
+ctx.fillText('Warning: always reset globalAlpha!', 20, 240);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('ctx.globalAlpha = 1;  // put this after', 20, 260);
+ctx.fillText('Prefer rgba() for per-shape transparency.', 20, 280);`;
+
+<CanvasRender
+  id="alpha-comparison"
+  title="globalAlpha vs RGBA: Two Approaches"
+  width={500}
+  height={350}
+  code={alphaComparisonCode}
+/>
+
+export const alphaLayeringCode = `// Like stacking colored glass discs on top of each other
+var circles = [
+  { x: 150, y: 150, color: '00e5ff' },
+  { x: 250, y: 110, color: 'ff2d7b' },
+  { x: 350, y: 150, color: '3fb950' },
+];
+
+// Draw 4 rings per circle, each more transparent
+var alphaLevels = [1, 0.6, 0.35, 0.15];
+alphaLevels.forEach(function(alpha, ring) {
+  ctx.globalAlpha = alpha;
+  circles.forEach(function(c) {
+    ctx.fillStyle = '#' + c.color;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 40 + ring * 28, 0, Math.PI * 2);
+    ctx.fill();
+  });
+});
+
+ctx.globalAlpha = 1; // always reset!
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.textAlign = 'center';
+ctx.fillText('Where circles overlap, colors blend through transparency', 250, 280);
+ctx.textAlign = 'left';`;
+
+<CanvasRender
+  id="alpha-layering"
+  title="Transparency Layering: Overlapping Circles"
+  width={500}
+  height={300}
+  code={alphaLayeringCode}
+/>
+
+## Linear Gradients
+
+<p>A gradient smoothly transitions between two or more colors. A <strong>linear gradient</strong> transitions along a straight line. Think of it like a paint roller that starts with one color and gradually shifts to another.</p>
+
+<Concept>
+  <p><code>createLinearGradient(x0, y0, x1, y1)</code> defines the line along which colors change:</p>
+  <pre>{`  Horizontal:  (0, 100) ─────────> (500, 100)
+               start                end
+               Left to right, same y
+
+  Vertical:    (100, 0)
+                  │
+                  │  Top to bottom, same x
+                  v
+               (100, 400)
+
+  Diagonal:    (0, 0)
+                  \\
+                   \\  Corner to corner
+                    v
+                   (500, 400)`}</pre>
+  <p>After creating the gradient, add color stops: <code>gradient.addColorStop(position, color)</code></p>
+  <p><code>position</code> is 0.0 (start) to 1.0 (end). You can add as many stops as you want!</p>
+</Concept>
+
+export const linearGradientBasicCode = `// === Horizontal gradient (left to right) ===
+var g1 = ctx.createLinearGradient(20, 0, 480, 0);
+g1.addColorStop(0, '#00e5ff');   // cyan at left
+g1.addColorStop(1, '#ff2d7b');   // magenta at right
+ctx.fillStyle = g1;
+ctx.fillRect(20, 15, 460, 60);
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '12px monospace';
+ctx.fillText('horizontal: same y, different x', 140, 50);
+
+// === Vertical gradient (top to bottom) ===
+var g2 = ctx.createLinearGradient(0, 95, 0, 175);
+g2.addColorStop(0, '#3fb950');   // green at top
+g2.addColorStop(1, '#d29922');   // gold at bottom
+ctx.fillStyle = g2;
+ctx.fillRect(20, 95, 460, 60);
+ctx.fillStyle = '#0a0a0f';
+ctx.fillText('vertical: same x, different y', 150, 130);
+
+// === Diagonal gradient ===
+var g3 = ctx.createLinearGradient(20, 175, 480, 255);
+g3.addColorStop(0, '#ff2d7b');
+g3.addColorStop(1, '#00e5ff');
+ctx.fillStyle = g3;
+ctx.fillRect(20, 175, 460, 60);
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText('diagonal: different x AND y', 155, 210);
+
+// === Multi-stop gradient ===
+var g4 = ctx.createLinearGradient(20, 0, 480, 0);
+g4.addColorStop(0, '#ff2d7b');     // magenta
+g4.addColorStop(0.25, '#d29922');  // gold
+g4.addColorStop(0.5, '#3fb950');   // green
+g4.addColorStop(0.75, '#00e5ff'); // cyan
+g4.addColorStop(1, '#bc8cff');     // purple
+ctx.fillStyle = g4;
+ctx.fillRect(20, 255, 460, 60);
+ctx.fillStyle = '#0a0a0f';
+ctx.fillText('multi-stop: 5 color stops at 0, 0.25, 0.5, 0.75, 1.0', 55, 290);
+
+// Label
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Gradient direction = line from (x0,y0) to (x1,y1)', 80, 340);`;
+
+<CanvasRender
+  id="linear-gradient-basic"
+  title="Linear Gradient Directions"
+  width={500}
+  height={350}
+  code={linearGradientBasicCode}
+/>
+
+export const gradientSunsetCode = `// A sunset sky uses a vertical gradient with many color stops
+var sky = ctx.createLinearGradient(0, 0, 0, 250);
+sky.addColorStop(0, '#0a0a2e');      // dark navy at top
+sky.addColorStop(0.3, '#1a1a4e');    // deep blue
+sky.addColorStop(0.5, '#c94c4c');    // red-orange
+sky.addColorStop(0.7, '#e88a3a');    // orange
+sky.addColorStop(0.85, '#f0c040');   // yellow-orange
+sky.addColorStop(1, '#f5e06d');      // pale yellow at horizon
+ctx.fillStyle = sky;
+ctx.fillRect(0, 0, 500, 250);
+
+// Sun: a radial gradient for the glowing orb
+var sun = ctx.createRadialGradient(250, 230, 5, 250, 230, 60);
+sun.addColorStop(0, '#ffffff');
+sun.addColorStop(0.3, '#ffe580');
+sun.addColorStop(0.7, 'rgba(245, 180, 80, 0.5)');
+sun.addColorStop(1, 'rgba(245, 160, 60, 0)');
+ctx.fillStyle = sun;
+ctx.beginPath();
+ctx.arc(250, 230, 60, 0, Math.PI * 2);
+ctx.fill();
+
+// Ground silhouette
+ctx.fillStyle = '#0a0a1a';
+ctx.fillRect(0, 250, 500, 100);
+
+// Simple tree silhouettes
+ctx.fillStyle = '#0a0a1a';
+var trees = [60, 140, 320, 410, 460];
+trees.forEach(function(tx) {
+  // Trunk
+  ctx.fillRect(tx - 3, 220, 6, 35);
+  // Canopy
+  ctx.beginPath();
+  ctx.arc(tx, 215, 18 + Math.random() * 8, 0, Math.PI * 2);
+  ctx.fill();
+});
+
+// Stars
+ctx.fillStyle = '#ffffff';
+for (var i = 0; i < 30; i++) {
+  var sx = Math.random() * 500;
+  var sy = Math.random() * 120;
+  var size = Math.random() * 1.5 + 0.5;
+  ctx.fillRect(sx, sy, size, size);
+}
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Sky: vertical gradient with 6 color stops', 20, 280);
+ctx.fillText('Sun: radial gradient (covered next)', 20, 300);`;
+
+<CanvasRender
+  id="gradient-sunset"
+  title="Practical Example: Sunset Sky"
+  width={500}
+  height={350}
+  code={gradientSunsetCode}
+/>
+
+## Radial Gradients
+
+<p>A <strong>radial gradient</strong> transitions colors outward from a center point, like ripples in a pond. It's defined by two circles: an inner circle (where the gradient starts) and an outer circle (where it ends).</p>
+
+<Concept>
+  <p><code>createRadialGradient(x0, y0, r0, x1, y1, r1)</code></p>
+  <pre>{`  (x0, y0, r0) = inner circle center + radius  (gradient START)
+  (x1, y1, r1) = outer circle center + radius  (gradient END)
+
+  Centered (same center):        Off-center (spotlight):
+  +───────────────────+          +───────────────────+
+  │                   │          │                   │
+  │     .-"""-.       │          │  .-"""-.          │
+  │   /  inner  \\     │          │ / inner \\  outer  │
+  │  │   (r0)   │     │          │ │  (r0)   \\  (r1) │
+  │   \\        /      │          │  \\       / ---'   │
+  │     '-...-'       │          │   '-...-'         │
+  │    outer (r1)     │          │                   │
+  +───────────────────+          +───────────────────+
+  Colors radiate evenly          Light source is offset
+  from center outward            creating a spotlight`}</pre>
+</Concept>
+
+export const radialGradientCode = `// === 1. Simple centered radial ===
+var g1 = ctx.createRadialGradient(120, 90, 5, 120, 90, 80);
+g1.addColorStop(0, '#00e5ff');
+g1.addColorStop(1, 'transparent');
+ctx.fillStyle = g1;
+ctx.fillRect(20, 15, 200, 155);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('centered (same x,y)', 40, 180);
+
+// === 2. Off-center: spotlight effect ===
+var g2 = ctx.createRadialGradient(310, 50, 5, 370, 90, 100);
+g2.addColorStop(0, '#ffffff');
+g2.addColorStop(0.4, '#d29922');
+g2.addColorStop(1, '#0a0a0f');
+ctx.fillStyle = g2;
+ctx.fillRect(280, 15, 200, 155);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('off-center (spotlight)', 310, 180);
+
+// === 3. 3D sphere illusion ===
+var g3 = ctx.createRadialGradient(95, 260, 5, 110, 280, 60);
+g3.addColorStop(0, '#ffffff');
+g3.addColorStop(0.3, '#3fb950');
+g3.addColorStop(1, '#0a2010');
+ctx.fillStyle = g3;
+ctx.beginPath();
+ctx.arc(110, 280, 60, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('3D sphere illusion', 55, 360);
+
+// === 4. Metallic button ===
+var g4 = ctx.createRadialGradient(310, 255, 10, 310, 280, 70);
+g4.addColorStop(0, '#e0e0e0');
+g4.addColorStop(0.3, '#a0a0a0');
+g4.addColorStop(0.7, '#606060');
+g4.addColorStop(1, '#303030');
+ctx.fillStyle = g4;
+ctx.beginPath();
+ctx.arc(310, 280, 60, 0, Math.PI * 2);
+ctx.fill();
+// Highlight ring
+ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.arc(310, 280, 58, -0.8, -2.2, true);
+ctx.stroke();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('metallic button', 270, 360);`;
+
+<CanvasRender
+  id="radial-gradient"
+  title="Radial Gradient Variations"
+  width={500}
+  height={380}
+  code={radialGradientCode}
+/>
+
+## Patterns with createPattern()
+
+<p>Besides solid colors and gradients, you can fill shapes with a <strong>repeating pattern</strong>. A pattern is like digital wallpaper: you create a small tile, and Canvas repeats it to fill any shape.</p>
+
+<Concept>
+  <p><code>createPattern(image, repetition)</code> where:</p>
+  <p><strong>image</strong> = any image source (Image, Canvas, Video)</p>
+  <p><strong>repetition</strong> = <code>"repeat"</code> (tile both ways), <code>"repeat-x"</code> (horizontal only), <code>"repeat-y"</code> (vertical only), <code>"no-repeat"</code> (once)</p>
+  <p>The easiest way to make patterns is to draw a tile on an offscreen canvas, then use that canvas as the pattern source.</p>
+</Concept>
+
+export const patternsCode = `// Helper: create a small offscreen canvas as our "tile"
+function makeTile(size, drawFn) {
+  var c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  var tc = c.getContext('2d');
+  drawFn(tc, size);
+  return c;
+}
+
+// === Pattern 1: Checkerboard ===
+var check = makeTile(20, function(tc, s) {
+  tc.fillStyle = '#12121a';
+  tc.fillRect(0, 0, s, s);
+  tc.fillStyle = '#1a1a2a';
+  tc.fillRect(0, 0, s/2, s/2);
+  tc.fillRect(s/2, s/2, s/2, s/2);
+});
+var pat1 = ctx.createPattern(check, 'repeat');
+ctx.fillStyle = pat1;
+ctx.fillRect(20, 30, 200, 130);
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('checkerboard', 65, 22);
+
+// === Pattern 2: Diagonal stripes ===
+var stripe = makeTile(16, function(tc, s) {
+  tc.fillStyle = '#0a0a0f';
+  tc.fillRect(0, 0, s, s);
+  tc.strokeStyle = '#00e5ff';
+  tc.lineWidth = 2;
+  tc.beginPath();
+  tc.moveTo(0, s);
+  tc.lineTo(s, 0);
+  tc.stroke();
+  tc.beginPath();
+  tc.moveTo(-s/2, s/2);
+  tc.lineTo(s/2, -s/2);
+  tc.stroke();
+  tc.beginPath();
+  tc.moveTo(s/2, s + s/2);
+  tc.lineTo(s + s/2, s/2);
+  tc.stroke();
+});
+var pat2 = ctx.createPattern(stripe, 'repeat');
+ctx.fillStyle = pat2;
+ctx.fillRect(260, 30, 220, 130);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('diagonal stripes', 320, 22);
+
+// === Pattern 3: Dots ===
+var dots = makeTile(20, function(tc, s) {
+  tc.fillStyle = '#12121a';
+  tc.fillRect(0, 0, s, s);
+  tc.fillStyle = '#3fb950';
+  tc.beginPath();
+  tc.arc(s/2, s/2, 3, 0, Math.PI * 2);
+  tc.fill();
+});
+var pat3 = ctx.createPattern(dots, 'repeat');
+ctx.fillStyle = pat3;
+ctx.beginPath();
+ctx.arc(120, 270, 70, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('dots (on a circle)', 60, 360);
+
+// === Pattern 4: Grid ===
+var grid = makeTile(24, function(tc, s) {
+  tc.fillStyle = '#0a0a0f';
+  tc.fillRect(0, 0, s, s);
+  tc.strokeStyle = '#1a1a2a';
+  tc.lineWidth = 1;
+  tc.strokeRect(0.5, 0.5, s - 1, s - 1);
+});
+var pat4 = ctx.createPattern(grid, 'repeat');
+ctx.fillStyle = pat4;
+ctx.fillRect(260, 195, 220, 150);
+ctx.fillStyle = '#7a7a8a';
+ctx.fillText('grid', 355, 190);
+
+// Note
+ctx.fillStyle = '#d29922';
+ctx.font = '11px monospace';
+ctx.fillText('Tip: patterns are great for backgrounds!', 20, 375);`;
+
+<CanvasRender
+  id="patterns"
+  layout="stack"
+  title="createPattern: Repeating Tile Patterns"
+  width={500}
+  height={380}
+  code={patternsCode}
+/>
+
+## Composite Operations (Blending Modes)
+
+<p><code>globalCompositeOperation</code> controls how new shapes interact with existing content on the canvas. The default is <code>"source-over"</code>, where new shapes paint on top. But there are 26 different modes that let you multiply, screen, subtract, and more.</p>
+
+<Concept>
+  <p><strong>Analogy: Photo editing layers.</strong> If you've used Photoshop or GIMP, composite operations are like blend modes. They control how a new layer combines with layers below it.</p>
+  <p><strong>"source"</strong> = the new shape you're drawing</p>
+  <p><strong>"destination"</strong> = what's already on the canvas</p>
+  <pre>{`  source-over      source-atop      destination-over     xor
+  +------+         +------+         +------+             +------+
+  |  BB  |         |  .B  |         |  AA  |             |  BA  |
+  | AABB |         | AABB |         | AABB |             | AA.BB|
+  | AA   |         | AA   |         | AABB |             | AA   |
+  +------+         +------+         +------+             +------+
+  New on top       New only where   Old on top           Overlap
+  of old           old exists       of new               becomes clear
+
+  A = existing (destination)     B = new shape (source)`}</pre>
+</Concept>
+
+export const compositeOpsCode = `// Show the most useful composite operations
+var ops = [
+  'source-over', 'source-atop', 'source-in', 'source-out',
+  'destination-over', 'destination-atop', 'lighter', 'xor',
+  'multiply', 'screen', 'overlay', 'difference'
+];
+
+var cols = 4;
+var cellW = 110;
+var cellH = 95;
+var startX = 15;
+var startY = 10;
+
+ops.forEach(function(op, i) {
+  var col = i % cols;
+  var row = Math.floor(i / cols);
+  var x = startX + col * (cellW + 10);
+  var y = startY + row * (cellH + 15);
+
+  // Background
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(x, y, cellW, cellH);
+
+  // Save state for compositing
+  ctx.save();
+
+  // Clip to this cell
+  ctx.beginPath();
+  ctx.rect(x, y, cellW, cellH);
+  ctx.clip();
+
+  // Draw destination (blue circle) first
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(x + 38, y + 45, 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Apply the composite operation
+  ctx.globalCompositeOperation = op;
+
+  // Draw source (red circle)
+  ctx.fillStyle = '#ff2d7b';
+  ctx.beginPath();
+  ctx.arc(x + 68, y + 45, 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Label
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '9px monospace';
+  ctx.fillText(op, x + 5, y + cellH + 10);
+});
+
+// Reset
+ctx.globalCompositeOperation = 'source-over';`;
+
+<CanvasRender
+  id="composite-ops"
+  title="Common Composite Operations"
+  width={500}
+  height={480}
+  code={compositeOpsCode}
+/>
+
+export const compositeEraserCode = `// Draw a colorful background
+var bg = ctx.createLinearGradient(0, 0, 500, 300);
+bg.addColorStop(0, '#00e5ff');
+bg.addColorStop(0.5, '#ff2d7b');
+bg.addColorStop(1, '#3fb950');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, 500, 300);
+
+// Now "erase" parts using destination-out
+// Anything we draw will CUT HOLES in existing content
+ctx.globalCompositeOperation = 'destination-out';
+
+// Erase circles to reveal the dark background
+ctx.fillStyle = 'rgba(0, 0, 0, 1)'; // color doesn't matter, only alpha
+ctx.beginPath();
+ctx.arc(150, 150, 60, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(300, 120, 40, 0, Math.PI * 2);
+ctx.fill();
+
+// Erase text shape
+ctx.font = 'bold 60px sans-serif';
+ctx.fillText('HOLE', 180, 250);
+
+// Reset composite mode
+ctx.globalCompositeOperation = 'source-over';
+
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('destination-out punches holes through existing content', 30, 290);`;
+
+<CanvasRender
+  id="composite-eraser"
+  title="Practical Use: Eraser with destination-out"
+  width={500}
+  height={300}
+  code={compositeEraserCode}
+/>
+
+## Line Styles
+
+<p>Lines in Canvas aren't just "draw a line." You can control their thickness, how their ends look, how corners connect, and whether they're dashed.</p>
+
+<Concept>
+  <p><strong>lineWidth</strong>: thickness in pixels. The line is centered on the path, so half the width extends to each side.</p>
+  <p><strong>lineCap</strong>: how line endpoints are drawn:</p>
+  <pre>{`  "butt"       "round"      "square"
+  ---|---      ---O---      --[|]--
+  Ends at      Adds a       Adds a
+  the exact    semicircle   rectangle
+  endpoint     beyond       beyond the
+               the end      endpoint`}</pre>
+  <p><strong>lineJoin</strong>: how corners between line segments connect:</p>
+  <pre>{`  "miter"      "round"      "bevel"
+    /\\           /\\           /\\
+   /  \\         (  )         /--\\
+  Sharp        Rounded      Flat
+  corner       corner       corner`}</pre>
+</Concept>
+
+export const lineStylesCode = `// === lineCap comparison ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('lineCap:', 20, 20);
+
+ctx.lineWidth = 15;
+ctx.strokeStyle = '#00e5ff';
+
+// Reference lines to show exact start/end points
+ctx.strokeStyle = '#1a1a2a';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(50, 30);
+ctx.lineTo(50, 130);
+ctx.moveTo(200, 30);
+ctx.lineTo(200, 130);
+ctx.stroke();
+
+['butt', 'round', 'square'].forEach(function(cap, i) {
+  ctx.lineCap = cap;
+  ctx.lineWidth = 15;
+  ctx.strokeStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.moveTo(50, 50 + i * 35);
+  ctx.lineTo(200, 50 + i * 35);
+  ctx.stroke();
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText(cap, 215, 55 + i * 35);
+});
+
+// === lineJoin comparison ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('lineJoin:', 320, 20);
+
+ctx.lineWidth = 10;
+ctx.strokeStyle = '#ff2d7b';
+ctx.lineCap = 'butt';
+
+['miter', 'round', 'bevel'].forEach(function(join, i) {
+  ctx.lineJoin = join;
+  ctx.beginPath();
+  ctx.moveTo(320, 55 + i * 45);
+  ctx.lineTo(370, 35 + i * 45);
+  ctx.lineTo(420, 55 + i * 45);
+  ctx.lineTo(470, 35 + i * 45);
+  ctx.stroke();
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText(join, 390, 65 + i * 45);
+});
+
+// === lineWidth comparison ===
+ctx.fillStyle = '#c8c8d0';
+ctx.font = 'bold 13px sans-serif';
+ctx.fillText('lineWidth:', 20, 175);
+ctx.lineJoin = 'miter';
+ctx.lineCap = 'butt';
+
+[1, 3, 5, 10, 20].forEach(function(w, i) {
+  ctx.lineWidth = w;
+  ctx.strokeStyle = '#3fb950';
+  ctx.beginPath();
+  ctx.moveTo(30, 200 + i * 32);
+  ctx.lineTo(250, 200 + i * 32);
+  ctx.stroke();
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '11px monospace';
+  ctx.fillText(w + 'px', 260, 205 + i * 32);
+});
+
+// Sub-pixel note
+ctx.fillStyle = '#d29922';
+ctx.font = '11px monospace';
+ctx.fillText('Tip: lineWidth=1 may look fuzzy.', 300, 210);
+ctx.fillText('Canvas lines are centered on the', 300, 225);
+ctx.fillText('path. A 1px line at y=100 spans', 300, 240);
+ctx.fillText('from 99.5 to 100.5: blurry!', 300, 255);
+ctx.fillText('Fix: use y=100.5 (half-pixel)', 300, 270);`;
+
+<CanvasRender
+  id="line-styles"
+  layout="stack"
+  title="lineCap, lineJoin, lineWidth"
+  width={500}
+  height={380}
+  code={lineStylesCode}
+/>
+
+## Dashed Lines and Marching Ants
+
+<p><code>setLineDash([segments])</code> creates dashed lines. The array alternates between dash length and gap length. <code>lineDashOffset</code> shifts the pattern; animate it for a "marching ants" selection effect.</p>
+
+export const dashesCode = `var patterns = [
+  { dash: [10, 5],        label: '[10, 5]        simple dash' },
+  { dash: [20, 10],       label: '[20, 10]       long dash' },
+  { dash: [5, 5, 15, 5],  label: '[5, 5, 15, 5]  dash-dot' },
+  { dash: [2, 8],         label: '[2, 8]         dots' },
+  { dash: [30, 5, 5, 5],  label: '[30, 5, 5, 5]  morse-code' },
+  { dash: [],             label: '[]             solid (reset)' },
+];
+
+patterns.forEach(function(p, i) {
+  var y = 25 + i * 35;
+  ctx.setLineDash(p.dash);
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(20, y);
+  ctx.lineTo(180, y);
+  ctx.stroke();
+
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '11px monospace';
+  ctx.fillText(p.label, 195, y + 4);
+});
+
+ctx.setLineDash([]);`;
+
+<CanvasRender
+  id="dashes"
+  title="setLineDash Patterns"
+  width={500}
+  height={250}
+  code={dashesCode}
+/>
+
+export const marchingAntsCode = `// "Marching ants": the animated dotted border you see
+// when you make a selection in image editors
+
+var offset = 0;
+
+function draw() {
+  ctx.clearRect(0, 0, 500, 250);
+
+  // Draw a shape with the animated border
+  ctx.setLineDash([6, 4]);
+  ctx.lineDashOffset = -offset;  // negative = march forward
+  ctx.strokeStyle = '#c8c8d0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(50, 30, 200, 120);
+
+  // Second shape: circle
+  ctx.beginPath();
+  ctx.arc(380, 90, 65, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Rounded rectangle
+  var rx = 100, ry = 170, rw = 300, rh = 55, rr = 12;
+  ctx.beginPath();
+  ctx.moveTo(rx + rr, ry);
+  ctx.lineTo(rx + rw - rr, ry);
+  ctx.arcTo(rx + rw, ry, rx + rw, ry + rr, rr);
+  ctx.lineTo(rx + rw, ry + rh - rr);
+  ctx.arcTo(rx + rw, ry + rh, rx + rw - rr, ry + rh, rr);
+  ctx.lineTo(rx + rr, ry + rh);
+  ctx.arcTo(rx, ry + rh, rx, ry + rh - rr, rr);
+  ctx.lineTo(rx, ry + rr);
+  ctx.arcTo(rx, ry, rx + rr, ry, rr);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  // Label
+  ctx.fillStyle = '#7a7a8a';
+  ctx.font = '12px monospace';
+  ctx.fillText('lineDashOffset animates from ' + Math.round(offset), 50, 245);
+
+  offset += 0.3;
+  if (offset > 20) offset = 0;
+  __raf = requestAnimationFrame(draw);
+}
+
+draw();`;
+
+<CanvasRender
+  id="marching-ants"
+  title="Animated Marching Ants (lineDashOffset)"
+  width={500}
+  height={250}
+  code={marchingAntsCode}
+/>
+
+## Shadows
+
+<p>Canvas can add shadows to anything you draw: shapes, text, and images. There are four shadow properties that work together.</p>
+
+<Concept>
+  <p><strong>shadowColor</strong>: the shadow's color (use rgba for translucent shadows).</p>
+  <p><strong>shadowBlur</strong>: how fuzzy the shadow is (0 = sharp, higher = softer).</p>
+  <p><strong>shadowOffsetX / shadowOffsetY</strong>: where the shadow falls relative to the shape.</p>
+  <pre>{`  shadowBlur = 0        shadowBlur = 10       shadowBlur = 30
+  +───+                 +───+                 +───+
+  │   │x                │   │                 │   │
+  +───+x                +───+                 +───+
+    xxxx                . soft .              .........
+  Sharp shadow          Moderate blur         Extremely soft
+
+  offsetX = 5, offsetY = 5   (shadow cast down-right)
+  offsetX = 0, offsetY = 0   (glow effect: shadow all around)`}</pre>
+  <p><strong>Always reset shadows when done!</strong> Otherwise every subsequent draw gets shadows too.</p>
+</Concept>
+
+export const shadowsBasicCode = `// === Drop shadow (classic) ===
+ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+ctx.shadowBlur = 12;
+ctx.shadowOffsetX = 6;
+ctx.shadowOffsetY = 6;
+ctx.fillStyle = '#c8c8d0';
+ctx.fillRect(30, 30, 120, 80);
+ctx.fillStyle = '#0a0a0f';
+ctx.font = '12px sans-serif';
+ctx.fillText('Drop shadow', 48, 75);
+
+// === Soft glow (no offset) ===
+ctx.shadowColor = '#00e5ff';
+ctx.shadowBlur = 25;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 0;
+ctx.fillStyle = '#00e5ff';
+ctx.fillRect(200, 30, 120, 80);
+
+// Reset for label
+ctx.shadowColor = 'transparent';
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '12px sans-serif';
+ctx.fillText('Glow', 238, 75);
+
+// === Colored shadow ===
+ctx.shadowColor = 'rgba(247, 120, 186, 0.7)';
+ctx.shadowBlur = 15;
+ctx.shadowOffsetX = 4;
+ctx.shadowOffsetY = 4;
+ctx.fillStyle = '#ff2d7b';
+ctx.fillRect(370, 30, 100, 80);
+
+ctx.shadowColor = 'transparent';
+ctx.fillStyle = '#c8c8d0';
+ctx.font = '12px sans-serif';
+ctx.fillText('Colored', 392, 75);
+
+// Reset shadows
+ctx.shadowColor = 'transparent';
+ctx.shadowBlur = 0;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 0;
+
+// Labels
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '11px monospace';
+ctx.fillText('offsetX:6 offsetY:6', 30, 135);
+ctx.fillText('blur:12', 30, 150);
+
+ctx.fillText('offsetX:0 offsetY:0', 200, 135);
+ctx.fillText('blur:25 (all around)', 200, 150);
+
+ctx.fillText('colored shadow', 370, 135);
+ctx.fillText('blur:15 offset:4', 370, 150);
+
+// Important reset reminder
+ctx.fillStyle = '#d29922';
+ctx.font = 'bold 12px sans-serif';
+ctx.fillText('Always reset after drawing shadows:', 30, 190);
+ctx.font = '12px monospace';
+ctx.fillStyle = '#c8c8d0';
+ctx.fillText("ctx.shadowColor = 'transparent';", 30, 210);
+ctx.fillText('ctx.shadowBlur = 0;', 30, 228);
+ctx.fillText('ctx.shadowOffsetX = 0;', 30, 246);
+ctx.fillText('ctx.shadowOffsetY = 0;', 30, 264);`;
+
+<CanvasRender
+  id="shadows-basic"
+  title="Shadow Properties Explained"
+  width={500}
+  height={300}
+  code={shadowsBasicCode}
+/>
+
+export const shadowNeonCode = `// === Neon sign effect ===
+// Multiple shadow layers create a convincing neon glow
+ctx.font = 'bold 50px sans-serif';
+ctx.textAlign = 'center';
+
+// Layer 1: wide outer glow
+ctx.shadowColor = '#00e5ff';
+ctx.shadowBlur = 40;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 0;
+ctx.fillStyle = '#00e5ff';
+ctx.fillText('NEON', 150, 80);
+
+// Layer 2: draw again for brighter center
+ctx.shadowBlur = 15;
+ctx.fillStyle = '#a0d4ff';
+ctx.fillText('NEON', 150, 80);
+
+// Pink neon
+ctx.shadowColor = '#ff2d7b';
+ctx.shadowBlur = 40;
+ctx.fillStyle = '#ff2d7b';
+ctx.fillText('GLOW', 370, 80);
+ctx.shadowBlur = 15;
+ctx.fillStyle = '#ffb0d8';
+ctx.fillText('GLOW', 370, 80);
+
+// Reset shadows
+ctx.shadowColor = 'transparent';
+ctx.shadowBlur = 0;
+
+// === 3D depth effect ===
+// Stack offset shadows to create depth
+ctx.textAlign = 'center';
+ctx.font = 'bold 48px sans-serif';
+
+// Draw multiple layers from back to front
+for (var depth = 8; depth >= 0; depth--) {
+  var shade = Math.floor(30 + depth * 15);
+  ctx.fillStyle = 'rgb(' + shade + ',' + Math.floor(shade * 0.6) + ',' + shade + ')';
+  ctx.fillText('DEPTH', 250, 200 + depth * 2);
+}
+// Top layer (brightest)
+ctx.fillStyle = '#3fb950';
+ctx.fillText('DEPTH', 250, 200);
+
+ctx.textAlign = 'left';
+
+// Label
+ctx.fillStyle = '#7a7a8a';
+ctx.font = '12px monospace';
+ctx.fillText('Neon: multiple shadow layers    |    3D: stacked offset layers', 40, 280);`;
+
+<CanvasRender
+  id="shadow-neon"
+  title="Neon Glow Text and 3D Depth"
+  width={500}
+  height={300}
+  code={shadowNeonCode}
+/>
+
+## Putting It All Together: Night City Scene
+
+<p>Let's combine gradients, patterns, transparency, shadows, and compositing into one scene. Study this example to see how all the techniques work together.</p>
+
+export const nightCityCode = `// === Sky gradient ===
+var sky = ctx.createLinearGradient(0, 0, 0, 250);
+sky.addColorStop(0, '#050520');
+sky.addColorStop(0.4, '#0a0a40');
+sky.addColorStop(0.8, '#1a1040');
+sky.addColorStop(1, '#2a1535');
+ctx.fillStyle = sky;
+ctx.fillRect(0, 0, 500, 250);
+
+// === Stars ===
+for (var i = 0; i < 60; i++) {
+  var sx = Math.random() * 500;
+  var sy = Math.random() * 180;
+  var brightness = Math.random();
+  ctx.globalAlpha = 0.3 + brightness * 0.7;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(sx, sy, brightness > 0.7 ? 2 : 1, brightness > 0.7 ? 2 : 1);
+}
+ctx.globalAlpha = 1;
+
+// === Moon with glow ===
+ctx.shadowColor = '#aaccff';
+ctx.shadowBlur = 40;
+var moon = ctx.createRadialGradient(400, 60, 5, 400, 60, 30);
+moon.addColorStop(0, '#ffffee');
+moon.addColorStop(0.8, '#ddddcc');
+moon.addColorStop(1, '#bbbbaa');
+ctx.fillStyle = moon;
+ctx.beginPath();
+ctx.arc(400, 60, 30, 0, Math.PI * 2);
+ctx.fill();
+ctx.shadowColor = 'transparent';
+ctx.shadowBlur = 0;
+
+// === Buildings (varying heights) ===
+var buildings = [
+  { x: 10, w: 50, h: 160 },
+  { x: 65, w: 40, h: 200 },
+  { x: 110, w: 60, h: 140 },
+  { x: 175, w: 45, h: 220 },
+  { x: 225, w: 55, h: 180 },
+  { x: 285, w: 70, h: 240 },
+  { x: 360, w: 40, h: 170 },
+  { x: 405, w: 55, h: 210 },
+  { x: 465, w: 35, h: 150 },
+];
+
+buildings.forEach(function(b) {
+  var bGrad = ctx.createLinearGradient(b.x, 250 - b.h, b.x + b.w, 250);
+  bGrad.addColorStop(0, '#12121a');
+  bGrad.addColorStop(1, '#1a1a25');
+  ctx.fillStyle = bGrad;
+  ctx.fillRect(b.x, 250 - b.h, b.w, b.h);
+
+  // Windows (randomly lit)
+  for (var wy = 250 - b.h + 10; wy < 245; wy += 14) {
+    for (var wx = b.x + 5; wx < b.x + b.w - 8; wx += 10) {
+      if (Math.random() > 0.4) {
+        var warmth = Math.random();
+        ctx.fillStyle = warmth > 0.5
+          ? 'rgba(255, 220, 100, ' + (0.3 + warmth * 0.5) + ')'
+          : 'rgba(100, 180, 255, ' + (0.2 + warmth * 0.3) + ')';
+        ctx.fillRect(wx, wy, 6, 8);
+      }
+    }
+  }
+});
+
+// === Ground ===
+ctx.fillStyle = '#0a0a12';
+ctx.fillRect(0, 250, 500, 150);
+
+// === Road with dashed lines ===
+ctx.fillStyle = '#15151f';
+ctx.fillRect(0, 300, 500, 100);
+
+ctx.strokeStyle = '#3a3a50';
+ctx.lineWidth = 2;
+ctx.setLineDash([20, 15]);
+ctx.beginPath();
+ctx.moveTo(0, 350);
+ctx.lineTo(500, 350);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// === Street lights ===
+[80, 250, 420].forEach(function(lx) {
+  ctx.fillStyle = '#333';
+  ctx.fillRect(lx - 2, 260, 4, 40);
+
+  // Light glow
+  var glow = ctx.createRadialGradient(lx, 260, 2, lx, 265, 35);
+  glow.addColorStop(0, 'rgba(255, 200, 100, 0.4)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(lx, 265, 35, 0, Math.PI * 2);
+  ctx.fill();
+});
+
+// === Neon sign on a building ===
+ctx.shadowColor = '#ff2d7b';
+ctx.shadowBlur = 15;
+ctx.fillStyle = '#ff2d7b';
+ctx.font = 'bold 14px sans-serif';
+ctx.fillText('OPEN', 290, 70);
+ctx.shadowColor = 'transparent';
+ctx.shadowBlur = 0;`;
+
+<CanvasRender
+  id="night-city"
+  layout="stack"
+  title="Night City: All Color Techniques Combined"
+  width={500}
+  height={400}
+  code={nightCityCode}
+/>
+
+<Concept>
+  <p><strong>Lesson 3 Recap: What you learned.</strong></p>
+  <p>Colors: RGB (how screens work), HSL (how humans think), and all CSS formats. <code>fillStyle</code> for fills, <code>strokeStyle</code> for outlines.</p>
+  <p>Transparency: <code>globalAlpha</code> (affects everything, so always reset!) vs <code>rgba()</code>/<code>hsla()</code> (per-color control).</p>
+  <p>Gradients: <code>createLinearGradient</code> for straight-line transitions, <code>createRadialGradient</code> for circular transitions. Both use <code>addColorStop()</code>.</p>
+  <p>Patterns: <code>createPattern</code> repeats a tile image to fill shapes.</p>
+  <p>Compositing: <code>globalCompositeOperation</code> controls how new shapes blend with existing content (26 modes!).</p>
+  <p>Lines: <code>lineWidth</code>, <code>lineCap</code>, <code>lineJoin</code>, <code>setLineDash</code>, and animated <code>lineDashOffset</code>.</p>
+  <p>Shadows: <code>shadowColor</code>, <code>shadowBlur</code>, <code>shadowOffsetX/Y</code>, used for glow, depth, and drop shadows.</p>
+</Concept>
+
+<LessonNav
+  prev={{ href: "/wiki/canvas-lab/02-paths", title: "Paths & Shapes" }}
+  next={{ href: "/wiki/canvas-lab/04-text-images", title: "Text & Images" }}
+/>
