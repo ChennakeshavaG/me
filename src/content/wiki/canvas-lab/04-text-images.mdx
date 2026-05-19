@@ -748,7 +748,8 @@ ctx.fillText('dest region', 170, 260);`;
 
 <Concept>
   <p><strong>The correct pattern:</strong></p>
-  <pre>{`  var img = new Image();
+  <pre>{`
+  var img = new Image();
 
   // STEP 1: Set up onload BEFORE setting src
   img.onload = function() {
@@ -769,15 +770,16 @@ ctx.fillText('dest region', 170, 260);`;
   <p><strong>CORS (Cross-Origin Resource Sharing):</strong> If you load an image from a different domain, you may need to set <code>img.crossOrigin = "anonymous"</code> before setting <code>src</code>. Without this, <code>getImageData()</code> and <code>toDataURL()</code> will throw a security error (the canvas becomes "tainted").</p>
 </Concept>
 
-export const imageLoadingCode = `// Since we can't reliably load external images in demos,
-// let's show the pattern visually and use generated images
+export const imageLoadingCode = `// Real Image loading — onload fires asynchronously.
+// We use an SVG data URL so the demo works without a network.
+// Try changing img.src below to a broken URL: onerror will fire.
 
-// The correct loading pattern (shown as code diagram):
-ctx.fillStyle = 'silver';
-ctx.font = 'bold 14px sans-serif';
-ctx.fillText('Image Loading Timeline:', 20, 25);
+var img = new Image();
+var state = 'loading';   // 'loading' | 'loaded' | 'error'
 
-// Timeline visualization
+img.onload = function() { state = 'loaded'; render(); };
+img.onerror = function() { state = 'error'; render(); };
+
 var steps = [
   { x: 30,  label: 'new Image()', detail: 'Create element', color: 'cyan' },
   { x: 130, label: '.onload = fn', detail: 'Set callback', color: 'limegreen' },
@@ -785,79 +787,99 @@ var steps = [
   { x: 380, label: 'onload fires', detail: 'NOW draw!', color: 'deeppink' },
 ];
 
-// Draw timeline line
-ctx.strokeStyle = '#1a1a2a';
-ctx.lineWidth = 2;
-ctx.beginPath();
-ctx.moveTo(30, 80);
-ctx.lineTo(470, 80);
-ctx.stroke();
+function render() {
+  ctx.clearRect(0, 0, w, h);
 
-// Arrow head
-ctx.fillStyle = '#1a1a2a';
-ctx.beginPath();
-ctx.moveTo(470, 80);
-ctx.lineTo(460, 75);
-ctx.lineTo(460, 85);
-ctx.closePath();
-ctx.fill();
+  // Title
+  ctx.fillStyle = 'silver';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('Image Loading Timeline:', 20, 25);
 
-steps.forEach(function(s) {
-  // Dot on timeline
-  ctx.fillStyle = s.color;
+  // Timeline line + arrowhead
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(s.x + 30, 80, 6, 0, Math.PI * 2);
+  ctx.moveTo(30, 80);
+  ctx.lineTo(470, 80);
+  ctx.stroke();
+  ctx.fillStyle = '#1a1a2a';
+  ctx.beginPath();
+  ctx.moveTo(470, 80);
+  ctx.lineTo(460, 75);
+  ctx.lineTo(460, 85);
+  ctx.closePath();
   ctx.fill();
 
-  // Label
-  ctx.font = 'bold 11px monospace';
-  ctx.fillText(s.label, s.x, 60);
-  ctx.font = '10px sans-serif';
+  // Step dots + labels
+  steps.forEach(function(s) {
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(s.x + 30, 80, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(s.label, s.x, 60);
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = 'gray';
+    ctx.fillText(s.detail, s.x + 5, 100);
+  });
+
+  // 80x80 preview box — shows current state
+  var bx = 30, by = 130, bs = 80;
+
+  if (state === 'loading') {
+    ctx.strokeStyle = 'goldenrod';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(bx, by, bs, bs);
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'goldenrod';
+    ctx.font = '11px monospace';
+    ctx.fillText('loading...', bx + 8, by + 45);
+
+    ctx.fillStyle = 'gray';
+    ctx.font = '11px monospace';
+    ctx.fillText('State: waiting for onload', 130, 170);
+  } else if (state === 'loaded') {
+    ctx.drawImage(img, bx, by);
+    ctx.fillStyle = 'limegreen';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('onload fired — drawImage works', 130, 170);
+  } else {
+    // error placeholder
+    ctx.fillStyle = '#2a1010';
+    ctx.fillRect(bx, by, bs, bs);
+    ctx.strokeStyle = 'deeppink';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bs, bs);
+    ctx.beginPath();
+    ctx.moveTo(bx, by); ctx.lineTo(bx + bs, by + bs);
+    ctx.moveTo(bx + bs, by); ctx.lineTo(bx, by + bs);
+    ctx.stroke();
+    ctx.fillStyle = 'deeppink';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('onerror fired — show placeholder', 130, 170);
+  }
+
   ctx.fillStyle = 'gray';
-  ctx.fillText(s.detail, s.x + 5, 100);
-  ctx.fillStyle = s.color;
-});
+  ctx.font = '11px monospace';
+  ctx.fillText('Edit img.src to a broken URL —', 130, 200);
+  ctx.fillText('onerror runs instead of onload.', 130, 218);
+}
 
-// "Downloading..." indicator
-ctx.setLineDash([6, 4]);
-ctx.strokeStyle = 'goldenrod';
-ctx.beginPath();
-ctx.moveTo(310, 73);
-ctx.lineTo(380, 73);
-ctx.stroke();
-ctx.setLineDash([]);
-ctx.fillStyle = 'goldenrod';
-ctx.font = '9px monospace';
-ctx.fillText('downloading...', 315, 70);
+// Draw the loading state immediately
+render();
 
-// Simulated loaded image
-var loaded = document.createElement('canvas');
-loaded.width = 80;
-loaded.height = 80;
-var lctx = loaded.getContext('2d');
-lctx.fillStyle = '#1a1a2e';
-lctx.fillRect(0, 0, 80, 80);
-lctx.fillStyle = 'cyan';
-lctx.fillRect(10, 10, 25, 25);
-lctx.fillStyle = 'deeppink';
-lctx.fillRect(45, 10, 25, 25);
-lctx.fillStyle = 'limegreen';
-lctx.fillRect(10, 45, 25, 25);
-lctx.fillStyle = 'goldenrod';
-lctx.fillRect(45, 45, 25, 25);
-
-ctx.drawImage(loaded, 30, 130);
-ctx.fillStyle = 'gray';
-ctx.font = '11px monospace';
-ctx.fillText('After onload: drawImage works!', 125, 170);
-
-// Error handling note
-ctx.fillStyle = 'deeppink';
-ctx.font = 'bold 11px sans-serif';
-ctx.fillText('Always add img.onerror too!', 125, 200);
-ctx.fillStyle = 'gray';
-ctx.font = '11px monospace';
-ctx.fillText('Networks fail. Show a placeholder.', 125, 218);`;
+// Real image as an inline SVG data URL — no network, no CORS,
+// but onload still fires asynchronously on the next tick.
+var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">' +
+  '<rect width="80" height="80" fill="#1a1a2e"/>' +
+  '<rect x="10" y="10" width="25" height="25" fill="cyan"/>' +
+  '<rect x="45" y="10" width="25" height="25" fill="deeppink"/>' +
+  '<rect x="10" y="45" width="25" height="25" fill="limegreen"/>' +
+  '<rect x="45" y="45" width="25" height="25" fill="goldenrod"/>' +
+  '</svg>';
+img.src = 'data:image/svg+xml;base64,' + btoa(svg);`;
 
 <CanvasRender
   id="image-loading"
