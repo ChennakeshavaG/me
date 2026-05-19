@@ -870,8 +870,6 @@ function render() {
 // Draw the loading state immediately
 render();
 
-// Real image as an inline SVG data URL — no network, no CORS,
-// but onload still fires asynchronously on the next tick.
 var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">' +
   '<rect width="80" height="80" fill="#1a1a2e"/>' +
   '<rect x="10" y="10" width="25" height="25" fill="cyan"/>' +
@@ -879,6 +877,9 @@ var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">' +
   '<rect x="10" y="45" width="25" height="25" fill="limegreen"/>' +
   '<rect x="45" y="45" width="25" height="25" fill="goldenrod"/>' +
   '</svg>';
+
+// Setting src kicks off the load. onload fires on the next tick,
+// so the 'loading...' state above is briefly visible before render() reruns.
 img.src = 'data:image/svg+xml;base64,' + btoa(svg);`;
 
 <CanvasRender
