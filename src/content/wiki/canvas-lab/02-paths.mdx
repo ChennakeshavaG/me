@@ -1,10 +1,10 @@
 ---
-type: wiki
-category: "canvas-lab"
+type: blog
 title: "Paths & Shapes"
 description: "Draw any shape you can imagine using paths, arcs, and curves."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
+category: "Learn Canvas"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
 import Concept from '../../../components/canvas-lab/Concept.astro';
@@ -52,7 +52,7 @@ Rectangles are useful for prototyping, but real graphics need triangles, circles
 export const beginpathBugCode = `// ---- BUG: No beginPath() between shapes ----
 // The left side shows what happens when you FORGET beginPath()
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('BUG: forgot beginPath()', 20, 25);
 
@@ -61,7 +61,7 @@ ctx.moveTo(50, 50);
 ctx.lineTo(150, 50);
 ctx.lineTo(100, 130);
 ctx.closePath();
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.stroke();
 
@@ -70,13 +70,13 @@ ctx.moveTo(50, 160);
 ctx.lineTo(150, 160);
 ctx.lineTo(100, 240);
 ctx.closePath();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
 // BOTH triangles get stroked blue!
 
 // ---- FIX: Always use beginPath() ----
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('FIX: use beginPath()', 280, 25);
 
 ctx.beginPath();  // fresh start
@@ -84,7 +84,7 @@ ctx.moveTo(310, 50);
 ctx.lineTo(410, 50);
 ctx.lineTo(360, 130);
 ctx.closePath();
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.stroke();
 
@@ -93,7 +93,7 @@ ctx.moveTo(310, 160);
 ctx.lineTo(410, 160);
 ctx.lineTo(360, 240);
 ctx.closePath();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
 // Each triangle has its own color, correct!`;
@@ -125,12 +125,12 @@ ctx.lineTo(100, 250);   // line down to bottom-left
 ctx.lineTo(400, 250);   // line across to bottom-right
 ctx.closePath();         // line back to start (top center)
 
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 3;
 ctx.stroke();
 
 // Label the points
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = '12px monospace';
 ctx.fillText('moveTo(250, 30)', 255, 30);
 ctx.fillText('lineTo(100, 250)', 10, 265);
@@ -138,7 +138,7 @@ ctx.fillText('lineTo(400, 250)', 350, 265);
 
 // Show the pen path with dotted arrows
 ctx.setLineDash([4, 4]);
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 1;
 ctx.beginPath();
 ctx.moveTo(250, 15);
@@ -165,16 +165,16 @@ ctx.lineTo(200, 50);
 ctx.lineTo(200, 200);
 ctx.lineTo(50, 200);
 // no closePath: the bottom-left corner is open!
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 3;
 ctx.stroke();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('no closePath()', 60, 240);
 ctx.fillText('gap here!', 10, 140);
 // Arrow pointing to gap
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 1;
 ctx.beginPath();
 ctx.moveTo(55, 135);
@@ -188,11 +188,11 @@ ctx.lineTo(430, 50);
 ctx.lineTo(430, 200);
 ctx.lineTo(280, 200);
 ctx.closePath();         // draws line back to (280,50)
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 3;
 ctx.stroke();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('with closePath()', 290, 240);`;
 
@@ -232,31 +232,31 @@ function pentagon(cx, cy, r) {
 
 // FILL only
 pentagon(90, 140, 65);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('fill()', 55, 240);
 
 // STROKE only
 pentagon(250, 140, 65);
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 3;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('stroke()', 210, 240);
 
 // BOTH fill and stroke
 pentagon(410, 140, 65);
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fill();
-ctx.strokeStyle = '#c8c8d0';
+ctx.strokeStyle = 'silver';
 ctx.lineWidth = 3;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('fill + stroke', 355, 240);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Tip: call fill() BEFORE stroke(),', 120, 280);
 ctx.fillText('so the stroke appears on top of the fill.', 105, 296);`;
@@ -300,9 +300,9 @@ ctx.fillText('so the stroke appears on top of the fill.', 105, 296);`;
 export const arcsCode = `// Full circle
 ctx.beginPath();
 ctx.arc(80, 80, 50, 0, Math.PI * 2);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('full circle', 42, 145);
 ctx.fillText('0 to PI*2', 45, 160);
@@ -310,19 +310,19 @@ ctx.fillText('0 to PI*2', 45, 160);
 // Half circle (top half, from PI to 0)
 ctx.beginPath();
 ctx.arc(220, 80, 50, Math.PI, 0);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('semicircle', 182, 145);
 ctx.fillText('PI to 0', 195, 160);
 
 // Quarter arc (stroke only)
 ctx.beginPath();
 ctx.arc(360, 80, 50, 0, Math.PI / 2);
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 4;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('quarter arc', 322, 145);
 ctx.fillText('0 to PI/2', 330, 160);
@@ -332,19 +332,19 @@ ctx.beginPath();
 ctx.moveTo(80, 250);
 ctx.arc(80, 250, 50, 0.3, Math.PI * 2 - 0.3);
 ctx.closePath();
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('pac-man', 48, 320);
 
 // Ring (thick stroked circle)
 ctx.beginPath();
 ctx.arc(220, 250, 40, 0, Math.PI * 2);
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 10;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('ring (thick', 180, 310);
 ctx.fillText('stroke)', 195, 325);
@@ -352,9 +352,9 @@ ctx.fillText('stroke)', 195, 325);
 // Smiley face
 ctx.beginPath();
 ctx.arc(380, 250, 50, 0, Math.PI * 2);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fill();
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.beginPath();
 ctx.arc(365, 240, 6, 0, Math.PI * 2);
 ctx.fill();
@@ -363,10 +363,10 @@ ctx.arc(395, 240, 6, 0, Math.PI * 2);
 ctx.fill();
 ctx.beginPath();
 ctx.arc(380, 260, 22, 0.2, Math.PI - 0.2);
-ctx.strokeStyle = '#0a0a0f';
+ctx.strokeStyle = 'black';
 ctx.lineWidth = 3;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('combine arcs', 340, 320);`;
 
@@ -390,13 +390,13 @@ ctx.beginPath();
 ctx.arc(140, 130, 80, startAngle, endAngle, false);
 ctx.lineTo(140, 130);   // line to center
 ctx.closePath();
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fill();
-ctx.strokeStyle = '#c8c8d0';
+ctx.strokeStyle = 'silver';
 ctx.lineWidth = 2;
 ctx.stroke();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('clockwise (default)', 52, 240);
 ctx.fillText('false', 110, 260);
@@ -406,18 +406,18 @@ ctx.beginPath();
 ctx.arc(360, 130, 80, startAngle, endAngle, true);
 ctx.lineTo(360, 130);   // line to center
 ctx.closePath();
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fill();
-ctx.strokeStyle = '#c8c8d0';
+ctx.strokeStyle = 'silver';
 ctx.lineWidth = 2;
 ctx.stroke();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('counterclockwise', 285, 240);
 ctx.fillText('true', 340, 260);
 
 // Show the start/end angles
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.font = '11px monospace';
 ctx.fillText('Same start & end angles,', 140, 20);
 ctx.fillText('different sweep direction!', 140, 36);`;
@@ -447,16 +447,16 @@ ctx.rect(110, 110, 100, 80);    // third (overlapping)
 // Fill them all at once (one path, one fill call)
 ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
 ctx.fill();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
 
 // Compare with fillRect (which draws immediately, separate)
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(300, 30, 100, 80);
 ctx.fillRect(340, 70, 100, 80);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('rect() = part of a path', 30, 220);
 ctx.fillText('fillRect() = draws immediately', 260, 220);`;
@@ -476,9 +476,9 @@ ctx.fillText('fillRect() = draws immediately', 260, 220);`;
 export const ellipseCode = `// A basic oval (wider than tall)
 ctx.beginPath();
 ctx.ellipse(100, 100, 70, 40, 0, 0, Math.PI * 2);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('radiusX=70', 55, 165);
 ctx.fillText('radiusY=40', 55, 180);
@@ -486,18 +486,18 @@ ctx.fillText('radiusY=40', 55, 180);
 // A tall oval
 ctx.beginPath();
 ctx.ellipse(260, 100, 35, 70, 0, 0, Math.PI * 2);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('radiusX=35', 218, 185);
 ctx.fillText('radiusY=70', 218, 200);
 
 // A rotated ellipse (45 degrees)
 ctx.beginPath();
 ctx.ellipse(420, 100, 70, 30, Math.PI / 4, 0, Math.PI * 2);
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('rotated 45deg', 370, 185);
 
 // Egg shape: scale a circle to create an elliptical egg
@@ -507,9 +507,9 @@ ctx.translate(180, 260);
 ctx.scale(1, 1.3);
 ctx.arc(0, 0, 35, 0, Math.PI * 2);
 ctx.restore();
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('egg (scaled arc)', 130, 255);`;
 
 <CanvasRender
@@ -542,6 +542,10 @@ ctx.fillText('egg (scaled arc)', 130, 255);`;
     the straight line, the more the curve bends.`}</pre>
 </Concept>
 
+<Concept variant="note">
+**Want the actual math?** The quadratic Bezier formula is `B(t) = (1-t)^2*P0 + 2*(1-t)*t*P1 + t^2*P2`. It's just two levels of lerp (linear interpolation) stacked together. See the <a href="/wiki/canvas-lab/appendix-bezier-math">Math Appendix</a> for the full derivation, interactive visualizations, and why it works.
+</Concept>
+
 export const quadraticCode = `var startX = 50, startY = 250;
 var cpX = 250, cpY = 30;      // control point
 var endX = 450, endY = 250;
@@ -550,7 +554,7 @@ var endX = 450, endY = 250;
 ctx.beginPath();
 ctx.moveTo(startX, startY);
 ctx.quadraticCurveTo(cpX, cpY, endX, endY);
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 3;
 ctx.stroke();
 
@@ -566,17 +570,17 @@ ctx.stroke();
 ctx.setLineDash([]);
 
 // Label the three points
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.beginPath(); ctx.arc(startX, startY, 6, 0, Math.PI * 2); ctx.fill();
 ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI * 2); ctx.fill();
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.beginPath(); ctx.arc(cpX, cpY, 6, 0, Math.PI * 2); ctx.fill();
 
 ctx.font = '12px monospace';
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillText('start', startX - 5, startY + 20);
 ctx.fillText('end', endX - 15, endY + 20);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillText('control point', cpX - 35, cpY - 12);
 ctx.fillText('(pulls the curve)', cpX - 45, cpY + 20);`;
 
@@ -618,6 +622,10 @@ ctx.fillText('(pulls the curve)', cpX - 45, cpY + 20);`;
                 ● CP2`}</pre>
 </Concept>
 
+<Concept variant="note">
+**The cubic formula:** `B(t) = (1-t)^3*P0 + 3*(1-t)^2*t*P1 + 3*(1-t)*t^2*P2 + t^3*P3`. Three levels of lerp. The <a href="/wiki/canvas-lab/appendix-bezier-math">Math Appendix</a> derives this step by step and shows why the coefficients 1, 3, 3, 1 come from Pascal's triangle.
+</Concept>
+
 export const bezierCode = `var sx = 50, sy = 150;       // start point
 var cp1x = 150, cp1y = 30;   // control point 1
 var cp2x = 350, cp2y = 280;  // control point 2
@@ -627,7 +635,7 @@ var ex = 450, ey = 150;      // end point
 ctx.beginPath();
 ctx.moveTo(sx, sy);
 ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, ex, ey);
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 3;
 ctx.stroke();
 
@@ -646,18 +654,18 @@ ctx.stroke();
 ctx.setLineDash([]);
 
 // Label all four points
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.fill();
 ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fill();
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.beginPath(); ctx.arc(cp1x, cp1y, 5, 0, Math.PI * 2); ctx.fill();
 ctx.beginPath(); ctx.arc(cp2x, cp2y, 5, 0, Math.PI * 2); ctx.fill();
 
 ctx.font = '12px monospace';
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillText('start', sx - 5, sy - 12);
 ctx.fillText('end', ex - 10, ey - 12);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillText('cp1 (pulls start)', cp1x + 8, cp1y);
 ctx.fillText('cp2 (pulls end)', cp2x + 8, cp2y);`;
 
@@ -672,6 +680,134 @@ ctx.fillText('cp2 (pulls end)', cp2x + 8, cp2y);`;
 ## Fill Rules: nonzero vs evenodd
 
 <p>When paths overlap or have holes, how does Canvas decide what's "inside" the shape? That's the <strong>fill rule</strong>. You pass it to <code>fill()</code>.</p>
+
+export const starConstructionCode = `// Watch how a star is drawn: skip-connecting pentagon vertices
+var cx = 250, cy = 185, r = 110;
+
+// Calculate all 5 pentagon vertices
+var pts = [];
+for (var i = 0; i < 5; i++) {
+  var angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+  pts.push({
+    x: cx + r * Math.cos(angle),
+    y: cy + r * Math.sin(angle),
+    label: i
+  });
+}
+
+// Star connection order: 0 -> 2 -> 4 -> 1 -> 3 -> 0
+var order = [0, 2, 4, 1, 3];
+var step = 0;
+var progress = 0;
+var speed = 0.02;
+var pause = 0;
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw faint circle showing where vertices sit
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw all 5 vertex dots and labels
+  for (var i = 0; i < 5; i++) {
+    var isCurrent = (step < 5 && order[step] === i);
+    var isNext = (step < 5 && order[(step + 1) % 5] === i);
+    ctx.fillStyle = isCurrent ? 'limegreen' : isNext ? 'goldenrod' : 'gray';
+    ctx.beginPath();
+    ctx.arc(pts[i].x, pts[i].y, isCurrent ? 7 : 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = isCurrent ? 'limegreen' : 'silver';
+    ctx.font = 'bold 14px monospace';
+    var lx = pts[i].x + (pts[i].x > cx ? 12 : -20);
+    var ly = pts[i].y + (pts[i].y > cy ? 20 : -10);
+    ctx.fillText(i, lx, ly);
+  }
+
+  // Draw completed lines
+  for (var s = 0; s < step && s < 5; s++) {
+    var from = pts[order[s]];
+    var to = pts[order[(s + 1) % 5]];
+    ctx.strokeStyle = 'cyan';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+  }
+
+  // Draw current line being animated
+  if (step < 5) {
+    var from = pts[order[step]];
+    var to = pts[order[(step + 1) % 5]];
+    var mx = from.x + (to.x - from.x) * progress;
+    var my = from.y + (to.y - from.y) * progress;
+    ctx.strokeStyle = 'limegreen';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(mx, my);
+    ctx.stroke();
+
+    // Moving dot
+    ctx.fillStyle = 'limegreen';
+    ctx.beginPath();
+    ctx.arc(mx, my, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Status text
+  ctx.fillStyle = 'silver';
+  ctx.font = '14px monospace';
+  ctx.fillText('Connection order: 0 -> 2 -> 4 -> 1 -> 3 -> 0', 50, 25);
+  ctx.fillText('(skip one vertex each time)', 130, 45);
+
+  if (step < 5) {
+    var fromIdx = order[step];
+    var toIdx = order[(step + 1) % 5];
+    ctx.fillStyle = 'limegreen';
+    ctx.fillText('Drawing: ' + fromIdx + ' -> ' + toIdx, 180, h - 15);
+  } else {
+    ctx.fillStyle = 'deeppink';
+    ctx.fillText('All lines cross! Star complete.', 140, h - 15);
+  }
+
+  // Advance animation
+  if (step < 5) {
+    progress += speed;
+    if (progress >= 1) {
+      progress = 0;
+      step++;
+    }
+  } else {
+    pause++;
+    if (pause > 120) {
+      step = 0;
+      progress = 0;
+      pause = 0;
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="star-construction"
+  title="How a Star Is Drawn: Skip-Connecting Vertices"
+  width={500}
+  height={340}
+  code={starConstructionCode}
+  readonly
+  hideCode
+/>
+
+<p>The 5 points sit on a circle like a pentagon. But instead of connecting 0→1→2→3→4 (which would draw a pentagon), the star connects 0→2→4→1→3 (skipping one each time). The lines cross over each other, creating a center region where the path overlaps. That overlap is what makes the fill rule matter:</p>
 
 export const fillRulesCode = `// Draw the same star shape twice with different fill rules
 
@@ -691,26 +827,26 @@ function star(cx, cy, r) {
 
 // LEFT: nonzero (default): fills everything
 star(140, 150, 100);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fill('nonzero');
-ctx.strokeStyle = '#c8c8d0';
+ctx.strokeStyle = 'silver';
 ctx.lineWidth = 1;
 ctx.stroke();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText("fill('nonzero')", 62, 275);
 ctx.fillText('fills everything', 62, 293);
 
 // RIGHT: evenodd: center is "outside" (creates hole)
 star(360, 150, 100);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fill('evenodd');
-ctx.strokeStyle = '#c8c8d0';
+ctx.strokeStyle = 'silver';
 ctx.lineWidth = 1;
 ctx.stroke();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText("fill('evenodd')", 285, 275);
 ctx.fillText('center has a hole!', 278, 293);`;
 
@@ -763,10 +899,10 @@ function roundRect(x, y, w, h, r) {
 roundRect(20, 20, 200, 80, 5);
 ctx.fillStyle = '#1a1a2a';
 ctx.fill();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('radius = 5', 70, 65);
 
@@ -774,41 +910,41 @@ ctx.fillText('radius = 5', 70, 65);
 roundRect(20, 120, 200, 80, 20);
 ctx.fillStyle = '#1a1a2a';
 ctx.fill();
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('radius = 20', 65, 165);
 
 // Large radius (pill shape)
 roundRect(20, 220, 200, 60, 30);
 ctx.fillStyle = '#1a1a2a';
 ctx.fill();
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 2;
 ctx.stroke();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('radius = 30 (pill)', 40, 255);
 
 // Button example
 roundRect(280, 40, 180, 50, 12);
-ctx.fillStyle = '#238636';
+ctx.fillStyle = 'forestgreen';
 ctx.fill();
-ctx.fillStyle = '#ffffff';
+ctx.fillStyle = 'white';
 ctx.font = 'bold 16px sans-serif';
 ctx.fillText('Click Me', 325, 72);
 
 // Card example
 roundRect(280, 120, 180, 150, 16);
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.fill();
 ctx.strokeStyle = '#1a1a2a';
 ctx.lineWidth = 1;
 ctx.stroke();
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 14px sans-serif';
 ctx.fillText('Card Title', 300, 155);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px sans-serif';
 ctx.fillText('Some content goes', 300, 180);
 ctx.fillText('here in the card.', 300, 198);`;
@@ -850,25 +986,25 @@ function speechBubble(x, y, w, h, r, tailX, tailY) {
 speechBubble(50, 30, 300, 100, 15, 120, 170);
 ctx.fillStyle = '#1a1a2a';
 ctx.fill();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
 
 // Add text inside
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = '16px sans-serif';
 ctx.fillText('Hello! I am a speech', 75, 70);
 ctx.fillText('bubble made of paths!', 75, 95);
 
 // Second bubble (right side, different tail position)
 speechBubble(200, 170, 260, 80, 12, 400, 285);
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.fill();
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.stroke();
 
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = '14px sans-serif';
 ctx.fillText('The tail is just lineTo()', 220, 205);
 ctx.fillText('calls in the middle of the path.', 220, 225);`;
@@ -914,23 +1050,23 @@ function arrow(fromX, fromY, toX, toY, headLen) {
 }
 
 // Horizontal arrow
-ctx.strokeStyle = '#00e5ff';
-ctx.fillStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
+ctx.fillStyle = 'cyan';
 ctx.lineWidth = 3;
 arrow(30, 50, 200, 50, 18);
 
 // Diagonal arrow
-ctx.strokeStyle = '#ff2d7b';
-ctx.fillStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
+ctx.fillStyle = 'deeppink';
 arrow(30, 100, 180, 200, 18);
 
 // Vertical arrow
-ctx.strokeStyle = '#3fb950';
-ctx.fillStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
+ctx.fillStyle = 'limegreen';
 arrow(250, 30, 250, 250, 18);
 
 // Curved idea: label the arrows
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('horizontal', 60, 40);
 ctx.fillText('diagonal', 50, 130);
@@ -946,13 +1082,13 @@ ctx.lineTo(430, 180);
 ctx.lineTo(430, 160);
 ctx.lineTo(320, 160);
 ctx.closePath();
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fill();
-ctx.strokeStyle = '#c8c8d0';
+ctx.strokeStyle = 'silver';
 ctx.lineWidth = 2;
 ctx.stroke();
 
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.font = 'bold 14px monospace';
 ctx.fillText('NEXT', 350, 135);`;
 
@@ -983,23 +1119,23 @@ function polygon(cx, cy, radius, sides) {
 }
 
 var shapes = [
-  { cx: 70,  cy: 80, r: 45, sides: 3, color: '#ff2d7b', label: '3 sides' },
-  { cx: 180, cy: 80, r: 45, sides: 5, color: '#00e5ff', label: '5 sides' },
-  { cx: 290, cy: 80, r: 45, sides: 6, color: '#3fb950', label: '6 sides' },
-  { cx: 400, cy: 80, r: 45, sides: 8, color: '#d29922', label: '8 sides' },
-  { cx: 125, cy: 220, r: 50, sides: 10, color: '#ff2d7b', label: '10 sides' },
-  { cx: 270, cy: 220, r: 50, sides: 16, color: '#bc8cff', label: '16 sides' },
-  { cx: 410, cy: 220, r: 50, sides: 32, color: '#7a7a8a', label: '32 (circle!)' }
+  { cx: 70,  cy: 80, r: 45, sides: 3, color: 'deeppink', label: '3 sides' },
+  { cx: 180, cy: 80, r: 45, sides: 5, color: 'cyan', label: '5 sides' },
+  { cx: 290, cy: 80, r: 45, sides: 6, color: 'limegreen', label: '6 sides' },
+  { cx: 400, cy: 80, r: 45, sides: 8, color: 'goldenrod', label: '8 sides' },
+  { cx: 125, cy: 220, r: 50, sides: 10, color: 'deeppink', label: '10 sides' },
+  { cx: 270, cy: 220, r: 50, sides: 16, color: 'mediumpurple', label: '16 sides' },
+  { cx: 410, cy: 220, r: 50, sides: 32, color: 'gray', label: '32 (circle!)' }
 ];
 
 shapes.forEach(function(s) {
   polygon(s.cx, s.cy, s.r, s.sides);
   ctx.fillStyle = s.color;
   ctx.fill();
-  ctx.strokeStyle = '#c8c8d0';
+  ctx.strokeStyle = 'silver';
   ctx.lineWidth = 1;
   ctx.stroke();
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '11px monospace';
   ctx.fillText(s.label, s.cx - 25, s.cy + s.r + 18);
 });`;
@@ -1039,16 +1175,16 @@ function gear(cx, cy, outerR, innerR, teeth) {
 gear(170, 170, 130, 100, 12);
 ctx.fillStyle = '#1a1a2a';
 ctx.fill();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
 
 // Center hole
 ctx.beginPath();
 ctx.arc(170, 170, 30, 0, Math.PI * 2);
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fill();
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.stroke();
 
@@ -1056,21 +1192,21 @@ ctx.stroke();
 gear(340, 120, 60, 45, 8);
 ctx.fillStyle = '#1a1a2a';
 ctx.fill();
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.stroke();
 
 // Center hole
 ctx.beginPath();
 ctx.arc(340, 120, 12, 0, Math.PI * 2);
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fill();
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.stroke();
 
 // Labels
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('12 teeth', 140, 330);
 ctx.fillText('8 teeth', 310, 210);
@@ -1086,6 +1222,189 @@ ctx.fillText('alternating radius!', 300, 306);`;
   code={gearCode}
 />
 
+<p>How does alternating between two radii create teeth? The idea: place <strong>2 x teeth</strong> points around a circle. Even points sit on the <strong>outer</strong> radius (tooth tips), odd points sit on the <strong>inner</strong> radius (tooth valleys). Connect them in order and you get a gear.</p>
+
+export const gearConstructionCode = `var gears = [
+  { cx: 250, cy: 230, outerR: 120, innerR: 90, teeth: 12, color: 'cyan', label: '12-tooth gear' },
+  { cx: 250, cy: 220, outerR: 80, innerR: 58, teeth: 8, color: 'deeppink', label: '8-tooth gear' }
+];
+var activeGear = 0;
+var step = 0;
+var progress = 0;
+var speed = 0.02;
+var pause = 0;
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+  var g = gears[activeGear];
+  var totalPts = g.teeth * 2;
+
+  // Title bar
+  ctx.fillStyle = g.color;
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText(g.label.toUpperCase(), 20, 22);
+  ctx.fillStyle = 'silver';
+  ctx.font = '12px monospace';
+  ctx.fillText('points = teeth x 2 = ' + totalPts, 20, 42);
+
+  // Legend top-right
+  ctx.font = '11px monospace';
+  ctx.fillStyle = g.color;
+  ctx.fillRect(370, 14, 8, 8);
+  ctx.fillStyle = '#888';
+  ctx.fillText('= tip', 384, 22);
+  ctx.fillStyle = '#666';
+  ctx.fillRect(370, 30, 8, 8);
+  ctx.fillStyle = '#888';
+  ctx.fillText('= valley', 384, 38);
+
+  // Divider
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(20, 55);
+  ctx.lineTo(w - 20, 55);
+  ctx.stroke();
+
+  // Draw both radius circles
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#4a4a5a';
+  ctx.beginPath();
+  ctx.arc(g.cx, g.cy, g.outerR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#3a3a4a';
+  ctx.beginPath();
+  ctx.arc(g.cx, g.cy, g.innerR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Radius labels above the gear
+  ctx.fillStyle = '#777';
+  ctx.font = '11px monospace';
+  ctx.fillText('outer r', g.cx - 22, g.cy - g.outerR - 8);
+  ctx.fillText('inner r', g.cx - 22, g.cy - g.innerR + 16);
+
+  // Calculate all points
+  var pts = [];
+  for (var i = 0; i < totalPts; i++) {
+    var r = (i % 2 === 0) ? g.outerR : g.innerR;
+    var angle = (i * Math.PI / g.teeth) - Math.PI / 2;
+    pts.push({
+      x: g.cx + r * Math.cos(angle),
+      y: g.cy + r * Math.sin(angle),
+      isOuter: (i % 2 === 0)
+    });
+  }
+
+  // Draw completed lines
+  for (var s = 0; s < step && s < totalPts; s++) {
+    var from = pts[s];
+    var to = pts[(s + 1) % totalPts];
+    ctx.strokeStyle = g.color;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw vertex dots
+  for (var i = 0; i < totalPts; i++) {
+    var drawn = (i <= step);
+    var isCurrent = (step < totalPts && i === step);
+    var isNext = (step < totalPts && i === (step + 1) % totalPts);
+    if (!drawn && !isNext) continue;
+    ctx.beginPath();
+    ctx.arc(pts[i].x, pts[i].y, isCurrent ? 6 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = isCurrent ? 'limegreen' : isNext ? 'goldenrod' : (pts[i].isOuter ? g.color : '#666');
+    ctx.fill();
+  }
+
+  // Animate current line
+  if (step < totalPts) {
+    var from = pts[step];
+    var to = pts[(step + 1) % totalPts];
+    var mx = from.x + (to.x - from.x) * progress;
+    var my = from.y + (to.y - from.y) * progress;
+    ctx.strokeStyle = 'limegreen';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(mx, my);
+    ctx.stroke();
+
+    ctx.fillStyle = 'limegreen';
+    ctx.beginPath();
+    ctx.arc(mx, my, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Status bar at bottom
+  ctx.font = '12px monospace';
+  if (step < totalPts) {
+    var ptType = (step % 2 === 0) ? 'OUTER (tip)' : 'INNER (valley)';
+    var nextType = ((step + 1) % 2 === 0) ? 'OUTER (tip)' : 'INNER (valley)';
+    ctx.fillStyle = 'limegreen';
+    ctx.fillText('Point ' + step + ': ' + ptType, 20, h - 30);
+    ctx.fillStyle = 'goldenrod';
+    ctx.fillText('Next ' + ((step + 1) % totalPts) + ': ' + nextType, 20, h - 10);
+  } else {
+    ctx.fillStyle = g.color;
+    ctx.fillText('All ' + totalPts + ' points connected!', 20, h - 30);
+    ctx.fillStyle = 'gray';
+    ctx.fillText(activeGear === 0 ? 'Next: 8-tooth gear...' : 'Restarting...', 20, h - 10);
+  }
+
+  // Advance
+  if (step < totalPts) {
+    progress += speed;
+    if (progress >= 1) {
+      progress = 0;
+      step++;
+    }
+  } else {
+    pause++;
+    if (pause > 90) {
+      step = 0;
+      progress = 0;
+      pause = 0;
+      activeGear = (activeGear + 1) % 2;
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="gear-construction"
+  title="How a Gear Is Drawn: Alternating Radii"
+  width={500}
+  height={420}
+  code={gearConstructionCode}
+  hideCode
+/>
+
+<Concept>
+<p><strong>The gear algorithm:</strong></p>
+<pre>{`    teeth = 12  -->  points = 24
+    
+    Point 0  (even) --> outer radius --> tooth TIP
+    Point 1  (odd)  --> inner radius --> tooth VALLEY
+    Point 2  (even) --> outer radius --> tooth TIP
+    Point 3  (odd)  --> inner radius --> tooth VALLEY
+    ...repeat...
+    
+    Each pair (tip + valley) = one tooth.
+    Connect all points in order --> gear shape.
+    
+    Fewer teeth = bigger teeth (8-tooth vs 12-tooth).
+    Gap between radii = tooth height.`}</pre>
+</Concept>
+
 ## Preview: isPointInPath() for Hit Testing
 
 <p>Canvas doesn't have built-in "click on a shape" like DOM elements. But <code>isPointInPath(x, y)</code> tells you whether a point is inside the current path. This is the foundation for making shapes interactive (covered fully in Lesson 7).</p>
@@ -1093,7 +1412,7 @@ ctx.fillText('alternating radius!', 300, 306);`;
 export const hitTestCode = `// Draw a circle that responds to clicks
 var circleX = 250, circleY = 150, circleR = 80;
 var message = 'Click anywhere!';
-var messageColor = '#7a7a8a';
+var messageColor = 'gray';
 
 function draw() {
   ctx.clearRect(0, 0, 500, 300);
@@ -1101,14 +1420,14 @@ function draw() {
   // Draw the circle
   ctx.beginPath();
   ctx.arc(circleX, circleY, circleR, 0, Math.PI * 2);
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.fill();
-  ctx.strokeStyle = '#c8c8d0';
+  ctx.strokeStyle = 'silver';
   ctx.lineWidth = 2;
   ctx.stroke();
 
   // Label
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = 'bold 16px monospace';
   ctx.fillText('Click me!', circleX - 45, circleY + 6);
 
@@ -1123,8 +1442,10 @@ draw();
 // Listen for clicks on the canvas
 addListener(canvas, 'click', function(e) {
   var rect = canvas.getBoundingClientRect();
-  var mx = e.clientX - rect.left;
-  var my = e.clientY - rect.top;
+  var scaleX = w / rect.width;
+  var scaleY = h / rect.height;
+  var mx = (e.clientX - rect.left) * scaleX;
+  var my = (e.clientY - rect.top) * scaleY;
 
   // Build the circle path again for hit testing
   ctx.beginPath();
@@ -1132,10 +1453,10 @@ addListener(canvas, 'click', function(e) {
 
   if (ctx.isPointInPath(mx, my)) {
     message = 'HIT! You clicked inside the circle!';
-    messageColor = '#3fb950';
+    messageColor = 'limegreen';
   } else {
     message = 'MISS! Click was at (' + Math.round(mx) + ', ' + Math.round(my) + ')';
-    messageColor = '#ff2d7b';
+    messageColor = 'deeppink';
   }
   draw();
 });`;
@@ -1166,11 +1487,11 @@ for (var i = 0; i < skyColors.length; i++) {
 // Sun (circle)
 ctx.beginPath();
 ctx.arc(400, 80, 35, 0, Math.PI * 2);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fill();
 
 // Sun rays
-ctx.strokeStyle = '#d29922';
+ctx.strokeStyle = 'goldenrod';
 ctx.lineWidth = 2;
 for (var i = 0; i < 12; i++) {
   var angle = i * Math.PI / 6;
@@ -1195,7 +1516,7 @@ ctx.moveTo(155, 120);
 ctx.lineTo(180, 100);
 ctx.lineTo(205, 120);
 ctx.quadraticCurveTo(180, 130, 155, 120);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fill();
 
 // Mountain 2 (front, smaller)
@@ -1213,7 +1534,7 @@ ctx.moveTo(330, 155);
 ctx.lineTo(350, 140);
 ctx.lineTo(370, 155);
 ctx.quadraticCurveTo(350, 165, 330, 155);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fill();
 
 // Lake (ellipse)
@@ -1263,7 +1584,7 @@ tree(450, 300, 45);
 tree(480, 308, 30);
 
 // Birds (simple bezier V shapes)
-ctx.strokeStyle = '#0a0a0f';
+ctx.strokeStyle = 'black';
 ctx.lineWidth = 2;
 var birds = [[120,50],[160,35],[300,55],[340,70]];
 birds.forEach(function(b) {

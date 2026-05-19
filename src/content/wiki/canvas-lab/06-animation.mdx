@@ -91,7 +91,7 @@ function loop() {
   if (x > 550) x = -50;     // wrap around when off-screen
 
   // Step 3: Draw the ball at its new position
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.beginPath();
   ctx.arc(x, 150, 25, 0, Math.PI * 2);
   ctx.fill();
@@ -176,11 +176,11 @@ function loop(now) {
   x1 += speed * dt;          // pixels/sec * seconds = pixels
   if (x1 > 550) x1 = -50;
 
-  ctx.fillStyle = '#3fb950';
+  ctx.fillStyle = 'limegreen';
   ctx.beginPath();
   ctx.arc(x1, 100, 20, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '13px monospace';
   ctx.fillText('speed * dt  (consistent on any monitor)', 60, 105);
 
@@ -188,11 +188,11 @@ function loop(now) {
   x2 += 2.5;                 // same speed only at 60fps!
   if (x2 > 550) x2 = -50;
 
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(x2, 200, 20, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('fixed += 2.5  (too fast at 120fps)', 60, 205);
 
   __raf = requestAnimationFrame(loop);
@@ -300,31 +300,31 @@ function loop(now) {
 
   // Ball 1: Fixed position change (teleporting, no physics)
   ball1.x += 60 * dt;
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(ball1.x, 80, 18, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('constant speed (no acceleration)', 60, 45);
 
   // Ball 2: Constant velocity
   ball2.x += ball2.vx * dt;
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.beginPath();
   ctx.arc(ball2.x, 175, 18, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('constant velocity: vx = 100', 60, 140);
 
   // Ball 3: Acceleration: velocity changes over time!
   ball3.vx += ball3.ax * dt;      // acceleration changes velocity
   ball3.x += ball3.vx * dt;       // velocity changes position
-  ctx.fillStyle = '#3fb950';
+  ctx.fillStyle = 'limegreen';
   ctx.beginPath();
   ctx.arc(ball3.x, 270, 18, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('acceleration: starts slow, gets faster', 60, 235);
 
   __raf = requestAnimationFrame(loop);
@@ -412,8 +412,8 @@ function loop(now) {
   ctx.stroke();
 
   // Draw ball with shadow for depth
-  ctx.fillStyle = '#00e5ff';
-  ctx.shadowColor = '#00e5ff';
+  ctx.fillStyle = 'cyan';
+  ctx.shadowColor = 'cyan';
   ctx.shadowBlur = 12;
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
@@ -493,7 +493,7 @@ function loop(now) {
 
   ctx.clearRect(0, 0, 500, 350);
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('click to launch balls: watch them slow down', 100, 20);
 
@@ -572,27 +572,27 @@ function loop(now) {
 
   ctx.clearRect(0, 0, 500, 400);
   ctx.font = '12px monospace';
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
 
   // --- 1. Bobbing (vertical sine) ---
   ctx.fillText('bobbing: y = 70 + sin(time * 2) * 30', 160, 25);
   var bobY = 70 + Math.sin(time * 2) * 30;
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.beginPath();
   ctx.arc(100, bobY, 18, 0, Math.PI * 2);
   ctx.fill();
 
   // --- 2. Pulsing (size sine) ---
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('pulsing: r = 20 + sin(time * 3) * 10', 160, 170);
   var pulseR = 20 + Math.sin(time * 3) * 10;
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(100, 175, pulseR, 0, Math.PI * 2);
   ctx.fill();
 
   // --- 3. Orbiting (sin + cos = circle) ---
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('orbit: x = cos(t)*60, y = sin(t)*60', 160, 310);
   var orbitX = 100 + Math.cos(time * 1.5) * 60;
   var orbitY = 320 + Math.sin(time * 1.5) * 60;
@@ -611,13 +611,13 @@ function loop(now) {
   ctx.fill();
 
   // Draw orbiting dot
-  ctx.fillStyle = '#3fb950';
+  ctx.fillStyle = 'limegreen';
   ctx.beginPath();
   ctx.arc(orbitX, orbitY, 14, 0, Math.PI * 2);
   ctx.fill();
 
   // --- Draw a sine wave visualization on the right ---
-  ctx.strokeStyle = '#00e5ff';
+  ctx.strokeStyle = 'cyan';
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (var px = 0; px < 200; px++) {
@@ -628,7 +628,7 @@ function loop(now) {
   }
   ctx.stroke();
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('the sine wave itself', 310, 105);
 
   __raf = requestAnimationFrame(loop);
@@ -709,8 +709,8 @@ function loop() {
   ctx.stroke();
 
   // Draw the following circle
-  ctx.fillStyle = '#00e5ff';
-  ctx.shadowColor = '#00e5ff';
+  ctx.fillStyle = 'cyan';
+  ctx.shadowColor = 'cyan';
   ctx.shadowBlur = 15;
   ctx.beginPath();
   ctx.arc(circleX, circleY, 22, 0, Math.PI * 2);
@@ -718,7 +718,7 @@ function loop() {
   ctx.shadowBlur = 0;
 
   // Label
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('move your mouse: circle follows with lerp', 110, 20);
 
@@ -775,7 +775,7 @@ for (var i = 0; i < 12; i++) {
 }
 
 // Fill background once at start
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fillRect(0, 0, 500, 400);
 
 function loop(now) {
@@ -866,7 +866,7 @@ function loop(now) {
   }
 
   // Label
-  ctx.fillStyle = '#c9d1d9';
+  ctx.fillStyle = 'lightgray';
   ctx.font = '13px monospace';
   ctx.fillText('hue cycling + sine wave heights', 130, 30);
 
@@ -950,7 +950,7 @@ function loop(now) {
   ctx.globalAlpha = 1;
 
   // --- Draw FPS counter ---
-  var fpsColor = fps >= 55 ? '#3fb950' : fps >= 30 ? '#d29922' : '#ff2d7b';
+  var fpsColor = fps >= 55 ? 'limegreen' : fps >= 30 ? 'goldenrod' : 'deeppink';
   ctx.fillStyle = 'rgba(10, 10, 15, 0.7)';
   ctx.fillRect(8, 8, 90, 28);
   ctx.fillStyle = fpsColor;
@@ -1015,12 +1015,12 @@ function elastic(t) {
 }
 
 var easings = [
-  { fn: linear,         name: 'linear',        color: '#7a7a8a' },
-  { fn: easeInQuad,     name: 'easeInQuad',     color: '#ff2d7b' },
-  { fn: easeOutQuad,    name: 'easeOutQuad',    color: '#00e5ff' },
-  { fn: easeInOutCubic, name: 'easeInOutCubic', color: '#3fb950' },
-  { fn: bounce,         name: 'bounce',         color: '#d29922' },
-  { fn: elastic,        name: 'elastic',        color: '#bc8cff' }
+  { fn: linear,         name: 'linear',        color: 'gray' },
+  { fn: easeInQuad,     name: 'easeInQuad',     color: 'deeppink' },
+  { fn: easeOutQuad,    name: 'easeOutQuad',    color: 'cyan' },
+  { fn: easeInOutCubic, name: 'easeInOutCubic', color: 'limegreen' },
+  { fn: bounce,         name: 'bounce',         color: 'goldenrod' },
+  { fn: elastic,        name: 'elastic',        color: 'mediumpurple' }
 ];
 
 var duration = 2000;
@@ -1064,7 +1064,7 @@ function loop(now) {
   }
 
   // Progress indicator
-  ctx.fillStyle = '#484f58';
+  ctx.fillStyle = 'dimgray';
   ctx.font = '11px monospace';
   ctx.fillText('t = ' + t.toFixed(2), 440, 390);
 
@@ -1158,7 +1158,7 @@ function loop(now) {
   ctx.stroke();
 
   // Spring line
-  ctx.strokeStyle = '#3fb950';
+  ctx.strokeStyle = 'limegreen';
   ctx.lineWidth = 2;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
@@ -1168,8 +1168,8 @@ function loop(now) {
   ctx.setLineDash([]);
 
   // Ball
-  ctx.fillStyle = '#3fb950';
-  ctx.shadowColor = '#3fb950';
+  ctx.fillStyle = 'limegreen';
+  ctx.shadowColor = 'limegreen';
   ctx.shadowBlur = 15;
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, 18, 0, Math.PI * 2);
@@ -1177,7 +1177,7 @@ function loop(now) {
   ctx.shadowBlur = 0;
 
   // Label
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('click to set target: ball springs to it', 115, 20);
 
@@ -1219,7 +1219,7 @@ function loop(now) {
   var arcLength = 1.5 + Math.sin(time * 2.5) * 1.0;
 
   // Draw the spinner arc
-  ctx.strokeStyle = '#00e5ff';
+  ctx.strokeStyle = 'cyan';
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
   ctx.beginPath();
@@ -1233,7 +1233,7 @@ function loop(now) {
   ctx.stroke();
 
   // Center dot
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.globalAlpha = 0.3 + Math.sin(time * 3) * 0.2;
   ctx.beginPath();
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
@@ -1305,7 +1305,7 @@ function loop(now) {
   ctx.rotate(boatTilt);
 
   // Hull
-  ctx.fillStyle = '#8b6914';
+  ctx.fillStyle = 'darkgoldenrod';
   ctx.beginPath();
   ctx.moveTo(-18, 0);
   ctx.lineTo(-14, 8);
@@ -1315,7 +1315,7 @@ function loop(now) {
   ctx.fill();
 
   // Mast
-  ctx.strokeStyle = '#c9d1d9';
+  ctx.strokeStyle = 'lightgray';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, 0);
@@ -1323,7 +1323,7 @@ function loop(now) {
   ctx.stroke();
 
   // Sail
-  ctx.fillStyle = '#c9d1d9';
+  ctx.fillStyle = 'lightgray';
   ctx.globalAlpha = 0.8;
   ctx.beginPath();
   ctx.moveTo(0, -20);
@@ -1336,7 +1336,7 @@ function loop(now) {
   ctx.restore();
 
   // Sky gradient at top
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('3 sine layers + different speeds = ocean', 115, 30);
 
@@ -1397,7 +1397,7 @@ function loop() {
     var angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
     var inner = i % 3 === 0 ? radius - 18 : radius - 12;
     var outer = radius - 4;
-    ctx.strokeStyle = i % 3 === 0 ? '#c9d1d9' : '#484f58';
+    ctx.strokeStyle = i % 3 === 0 ? 'lightgray' : 'dimgray';
     ctx.lineWidth = i % 3 === 0 ? 3 : 1;
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
@@ -1420,24 +1420,24 @@ function loop() {
   // --- Draw hands ---
   // Hour hand
   var hourAngle = ((hours + minutes / 60) / 12) * Math.PI * 2 - Math.PI / 2;
-  drawHand(hourAngle, 60, 5, '#c9d1d9');
+  drawHand(hourAngle, 60, 5, 'lightgray');
 
   // Minute hand
   var minAngle = ((minutes + smoothSec / 60) / 60) * Math.PI * 2 - Math.PI / 2;
-  drawHand(minAngle, 85, 3, '#7a7a8a');
+  drawHand(minAngle, 85, 3, 'gray');
 
   // Second hand (smooth sweep)
   var secAngle = (smoothSec / 60) * Math.PI * 2 - Math.PI / 2;
-  drawHand(secAngle, 95, 1.5, '#ff2d7b');
+  drawHand(secAngle, 95, 1.5, 'deeppink');
 
   // Center cap
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(cx, cy, 5, 0, Math.PI * 2);
   ctx.fill();
 
   // Digital time below
-  ctx.fillStyle = '#484f58';
+  ctx.fillStyle = 'dimgray';
   ctx.font = '12px monospace';
   var timeStr = (hours === 0 ? 12 : hours) + ':' +
     (minutes < 10 ? '0' : '') + minutes + ':' +

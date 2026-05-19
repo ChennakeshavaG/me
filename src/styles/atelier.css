@@ -140,17 +140,10 @@
   border-color: var(--color-accent);
 }
 
-.stream-card__seg--current::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
 .stream-card__seg,
 .stream-card__pin,
 .stream-card__date {
   position: relative;
-  z-index: 1;
 }
 
 .stream-card--pinned {

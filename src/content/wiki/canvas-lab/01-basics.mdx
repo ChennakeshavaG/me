@@ -39,12 +39,12 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 </Concept>
 
 export const fillRectCode = `// First, set the fill color
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 // Draw a rectangle at (50,50), 200 wide, 100 tall
 ctx.fillRect(50, 50, 200, 100);
 
 // Change color and draw another
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(150, 100, 200, 100);
 
 // Semi-transparent rectangle (the 0.6 means 60% opacity)
@@ -52,7 +52,7 @@ ctx.fillStyle = 'rgba(63, 185, 80, 0.6)';
 ctx.fillRect(250, 50, 200, 150);
 
 // Label the first rectangle
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = '12px monospace';
 ctx.fillText('fillRect(50, 50, 200, 100)', 55, 95);`;
 
@@ -82,10 +82,10 @@ function swatch(color, label, description) {
   ctx.lineWidth = 1;
   ctx.strokeRect(20, y, swatchSize, swatchSize);
 
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = 'bold 13px monospace';
   ctx.fillText(label, 75, y + 18);
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText(description, 75, y + 35);
   y += 55;
@@ -93,7 +93,7 @@ function swatch(color, label, description) {
 
 swatch('tomato', "'tomato'", 'Named color (140+ built-in names)');
 swatch('#00e5ff', "'#00e5ff'", 'Hex: #RRGGBB (most common on web)');
-swatch('#f0f', "'#f0f'", 'Hex shorthand: #RGB (same as #ff00ff)');
+swatch('magenta', "'#f0f'", 'Hex shorthand: #RGB (same as #ff00ff)');
 swatch('rgb(210, 153, 34)', "'rgb(210, 153, 34)'", 'RGB: values 0-255 for Red, Green, Blue');
 swatch('rgba(0, 229, 255, 0.5)', "'rgba(0,229,255,0.5)'", 'RGBA: like RGB but with alpha (0=invisible, 1=solid)');
 swatch('hsl(280, 70%, 60%)', "'hsl(280, 70%, 60%)'", 'HSL: Hue (0-360), Saturation %, Lightness %');`;
@@ -115,43 +115,43 @@ swatch('hsl(280, 70%, 60%)', "'hsl(280, 70%, 60%)'", 'HSL: Hue (0-360), Saturati
 <p><code>strokeRect(x, y, width, height)</code> draws just the <strong>outline</strong> of a rectangle, without filling the inside. You control the outline color with <code>strokeStyle</code>, thickness with <code>lineWidth</code>, and pattern with <code>setLineDash([dashLength, gapLength])</code> for dashed or dotted lines.</p>
 
 export const strokeRectCode = `// Thin outline (2px)
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 2;
 ctx.strokeRect(30, 30, 120, 80);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('lineWidth = 2', 40, 135);
 
 // Medium outline (5px)
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 5;
 ctx.strokeRect(180, 30, 120, 80);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('lineWidth = 5', 190, 135);
 
 // Thick outline (10px)
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 10;
 ctx.strokeRect(330, 30, 120, 80);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('lineWidth = 10', 340, 135);
 
 // Dashed outline
-ctx.strokeStyle = '#d29922';
+ctx.strokeStyle = 'goldenrod';
 ctx.lineWidth = 3;
 ctx.setLineDash([10, 5]);
 ctx.strokeRect(30, 170, 200, 80);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('setLineDash([10, 5])', 40, 275);
 ctx.setLineDash([]);
 
 // Dotted outline
-ctx.strokeStyle = '#bc8cff';
+ctx.strokeStyle = 'mediumpurple';
 ctx.lineWidth = 3;
 ctx.setLineDash([3, 6]);
 ctx.strokeRect(260, 170, 200, 80);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('setLineDash([3, 6])', 270, 275);
 ctx.setLineDash([]);`;
 
@@ -184,7 +184,7 @@ ctx.setLineDash([]);`;
 <p><code>clearRect(x, y, width, height)</code> makes a rectangular area fully transparent. It erases whatever was drawn there. Think of it as a rectangular eraser.</p>
 
 export const clearRectCode = `// Fill the entire canvas with cyan
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fillRect(0, 0, 500, 300);
 
 // Cut rectangular holes to reveal the background
@@ -193,11 +193,11 @@ ctx.clearRect(200, 100, 150, 100);
 ctx.clearRect(380, 30, 80, 250);
 
 // You can draw on top of cleared areas
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(60, 60, 30, 30);
 
 // Label
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = '12px monospace';
 ctx.fillText('cleared areas become transparent', 50, 290);`;
 
@@ -224,26 +224,26 @@ export const drawOrderCode = `// Draw three overlapping rectangles
 // The ORDER you draw them determines what's on top
 
 // First: red (drawn first = on the bottom)
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(50, 50, 180, 150);
 
 // Second: green (covers part of red)
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillRect(130, 90, 180, 150);
 
 // Third: cyan (covers parts of both)
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fillRect(210, 40, 180, 150);
 
 // Labels showing draw order
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 14px monospace';
 ctx.fillText('1st', 120, 130);
 ctx.fillText('2nd', 200, 175);
 ctx.fillText('3rd', 280, 125);
 
 // Explanation on the right
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Drawn first', 410, 60);
 ctx.fillText('= on bottom', 410, 78);
@@ -267,7 +267,7 @@ ctx.fillText('= on top', 410, 198);`;
 <p>Let's use everything we've learned to draw something fun: a robot made entirely from rectangles!</p>
 
 export const robotCode = `// Background
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fillRect(0, 0, 500, 400);
 
 // Main body (torso)
@@ -279,35 +279,35 @@ ctx.fillStyle = '#1a1a2a';
 ctx.fillRect(200, 50, 100, 80);
 
 // Antenna
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillRect(245, 20, 10, 30);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(240, 10, 20, 15);
 
 // Eyes
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fillRect(220, 70, 25, 20);
 ctx.fillRect(255, 70, 25, 20);
 
 // Pupils
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fillRect(230, 75, 10, 10);
 ctx.fillRect(262, 75, 10, 10);
 
 // Mouth
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillRect(225, 105, 50, 8);
 
 // Chest panel
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.fillRect(210, 160, 80, 60);
 
 // Chest lights
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(220, 170, 15, 15);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fillRect(243, 170, 15, 15);
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillRect(266, 170, 15, 15);
 
 // Arms
@@ -316,7 +316,7 @@ ctx.fillRect(150, 150, 35, 100);
 ctx.fillRect(315, 150, 35, 100);
 
 // Hands
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillRect(155, 250, 25, 25);
 ctx.fillRect(320, 250, 25, 25);
 
@@ -326,7 +326,7 @@ ctx.fillRect(205, 285, 35, 80);
 ctx.fillRect(260, 285, 35, 80);
 
 // Feet
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillRect(195, 365, 55, 20);
 ctx.fillRect(250, 365, 55, 20);
 
@@ -371,17 +371,17 @@ ctx.moveTo(100, 130);
 ctx.lineTo(220, 50);
 ctx.lineTo(340, 130);
 ctx.closePath();
-ctx.fillStyle = '#c0392b';
+ctx.fillStyle = 'firebrick';
 ctx.fill();
 
 // Door
 ctx.fillStyle = '#5d3a1a';
 ctx.fillRect(195, 180, 40, 70);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fillRect(225, 218, 6, 6);
 
 // Windows
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fillRect(140, 160, 35, 35);
 ctx.fillRect(265, 160, 35, 35);
 
@@ -399,11 +399,11 @@ ctx.fillRect(280, 60, 30, 70);
 // Moon
 ctx.beginPath();
 ctx.arc(420, 60, 25, 0, Math.PI * 2);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fill();
 
 // Stars
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 var stars = [[50,30],[100,70],[350,40],[300,20],[450,90],[80,120],[400,130]];
 stars.forEach(function(s) {
   ctx.fillRect(s[0], s[1], 2, 2);
@@ -432,19 +432,19 @@ var letters = {
 
 // Five buildings, each shows one letter
 var buildings = [
-  { x: 10,  w: 75,  top: 95,  letter: 'C', shade: '#12121a' },
+  { x: 10,  w: 75,  top: 95,  letter: 'C', shade: 'black' },
   { x: 95,  w: 80,  top: 60,  letter: 'H', shade: '#1a1a2a' },
-  { x: 190, w: 85,  top: 40,  letter: 'A', shade: '#12121a' },
+  { x: 190, w: 85,  top: 40,  letter: 'A', shade: 'black' },
   { x: 290, w: 80,  top: 60,  letter: 'O', shade: '#1a1a2a' },
-  { x: 385, w: 75,  top: 95,  letter: 'S', shade: '#12121a' }
+  { x: 385, w: 75,  top: 95,  letter: 'S', shade: 'black' }
 ];
 
 // Sky
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fillRect(0, 0, 500, 350);
 
 // Stars
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 for (var i = 0; i < 30; i++) {
   var sx = Math.random() * 500;
   var sy = Math.random() * 80;
@@ -452,11 +452,11 @@ for (var i = 0; i < 30; i++) {
 }
 
 // Moon (crescent)
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.beginPath();
 ctx.arc(430, 30, 18, 0, Math.PI * 2);
 ctx.fill();
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.beginPath();
 ctx.arc(438, 24, 16, 0, Math.PI * 2);
 ctx.fill();
@@ -483,7 +483,7 @@ for (var b = 0; b < buildings.length; b++) {
       var wy = groundY - bottomPad - (5 - row) * (winH + gapY);
       if (grid[row][col]) {
         var r = Math.random();
-        ctx.fillStyle = r > 0.6 ? '#d29922' : r > 0.3 ? '#00e5ff' : '#e8e4d9';
+        ctx.fillStyle = r > 0.6 ? 'goldenrod' : r > 0.3 ? 'cyan' : '#e8e4d9';
       } else {
         ctx.fillStyle = Math.random() > 0.7 ? '#1a1a2a' : '#0a0a12';
       }
@@ -493,9 +493,9 @@ for (var b = 0; b < buildings.length; b++) {
 }
 
 // Antenna on tallest building (A)
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillRect(232, 20, 2, 20);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(230, 18, 6, 4);
 
 // Ground
@@ -503,9 +503,9 @@ ctx.fillStyle = '#1a3a1a';
 ctx.fillRect(0, groundY, 500, 80);
 
 // Road
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.fillRect(0, 285, 500, 65);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 for (var i = 0; i < 10; i++) {
   ctx.fillRect(10 + i * 52, 316, 30, 4);
 }`;

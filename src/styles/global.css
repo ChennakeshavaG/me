@@ -41,10 +41,10 @@
   --color-accent: #22d3ee;
   --color-accent-hover: #67e8f9;
   --color-muted: #71717a;
-  --color-border: #27272a;
+  --color-border: #303034;
   --color-surface: #18181b;
   --color-surface-glass: rgba(24, 24, 27, 0.8);
-  --color-content-bg: #0f0f0f;
+  --color-content-bg: #141414;
 }
 
 /* ── Reset ── */

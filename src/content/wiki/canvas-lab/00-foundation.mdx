@@ -156,7 +156,7 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 export const helloWorldCode = `// --- STEP 1: Draw a filled rectangle ---
 
 // Set the fill color to a nice cyan
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 
 // Draw a rectangle: x=40, y=40, width=200, height=100
 // (40 pixels from the left, 40 from the top)
@@ -172,25 +172,25 @@ ctx.beginPath();
 ctx.arc(350, 90, 60, 0, Math.PI * 2);
 
 // Set fill color to magenta and fill the circle
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fill();
 
 // --- STEP 3: Add some text ---
 
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 16px monospace';
 ctx.fillText('fillRect()', 85, 95);
 ctx.fillText('arc()', 325, 95);
 
 // --- STEP 4: Annotate the coordinates ---
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('x:40 y:40 w:200 h:100', 40, 170);
 ctx.fillText('center:(350,90) r:60', 280, 175);
 
 // A small note at the bottom
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.font = '14px monospace';
 ctx.fillText('A few lines of code is all it takes!', 100, 250);`;
 
@@ -203,7 +203,7 @@ ctx.fillText('A few lines of code is all it takes!', 100, 250);`;
 />
 
 <Concept variant="note">
-**Try this:** Change the rectangle's fill color to `'#ff2d7b'` and move the circle by editing its center coordinates in the `ctx.arc()` call. Watch how the coordinate system maps to actual positions on canvas.
+**Try this:** Change the rectangle's fill color to `'deeppink'` and move the circle by editing its center coordinates in the `ctx.arc()` call. Watch how the coordinate system maps to actual positions on canvas.
 </Concept>
 
 <p>A handful of drawing commands to put a rectangle, a circle, and text on screen. Do not worry about memorizing these methods yet -- you will learn each one in detail starting in Lesson 1. The point here is to see the pattern: set a style, call a draw method, repeat.</p>
@@ -244,12 +244,12 @@ export const sizePitfallCode = `// This demo's canvas is 500x200 (the drawing su
 // Draw a perfect circle to prove proportions are correct
 ctx.beginPath();
 ctx.arc(100, 100, 80, 0, Math.PI * 2);
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 3;
 ctx.stroke();
 
 // Label it
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '14px monospace';
 ctx.fillText('This is a circle, not an oval.', 200, 95);
 ctx.fillText('If it looks round, the canvas', 200, 115);
@@ -479,6 +479,35 @@ flowchart TD
 
 <p>This "Y goes down" convention trips up nearly everyone who has taken a math class where Y goes up. It comes from how old computer monitors drew pixels, starting at the top-left and scanning rightward, row by row, top to bottom. The convention stuck, and virtually every 2D graphics system (not just Canvas) uses it.</p>
 
+<Concept>
+**"But wait, why does Y go DOWN?!"**
+
+Blame the typewriter. Seriously.
+
+In the 1870s, typewriters printed left to right, then rolled the paper *up* so the next line appeared *below*. Top to bottom. Teletypes (1900s) copied this because they were literally electric typewriters connected to a wire. When CRT monitors replaced paper in the 1950s, they borrowed from TV: an electron beam sweeps left to right, top to bottom, one row at a time. The first pixel on screen was always the top left one.
+
+Then came framebuffers (1970s): a block of memory where byte 0 = top left pixel, and each subsequent byte moves right, then down. Address = `y * width + x`. Y=0 meant the top row. This was the simplest mapping because it matched the physical scan order. No math required.
+
+The Xerox Alto (1973) used it. The Macintosh (1984) used it. X11 and Windows used it. HTML and CSS used it. And when Apple added `<canvas>` in 2004, it inherited the same convention because *everything above it* in the stack was already Y down.
+
+So who uses Y up? Rene Descartes, who invented the coordinate system in 1637 while lying in bed watching a fly on his ceiling (maybe). He was plotting abstract math on paper, where "more" naturally goes upward (like stacking things). He had no pixels to scan. OpenGL (1992) followed Descartes because its users were scientists who'd spent years with Y up in university and would riot otherwise.
+
+Our reality: Canvas Y down comes from 130 years of machines that print top to bottom. Math Y up comes from a 17th century Frenchman watching a bug. Both are perfectly logical. They just never expected to meet inside a `<script>` tag.
+
+**The family tree:**
+
+<pre>{`    Descartes (1637):           Typewriter (1870s):
+    "Y goes up because          "Y goes down because
+     more is up, obviously."     that's how paper feeds."
+            │                           │
+            ▼                           ▼
+       OpenGL (1992)              Every screen ever
+       Scientific viz              ▼
+                              Canvas (2004)
+                              "Don't look at me,
+                               I just work here."`}</pre>
+</Concept>
+
 <p>One detail worth noting: coordinates do not have to be whole numbers. You can draw at position <code>(100.5, 75.3)</code>, and the browser will use <strong>anti-aliasing</strong> (blending neighboring pixels) to approximate the sub-pixel position. This is useful for smooth animations but can cause blurry lines if you are not careful. We will revisit this in later lessons.</p>
 
 export const coordsCode = `// --- STEP 1: Draw a background grid ---
@@ -499,7 +528,7 @@ for (var y = 50; y < 400; y += 50) {
 }
 
 // --- STEP 2: Draw the X and Y axes ---
-ctx.strokeStyle = '#7a7a8a';
+ctx.strokeStyle = 'gray';
 ctx.lineWidth = 2;
 
 // X axis
@@ -529,7 +558,7 @@ ctx.lineTo(6, 380);
 ctx.stroke();
 
 // Label axes
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = 'bold 14px monospace';
 ctx.fillText('X', 480, 20);
 ctx.fillText('Y', 10, 395);
@@ -542,12 +571,12 @@ var points = [
   [100, 300, '(100,300)']
 ];
 points.forEach(function(p) {
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.font = '13px monospace';
   var labelX = p[0] + 10;
   var labelY = p[1] + 5;

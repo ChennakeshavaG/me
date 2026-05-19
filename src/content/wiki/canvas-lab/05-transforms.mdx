@@ -53,7 +53,7 @@ for (var gy = 0; gy <= 300; gy += 50) {
 }
 
 // Draw axes thicker
-ctx.strokeStyle = '#484f58';
+ctx.strokeStyle = 'dimgray';
 ctx.lineWidth = 2;
 ctx.beginPath();
 ctx.moveTo(0, 0);
@@ -65,7 +65,7 @@ ctx.lineTo(0, 300);
 ctx.stroke();
 
 // Label the origin
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = 'bold 14px monospace';
 ctx.fillText('(0,0)', 8, 20);
 
@@ -79,18 +79,18 @@ var points = [
 
 points.forEach(function(p) {
   // Dot
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.beginPath();
   ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
   ctx.fill();
   // Label
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText(p.label, p.x + 8, p.y - 8);
 });
 
 // Axis labels
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.font = 'bold 12px monospace';
 ctx.fillText('x increases →', 380, 20);
 ctx.save();
@@ -155,7 +155,7 @@ ctx.restore();`;
 export const translateBasicCode = `// Without translate: draw a rect at (50, 50)
 ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
 ctx.fillRect(50, 50, 80, 60);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.font = '11px monospace';
 ctx.fillText('fillRect(50,50,80,60)', 50, 130);
 
@@ -164,25 +164,25 @@ ctx.save();
 ctx.translate(250, 50);
 
 // Mark the new origin
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.beginPath();
 ctx.arc(0, 0, 4, 0, Math.PI * 2);
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '10px monospace';
 ctx.fillText('new (0,0)', 8, -5);
 
 // Draw at (0,0) in the translated system
 ctx.fillStyle = 'rgba(255, 45, 123, 0.3)';
 ctx.fillRect(0, 0, 80, 60);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = '11px monospace';
 ctx.fillText('fillRect(0,0,80,60)', 0, 80);
 ctx.fillText('after translate(250,50)', 0, 95);
 ctx.restore();
 
 // Explanation at bottom
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('Both rects are the same size: different position method', 30, 260);`;
 
@@ -210,15 +210,15 @@ function drawHouse(color) {
   ctx.fillStyle = color;
   ctx.fill();
   // Door
-  ctx.fillStyle = '#d29922';
+  ctx.fillStyle = 'goldenrod';
   ctx.fillRect(30, 55, 20, 35);
 }
 
 // Now stamp the house at three positions
 var positions = [
-  { x: 40,  y: 100, color: '#00e5ff' },
-  { x: 200, y: 120, color: '#ff2d7b' },
-  { x: 360, y: 90,  color: '#3fb950' },
+  { x: 40,  y: 100, color: 'cyan' },
+  { x: 200, y: 120, color: 'deeppink' },
+  { x: 360, y: 90,  color: 'limegreen' },
 ];
 
 positions.forEach(function(pos) {
@@ -228,7 +228,7 @@ positions.forEach(function(pos) {
   ctx.restore();            // Restore clean state
 });
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Same drawHouse(): three different translate() calls', 50, 260);`;
 
@@ -293,19 +293,19 @@ var cy = 175;
 // Draw reference: un-rotated rectangle
 ctx.save();
 ctx.translate(cx, cy);
-ctx.strokeStyle = '#484f58';
+ctx.strokeStyle = 'dimgray';
 ctx.lineWidth = 2;
 ctx.setLineDash([5, 5]);
 ctx.strokeRect(20, -15, 100, 30);
 ctx.setLineDash([]);
-ctx.fillStyle = '#484f58';
+ctx.fillStyle = 'dimgray';
 ctx.font = '11px monospace';
 ctx.fillText('0° (original)', 30, 5);
 ctx.restore();
 
 // Draw rotated rectangles at various angles
 var angles = [30, 60, 90, 135];
-var colors = ['#00e5ff', '#3fb950', '#d29922', '#ff2d7b'];
+var colors = ['cyan', 'limegreen', 'goldenrod', 'deeppink'];
 
 angles.forEach(function(deg, i) {
   ctx.save();
@@ -322,11 +322,11 @@ angles.forEach(function(deg, i) {
 });
 
 // Center dot
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.beginPath();
 ctx.arc(cx, cy, 5, 0, Math.PI * 2);
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('pivot point', cx + 8, cy - 8);
 ctx.fillText('All rects: translate to center → rotate → draw', 80, 340);`;
@@ -362,12 +362,12 @@ for (var i = 0; i < 12; i++) {
 }
 
 // Center dot
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.beginPath();
 ctx.arc(cx, cy, 5, 0, Math.PI * 2);
 ctx.fill();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('12 rectangles, each rotated 30° more', 115, 335);`;
 
@@ -399,9 +399,9 @@ function drawStar(size) {
 // Normal size (scale 1.0)
 ctx.save();
 ctx.translate(80, 100);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 drawStar(30);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('scale(1, 1)', -25, 50);
 ctx.restore();
@@ -410,10 +410,10 @@ ctx.restore();
 ctx.save();
 ctx.translate(200, 100);
 ctx.scale(1.5, 1.5);         // Everything 50% bigger
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 drawStar(30);                 // Same size param = bigger on screen
 ctx.restore();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('scale(1.5, 1.5)', 165, 170);
 
@@ -421,23 +421,23 @@ ctx.fillText('scale(1.5, 1.5)', 165, 170);
 ctx.save();
 ctx.translate(340, 100);
 ctx.scale(0.5, 0.5);         // Everything half size
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 drawStar(30);
 ctx.restore();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('scale(0.5, 0.5)', 315, 135);
 
 // Stretched (different x and y)
 ctx.save();
 ctx.translate(450, 100);
 ctx.scale(0.7, 2);           // Narrow but tall
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 drawStar(30);
 ctx.restore();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('scale(0.7, 2)', 415, 175);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Same drawStar(30) call: only the scale changes', 60, 265);`;
 
@@ -465,7 +465,7 @@ function drawArrow() {
   ctx.lineTo(0, 15);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = '#0a0a0f';
+  ctx.strokeStyle = 'black';
   ctx.lineWidth = 1;
   ctx.stroke();
 }
@@ -473,9 +473,9 @@ function drawArrow() {
 // Normal
 ctx.save();
 ctx.translate(70, 75);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 drawArrow();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Normal', -10, 45);
 ctx.restore();
@@ -484,10 +484,10 @@ ctx.restore();
 ctx.save();
 ctx.translate(280, 75);
 ctx.scale(-1, 1);            // Flip the x axis
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 drawArrow();
 ctx.restore();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('scale(-1, 1)', 220, 120);
 
@@ -495,20 +495,20 @@ ctx.fillText('scale(-1, 1)', 220, 120);
 ctx.save();
 ctx.translate(70, 210);
 ctx.scale(1, -1);            // Flip the y axis
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 drawArrow();
 ctx.restore();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('scale(1, -1)', 60, 255);
 
 // Flipped both: scale(-1, -1): same as 180° rotation
 ctx.save();
 ctx.translate(280, 210);
 ctx.scale(-1, -1);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 drawArrow();
 ctx.restore();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('scale(-1, -1)', 220, 255);`;
 
 <CanvasRender
@@ -539,41 +539,41 @@ ctx.fillText('scale(-1, -1)', 220, 255);`;
 </Concept>
 
 export const saveRestoreCode = `// WITHOUT save/restore: transforms accumulate (bad!)
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '14px monospace';
 ctx.fillText('WITHOUT save/restore (transforms leak):', 20, 25);
 
 ctx.save(); // Preserve DPR scaling
 ctx.translate(50, 60);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fillRect(0, 0, 60, 40);
 ctx.font = '11px monospace';
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fillText('1st', 5, 25);
 
 ctx.translate(100, 0);         // Adds to previous translate!
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillRect(0, 0, 60, 40);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fillText('2nd', 5, 25);
 
 ctx.translate(100, 0);         // Adds AGAIN!
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillRect(0, 0, 60, 40);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fillText('3rd', 5, 25);
 
 ctx.restore(); // Restore DPR scaling (instead of setTransform which would nuke it)
 
 // WITH save/restore: each transform is independent (good!)
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '14px monospace';
 ctx.fillText('WITH save/restore (each independent):', 20, 155);
 
 var items = [
-  { x: 50,  color: '#00e5ff' },
-  { x: 200, color: '#ff2d7b' },
-  { x: 350, color: '#3fb950' },
+  { x: 50,  color: 'cyan' },
+  { x: 200, color: 'deeppink' },
+  { x: 350, color: 'limegreen' },
 ];
 
 items.forEach(function(item, i) {
@@ -582,13 +582,13 @@ items.forEach(function(item, i) {
   ctx.rotate(i * 0.3);
   ctx.fillStyle = item.color;
   ctx.fillRect(0, 0, 60, 40);
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = '13px monospace';
   ctx.fillText((i + 1) + '', 25, 25);
   ctx.restore();               // Back to clean state!
 });
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Top row: translates stacked. Bottom: each isolated.', 30, 310);`;
 
@@ -626,11 +626,11 @@ ctx.fillText('Top row: translates stacked. Bottom: each isolated.', 30, 310);`;
 export const transformOrderCode = `var angle = Math.PI / 6;  // 30 degrees
 
 // Show origin
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.beginPath();
 ctx.arc(0, 0, 6, 0, Math.PI * 2);
 ctx.fill();
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = '11px monospace';
 ctx.fillText('origin (0,0)', 10, 20);
 
@@ -640,7 +640,7 @@ ctx.translate(130, 150);       // Step 1: move origin
 ctx.rotate(angle);             // Step 2: rotate
 ctx.fillStyle = 'rgba(0, 229, 255, 0.6)';
 ctx.fillRect(-40, -25, 80, 50);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.font = '11px monospace';
 ctx.fillText('translate', -30, -5);
 ctx.fillText('then rotate', -30, 10);
@@ -652,13 +652,13 @@ ctx.rotate(angle);             // Step 1: rotate axes
 ctx.translate(300, 80);        // Step 2: move along rotated axes
 ctx.fillStyle = 'rgba(255, 45, 123, 0.6)';
 ctx.fillRect(-40, -25, 80, 50);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = '11px monospace';
 ctx.fillText('rotate', -25, -5);
 ctx.fillText('then translate', -25, 10);
 ctx.restore();
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Same angle + distance, different order = different result', 30, 330);`;
 
@@ -699,7 +699,7 @@ ctx.fillText('Same angle + distance, different order = different result', 30, 33
 </Concept>
 
 export const setTransformCode = `// Demonstrate transform() accumulation
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('transform() accumulates:', 20, 25);
 
@@ -709,7 +709,7 @@ ctx.save(); // Preserve DPR scaling around the entire setTransform demo
 ctx.transform(1, 0, 0, 1, 50, 50);
 ctx.fillStyle = 'rgba(0, 229, 255, 0.5)';
 ctx.fillRect(0, 0, 40, 40);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.font = '10px monospace';
 ctx.fillText('1st', 10, 25);
 
@@ -717,19 +717,19 @@ ctx.fillText('1st', 10, 25);
 ctx.transform(1, 0, 0, 1, 70, 0);
 ctx.fillStyle = 'rgba(63, 185, 80, 0.5)';
 ctx.fillRect(0, 0, 40, 40);
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillText('2nd', 10, 25);
 
 // Third transform: adds to both
 ctx.transform(1, 0, 0, 1, 70, 0);
 ctx.fillStyle = 'rgba(255, 45, 123, 0.5)';
 ctx.fillRect(0, 0, 40, 40);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillText('3rd', 10, 25);
 
 // Now use setTransform to REPLACE (reset + set)
 ctx.setTransform(1, 0, 0, 1, 0, 0);  // Back to identity
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('setTransform() replaces entirely:', 20, 155);
 
@@ -737,13 +737,13 @@ ctx.fillText('setTransform() replaces entirely:', 20, 155);
 ctx.setTransform(1, 0, 0.3, 1, 50, 170);
 ctx.fillStyle = 'rgba(210, 153, 34, 0.5)';
 ctx.fillRect(0, 0, 100, 40);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = '11px monospace';
 ctx.fillText('Skewed!', 10, 25);
 
 ctx.restore(); // Restore DPR scaling (setTransform calls above are now harmless)
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('setTransform ignores all previous transforms', 50, 265);`;
 
@@ -767,7 +767,7 @@ ctx.fillText('setTransform ignores all previous transforms', 50, 265);`;
 </Concept>
 
 export const mistakesCode = `// Wrong: rotate without translating to center
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('WRONG: rotate without translate', 20, 25);
 
@@ -775,13 +775,13 @@ ctx.save();
 ctx.rotate(0.3);
 ctx.fillStyle = 'rgba(255, 45, 123, 0.4)';
 ctx.fillRect(100, 50, 80, 50);
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = '10px monospace';
 ctx.fillText('Spins around (0,0)!', 105, 80);
 ctx.restore();
 
 // Right: translate to center, then rotate
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '13px monospace';
 ctx.fillText('RIGHT: translate to center first', 20, 175);
 
@@ -790,25 +790,25 @@ ctx.translate(140, 230);      // Move to center of where we want the rect
 ctx.rotate(0.3);
 ctx.fillStyle = 'rgba(63, 185, 80, 0.4)';
 ctx.fillRect(-40, -25, 80, 50);  // Draw centered at origin
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.font = '10px monospace';
 ctx.fillText('Spins in place!', -35, 5);
 ctx.restore();
 
 // Mark both pivot points
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.beginPath();
 ctx.arc(0, 0, 5, 0, Math.PI * 2);
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '10px monospace';
 ctx.fillText('pivot', 8, 10);
 
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.beginPath();
 ctx.arc(140, 230, 5, 0, Math.PI * 2);
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('pivot', 148, 228);`;
 
 <CanvasRender
@@ -843,7 +843,7 @@ function loop() {
     var alpha = 1 - (distance / numLines) * 0.8;
 
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = '#00e5ff';
+    ctx.strokeStyle = 'cyan';
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -883,7 +883,7 @@ function loop() {
   ctx.clearRect(0, 0, 500, 400);
 
   // Starfield background
-  ctx.fillStyle = '#0a0a0f';
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, 500, 400);
 
   // Move to center of canvas (the Sun's position)
@@ -891,8 +891,8 @@ function loop() {
   ctx.translate(250, 200);
 
   // Draw the Sun
-  ctx.fillStyle = '#d29922';
-  ctx.shadowColor = '#d29922';
+  ctx.fillStyle = 'goldenrod';
+  ctx.shadowColor = 'goldenrod';
   ctx.shadowBlur = 20;
   ctx.beginPath();
   ctx.arc(0, 0, 25, 0, Math.PI * 2);
@@ -913,7 +913,7 @@ function loop() {
   ctx.translate(110, 0);         // Move to orbit radius
 
   // Draw Earth
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.beginPath();
   ctx.arc(0, 0, 10, 0, Math.PI * 2);
   ctx.fill();
@@ -929,7 +929,7 @@ function loop() {
   ctx.translate(25, 0);
 
   // Draw Moon
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.beginPath();
   ctx.arc(0, 0, 4, 0, Math.PI * 2);
   ctx.fill();
@@ -947,7 +947,7 @@ function loop() {
   ctx.rotate(time * 0.3);        // Mars is slower
   ctx.translate(170, 0);
 
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(0, 0, 7, 0, Math.PI * 2);
   ctx.fill();
@@ -957,7 +957,7 @@ function loop() {
   ctx.restore();  // End Sun/center
 
   // Labels
-  ctx.fillStyle = '#484f58';
+  ctx.fillStyle = 'dimgray';
   ctx.font = '11px monospace';
   ctx.fillText('Nested transforms: Moon orbits Earth which orbits Sun', 60, 385);
 
@@ -978,7 +978,7 @@ loop();`;
 
 <p>Recursion + transforms = fractals. Each branch translates to its end, rotates, scales down, and draws another branch. The tree emerges from simple rules repeated.</p>
 
-export const fractalTreeCode = `ctx.fillStyle = '#0a0a0f';
+export const fractalTreeCode = `ctx.fillStyle = 'black';
 ctx.fillRect(0, 0, 500, 400);
 
 function drawBranch(depth, maxDepth) {
@@ -1023,7 +1023,7 @@ ctx.translate(250, 390);
 drawBranch(0, 8);
 ctx.restore();
 
-ctx.fillStyle = '#484f58';
+ctx.fillStyle = 'dimgray';
 ctx.font = '11px monospace';
 ctx.fillText('Each branch: translate to end, rotate, scale down, recurse', 55, 15);`;
 
@@ -1051,7 +1051,7 @@ function drawTile(row, col) {
                 row * tileSize + tileSize / 2);
 
   // Background square
-  ctx.fillStyle = isEven ? '#12121a' : '#1a1a2a';
+  ctx.fillStyle = isEven ? 'black' : '#1a1a2a';
   ctx.fillRect(-tileSize / 2, -tileSize / 2, tileSize, tileSize);
 
   // Rotated diamond shape inside
@@ -1094,7 +1094,7 @@ export const sandboxCode = `// We'll show 4 steps of transforms
 
 function drawAxes(len, label) {
   // X axis
-  ctx.strokeStyle = '#ff2d7b';
+  ctx.strokeStyle = 'deeppink';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, 0);
@@ -1108,7 +1108,7 @@ function drawAxes(len, label) {
   ctx.stroke();
 
   // Y axis
-  ctx.strokeStyle = '#3fb950';
+  ctx.strokeStyle = 'limegreen';
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(0, len);
@@ -1120,14 +1120,14 @@ function drawAxes(len, label) {
   ctx.stroke();
 
   // Origin dot
-  ctx.fillStyle = '#d29922';
+  ctx.fillStyle = 'goldenrod';
   ctx.beginPath();
   ctx.arc(0, 0, 4, 0, Math.PI * 2);
   ctx.fill();
 
   // Label
   if (label) {
-    ctx.fillStyle = '#c8c8d0';
+    ctx.fillStyle = 'silver';
     ctx.font = '10px monospace';
     ctx.fillText(label, 6, -8);
   }
@@ -1137,7 +1137,7 @@ function drawAxes(len, label) {
 ctx.globalAlpha = 0.3;
 drawAxes(60, '');
 ctx.globalAlpha = 1;
-ctx.fillStyle = '#484f58';
+ctx.fillStyle = 'dimgray';
 ctx.font = '10px monospace';
 ctx.fillText('Step 0: default', 8, 75);
 
@@ -1147,7 +1147,7 @@ ctx.translate(150, 200);
 ctx.globalAlpha = 0.5;
 drawAxes(60, 'Step 1');
 ctx.globalAlpha = 1;
-ctx.fillStyle = '#484f58';
+ctx.fillStyle = 'dimgray';
 ctx.font = '10px monospace';
 ctx.fillText('translate(150,200)', 8, 75);
 
@@ -1156,7 +1156,7 @@ ctx.rotate(Math.PI / 6);
 ctx.globalAlpha = 0.7;
 drawAxes(60, 'Step 2');
 ctx.globalAlpha = 1;
-ctx.fillStyle = '#484f58';
+ctx.fillStyle = 'dimgray';
 ctx.font = '10px monospace';
 ctx.fillText('+ rotate(30°)', 8, 75);
 
@@ -1164,21 +1164,21 @@ ctx.fillText('+ rotate(30°)', 8, 75);
 ctx.scale(1.5, 0.8);
 ctx.globalAlpha = 1;
 drawAxes(60, 'Step 3');
-ctx.fillStyle = '#484f58';
+ctx.fillStyle = 'dimgray';
 ctx.font = '10px monospace';
 ctx.fillText('+ scale(1.5, 0.8)', 8, 75);
 
 // Draw a shape in the final coordinate system
 ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
 ctx.fillRect(20, 20, 60, 40);
-ctx.strokeStyle = '#00e5ff';
+ctx.strokeStyle = 'cyan';
 ctx.lineWidth = 1;
 ctx.strokeRect(20, 20, 60, 40);
 
 ctx.restore();
 
 // Legend
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Red axis = X, Green axis = Y, Dot = origin', 100, 385);
 ctx.fillText('Each step transforms the CURRENT coordinate system', 80, 370);`;
@@ -1203,7 +1203,7 @@ ctx.save();
 ctx.translate(cx, cy);  // Center everything
 
 // --- Clock face background ---
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.beginPath();
 ctx.arc(0, 0, radius + 10, 0, Math.PI * 2);
 ctx.fill();
@@ -1219,7 +1219,7 @@ ctx.stroke();
 for (var h = 0; h < 12; h++) {
   ctx.save();
   ctx.rotate(h * Math.PI / 6);    // 30° per hour
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.fillRect(-3, -radius + 10, 6, 20);
   ctx.restore();
 }
@@ -1236,7 +1236,7 @@ for (var m = 0; m < 60; m++) {
 
 // --- Hour numbers ---
 ctx.font = 'bold 20px sans-serif';
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.textAlign = 'center';
 ctx.textBaseline = 'middle';
 for (var n = 1; n <= 12; n++) {
@@ -1252,7 +1252,7 @@ for (var n = 1; n <= 12; n++) {
 // --- Hour hand (pointing to 10 o'clock) ---
 ctx.save();
 ctx.rotate((10 / 12) * Math.PI * 2 - Math.PI / 2);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.beginPath();
 ctx.moveTo(-5, 10);
 ctx.lineTo(0, -80);
@@ -1264,7 +1264,7 @@ ctx.restore();
 // --- Minute hand (pointing to 50 minutes) ---
 ctx.save();
 ctx.rotate((50 / 60) * Math.PI * 2 - Math.PI / 2);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.beginPath();
 ctx.moveTo(-3, 10);
 ctx.lineTo(0, -110);
@@ -1276,7 +1276,7 @@ ctx.restore();
 // --- Second hand (pointing to 30 seconds) ---
 ctx.save();
 ctx.rotate((30 / 60) * Math.PI * 2 - Math.PI / 2);
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 1.5;
 ctx.beginPath();
 ctx.moveTo(0, 15);
@@ -1285,7 +1285,7 @@ ctx.stroke();
 ctx.restore();
 
 // --- Center cap ---
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.beginPath();
 ctx.arc(0, 0, 6, 0, Math.PI * 2);
 ctx.fill();

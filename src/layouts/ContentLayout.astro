@@ -20,11 +20,19 @@ const { title, description, type, date, updatedAt, tags = [], draft, category, s
 
 const typeLabel = type.toUpperCase();
 
+import { getCollection } from 'astro:content';
+
+const allEntries = await getCollection('content');
+const validPaths = new Set([
+  '/atelier',
+  ...allEntries.map(e => '/' + e.id),
+]);
+
 const segments = Astro.url.pathname.replace(/\/$/, '').split('/').filter(Boolean);
-const crumbs = segments.slice(0, -1).map((seg, i) => ({
-  label: seg,
-  href: '/' + segments.slice(0, i + 1).join('/'),
-}));
+const crumbs = segments.slice(0, -1).map((seg, i) => {
+  const href = '/' + segments.slice(0, i + 1).join('/');
+  return { label: seg, href, hasPage: validPaths.has(href) };
+});
 ---
 
 <BaseLayout title={title} description={description} ogType="article">
@@ -34,7 +42,10 @@ const crumbs = segments.slice(0, -1).map((seg, i) => ({
       {crumbs.map(c => (
         <>
           <span class="content__crumb-sep">/</span>
-          <a href={c.href}>{c.label}</a>
+          {c.hasPage
+            ? <a href={c.href}>{c.label}</a>
+            : <span>{c.label}</span>
+          }
         </>
       ))}
       <span class="content__crumb-sep">/</span>

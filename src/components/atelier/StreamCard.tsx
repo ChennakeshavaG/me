@@ -16,10 +16,20 @@ function formatDate(dateStr: string): string {
 }
 
 export default function StreamCard(props: { item: Item }) {
+  function handleCardClick(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest('a.stream-card__seg')) return;
+    const a = document.createElement('a');
+    a.href = props.item.href;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   return (
     <div
       class={`stream-card glass${props.item.pinned ? ' stream-card--pinned' : ''}`}
       data-type={props.item.type}
+      onClick={handleCardClick}
     >
       <div class="stream-card__header">
         <div class="stream-card__route">

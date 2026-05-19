@@ -7,9 +7,10 @@ interface Props {
   code: string;
   readonly?: boolean;
   layout?: 'side' | 'stack';
+  hideCode?: boolean;
 }
 
-const { id, title, width = 500, height = 400, code, readonly = false, layout = 'side' } = Astro.props;
+const { id, title, width = 500, height = 400, code, readonly = false, layout = 'side', hideCode = false } = Astro.props;
 const trimmedCode = code.trim();
 
 const wrapperClasses = [
@@ -29,6 +30,7 @@ const wrapperClasses = [
         aria-label={title ? `Canvas: ${title}` : 'Canvas demo'}
       ></canvas>
     </div>
+    {!hideCode && (
     <div class="cl-render__editor">
       <div class="cl-render__code-wrap">
         <pre
@@ -54,6 +56,7 @@ const wrapperClasses = [
         </div>
       )}
     </div>
+    )}
   </div>
 </div>
 
@@ -174,19 +177,20 @@ const wrapperClasses = [
     if (codeEl) codeEl.innerHTML = highlightJS(editor.value);
   }
 
-  editor.value = originalCode;
+  if (editor) {
+    editor.value = originalCode;
+    updateHighlight();
+    addEditorListener(editor, 'input', updateHighlight);
+    addEditorListener(editor, 'scroll', function() {
+      if (highlightEl) {
+        highlightEl.scrollTop = editor.scrollTop;
+        highlightEl.scrollLeft = editor.scrollLeft;
+      }
+    });
+  }
   runDemo(originalCode);
-  updateHighlight();
 
-  addEditorListener(editor, 'input', updateHighlight);
-  addEditorListener(editor, 'scroll', function() {
-    if (highlightEl) {
-      highlightEl.scrollTop = editor.scrollTop;
-      highlightEl.scrollLeft = editor.scrollLeft;
-    }
-  });
-
-  if (!isReadonly) {
+  if (!isReadonly && editor) {
     addEditorListener(editor, 'keydown', function(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
@@ -216,7 +220,7 @@ const wrapperClasses = [
     __editorListeners = [];
   };
 
-  if (!isReadonly) {
+  if (!isReadonly && editor) {
     var runBtn = document.querySelector('[data-run="' + id + '"]');
     if (runBtn) {
       runBtn.onclick = function() {

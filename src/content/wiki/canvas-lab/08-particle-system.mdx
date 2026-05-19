@@ -125,7 +125,7 @@ function loop(now) {
   ctx.globalAlpha = 1;
 
   // Show particle count
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('particles: ' + particles.length, 10, 20);
 
@@ -212,7 +212,7 @@ function loop(now) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Move mouse here | particles: ' + particles.length, 10, 20);
 
@@ -347,10 +347,10 @@ function loop(now) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = '14px monospace';
   ctx.fillText('Pattern: ' + patterns[pattern], 10, 25);
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Click to switch | ' + particles.length + ' particles', 10, 45);
 
@@ -359,7 +359,7 @@ function loop(now) {
 __raf = requestAnimationFrame(loop);`;
 
 <CanvasRender
-  id="emitter-patterns"
+  id="emitter-patterns-demo"
   layout="stack"
   title="Emitter Patterns: Click to Switch"
   width={500}
@@ -451,10 +451,10 @@ function loop(now) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = '14px monospace';
   ctx.fillText('Force: ' + forceNames[forceMode], 10, 25);
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Click to switch | ' + particles.length + ' particles', 10, 45);
 
@@ -549,16 +549,16 @@ function loop(now) {
   });
 
   // Mouse indicator
-  ctx.strokeStyle = repel ? '#ff2d7b' : '#00e5ff';
+  ctx.strokeStyle = repel ? 'deeppink' : 'cyan';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(mx, my, 15, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = '13px monospace';
   ctx.fillText('Mode: ' + (repel ? 'REPEL' : 'ATTRACT'), 10, 25);
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Move mouse | Click to toggle', 10, 45);
 
@@ -636,7 +636,7 @@ function loop(now) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Click anywhere to explode! | ' + particles.length + ' particles', 10, 20);
 
@@ -746,19 +746,19 @@ function loop(now) {
 
   // Draw particles
   particles.forEach(function(p) {
-    ctx.fillStyle = '#00e5ff';
+    ctx.fillStyle = 'cyan';
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fill();
   });
 
   // Mouse dot
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.beginPath();
   ctx.arc(mx, my, 4, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Move mouse to interact | ' + numParticles + ' particles', 10, 20);
 
@@ -829,7 +829,7 @@ function loop(now) {
   last = now;
 
   // Dark background (fully clear for black)
-  ctx.fillStyle = '#0a0a0f';
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, 500, 400);
 
   emit(mx, my);
@@ -865,7 +865,7 @@ function loop(now) {
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Additive blending | particles: ' + particles.length, 10, 20);
 
@@ -1005,7 +1005,7 @@ function loop(now) {
 
   // Background
   if (isSnow) {
-    ctx.fillStyle = '#0a0a0f';
+    ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, 500, 400);
   } else {
     ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
@@ -1051,10 +1051,10 @@ function loop(now) {
   }
 
   // Ground line
-  ctx.fillStyle = isSnow ? '#0a0a0f' : '#12121a';
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 380, 500, 20);
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText((isSnow ? 'Snow' : 'Rain') + ' | Click to toggle | ' + particles.length, 10, 20);
 
@@ -1076,7 +1076,7 @@ __raf = requestAnimationFrame(loop);`;
 
 export const confettiCode = `var particles = [];
 var last = performance.now();
-var confettiColors = ['#ff2d7b','#f0883e','#d29922','#3fb950','#00e5ff','#bc8cff','#ff2d7b'];
+var confettiColors = ['deeppink','coral','goldenrod','limegreen','cyan','mediumpurple','deeppink'];
 
 function burst(x, y) {
   for (var i = 0; i < 80; i++) {
@@ -1135,7 +1135,7 @@ function loop(now) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Click for confetti! | ' + particles.length, 10, 20);
 
@@ -1181,7 +1181,7 @@ function loop(now) {
   var dt = (now - last) / 1000;
   last = now;
 
-  ctx.fillStyle = '#0a0a0f';
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, 500, 400);
 
   // Smoothly move center toward mouse
@@ -1226,7 +1226,7 @@ function loop(now) {
     ctx.stroke();
   });
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Move mouse to steer through space', 130, 390);
 
@@ -1343,10 +1343,10 @@ function loop(now) {
   }
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = '12px monospace';
   ctx.fillText('Active: ' + activeCount + ' / Pool: ' + POOL_SIZE, 10, 20);
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('No new objects created: all recycled from pool', 10, 40);
   ctx.fillText('Move mouse to emit', 10, 60);
 
@@ -1467,10 +1467,10 @@ function loop(now) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = '14px monospace';
   ctx.fillText('Mode: ' + modes[mode] + ' (click to switch)', 10, 25);
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText(particles.length + ' particles', 10, 45);
 
@@ -1537,4 +1537,5 @@ __raf = requestAnimationFrame(loop);`;
 
 <LessonNav
   prev={{ href: '/wiki/canvas-lab/07-interaction', title: 'Interaction' }}
+  next={{ href: '/wiki/canvas-lab/appendix-bezier-math', title: 'Appendix: Bezier Math' }}
 />

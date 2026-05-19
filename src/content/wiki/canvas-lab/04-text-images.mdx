@@ -36,30 +36,30 @@ Most real Canvas projects need more than shapes. Labels on a chart, scores in a 
 
 export const basicTextCode = `// === fillText: solid filled text ===
 ctx.font = '32px sans-serif';
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fillText('Hello, Canvas!', 30, 55);
 
 // === strokeText: outlined text ===
 ctx.font = 'bold 40px sans-serif';
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.strokeText('Outlined Text', 30, 115);
 
 // === Both together: fill + stroke for contrast ===
 ctx.font = 'bold 48px sans-serif';
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillText('Combined', 30, 190);
-ctx.strokeStyle = '#0a0a0f';
+ctx.strokeStyle = 'black';
 ctx.lineWidth = 1.5;
 ctx.strokeText('Combined', 30, 190);
 
 // === Monospace for code-style text ===
 ctx.font = '16px monospace';
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fillText('ctx.fillText("text", x, y)', 30, 240);
 
 // Note about order
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '12px monospace';
 ctx.fillText('Tip: fillText first, then strokeText on top', 30, 280);
 ctx.fillText('for outlined text with a filled interior', 30, 296);`;
@@ -111,17 +111,17 @@ fonts.forEach(function(f, i) {
 
   // Draw sample text in that font
   ctx.font = f.font;
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.fillText('Sample', 20, y);
 
   // Show the font string used
   ctx.font = '11px monospace';
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText(f.label, 230, y);
 });
 
 // Warning about custom fonts
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = '12px sans-serif';
 ctx.fillText('Custom fonts must be loaded before drawing!', 20, 330);`;
 
@@ -152,7 +152,7 @@ ctx.fillText('Custom fonts must be loaded before drawing!', 20, 330);`;
 </Concept>
 
 export const textAlignCode = `// === textAlign demo ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('textAlign (x = 250, the dashed line):', 20, 20);
 
@@ -160,7 +160,7 @@ ctx.font = '18px sans-serif';
 var centerX = 250;
 
 // Draw the reference line at x = 250
-ctx.strokeStyle = '#d29922';
+ctx.strokeStyle = 'goldenrod';
 ctx.lineWidth = 1;
 ctx.setLineDash([4, 4]);
 ctx.beginPath();
@@ -174,7 +174,7 @@ var aligns = ['left', 'center', 'right', 'start', 'end'];
 aligns.forEach(function(a, i) {
   var y = 55 + i * 32;
   ctx.textAlign = a;
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.font = '18px sans-serif';
   ctx.fillText('Hello (' + a + ')', centerX, y);
 });
@@ -183,14 +183,14 @@ aligns.forEach(function(a, i) {
 ctx.textAlign = 'left';
 
 // === textBaseline demo ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('textBaseline (y = 280, the dashed line):', 20, 225);
 
 var baseY = 280;
 
 // Draw the reference line at y = 280
-ctx.strokeStyle = '#d29922';
+ctx.strokeStyle = 'goldenrod';
 ctx.lineWidth = 1;
 ctx.setLineDash([4, 4]);
 ctx.beginPath();
@@ -203,12 +203,12 @@ ctx.setLineDash([]);
 var baselines = ['top', 'middle', 'alphabetic', 'bottom'];
 baselines.forEach(function(b, i) {
   ctx.textBaseline = b;
-  ctx.fillStyle = '#ff2d7b';
+  ctx.fillStyle = 'deeppink';
   ctx.font = '16px sans-serif';
   ctx.fillText(b, 15 + i * 125, baseY);
 
   // Draw a dot at the exact anchor point
-  ctx.fillStyle = '#d29922';
+  ctx.fillStyle = 'goldenrod';
   ctx.beginPath();
   ctx.arc(15 + i * 125, baseY, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -218,7 +218,7 @@ baselines.forEach(function(b, i) {
 ctx.textAlign = 'left';
 ctx.textBaseline = 'alphabetic';
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Yellow dots = the exact (x, y) anchor point', 20, 340);
 ctx.fillText('Most common: textAlign="left" textBaseline="alphabetic"', 20, 358);`;
@@ -237,32 +237,31 @@ ctx.fillText('Most common: textAlign="left" textBaseline="alphabetic"', 20, 358)
 
 export const measureTextCode = `// measureText is your ruler for text on canvas
 var words = ['Canvas', 'is', 'powerful'];
-var colors = ['#00e5ff', '#3fb950', '#ff2d7b'];
-ctx.font = 'bold 32px sans-serif';
+var colors = ['cyan', 'limegreen', 'deeppink'];
 
 var x = 20;
 var y = 80;
 
 words.forEach(function(word, i) {
-  // Measure the word BEFORE drawing it
+  // Font MUST be set before measureText — it uses current ctx.font
+  ctx.font = 'bold 32px sans-serif';
   var metrics = ctx.measureText(word);
   var textWidth = metrics.width;
 
   // Draw a background box that perfectly fits the text
-  ctx.fillStyle = '#12121a';
+  ctx.fillStyle = 'black';
   ctx.strokeStyle = colors[i];
   ctx.lineWidth = 2;
   ctx.fillRect(x - 6, y - 30, textWidth + 12, 42);
   ctx.strokeRect(x - 6, y - 30, textWidth + 12, 42);
 
-  // Draw the word
+  // Draw the word (font still 32px from above)
   ctx.fillStyle = colors[i];
-  ctx.font = 'bold 32px sans-serif';
   ctx.fillText(word, x, y);
 
   // Show the measured width below
   ctx.font = '11px monospace';
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('w=' + Math.round(textWidth) + 'px', x, y + 35);
 
   // Move x for the next word (width + padding)
@@ -270,7 +269,7 @@ words.forEach(function(word, i) {
 });
 
 // Centering example
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('Centering text with measureText:', 20, 160);
 
@@ -289,10 +288,10 @@ ctx.lineTo(canvasCenter, 210);
 ctx.stroke();
 ctx.setLineDash([]);
 
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.fillText(phrase, textX, 200);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('x = canvasCenter - measureText(text).width / 2', 60, 235);`;
 
@@ -310,35 +309,35 @@ ctx.fillText('x = canvasCenter - measureText(text).width / 2', 60, 235);`;
 
 export const maxWidthCode = `var longText = 'This is a very long sentence that would overflow';
 ctx.font = '24px sans-serif';
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 
 // Without maxWidth: text overflows the box
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.fillRect(20, 15, 300, 40);
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.strokeRect(20, 15, 300, 40);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fillText(longText, 25, 43);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('No maxWidth: text overflows the box!', 20, 75);
 
 // With maxWidth: text shrinks to fit
 ctx.font = '24px sans-serif';
-ctx.fillStyle = '#12121a';
+ctx.fillStyle = 'black';
 ctx.fillRect(20, 95, 300, 40);
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.strokeRect(20, 95, 300, 40);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.fillText(longText, 25, 123, 290);  // maxWidth = 290
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('maxWidth = 290: text squished to fit', 20, 155);
 
 // Show different maxWidth values
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('Same text at different maxWidth values:', 20, 185);
 
@@ -346,11 +345,11 @@ var widths = [450, 300, 200, 100];
 widths.forEach(function(mw, i) {
   var y = 205 + i * 18;
   ctx.font = '14px sans-serif';
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = 'cyan';
   ctx.fillText('The quick brown fox jumps', 20, y, mw);
 
   ctx.font = '10px monospace';
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText('maxWidth=' + mw, 20 + mw + 10, y);
 });`;
 
@@ -425,11 +424,11 @@ ctx.strokeRect(boxX, boxY, boxW, 310);
 
 // Wrapped text
 ctx.font = '15px sans-serif';
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 var lineCount = wrapText(ctx, paragraph, boxX + 10, boxY + 25, boxW - 20, 22);
 
 // Stats
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText(lineCount + ' lines at 15px font', 320, 40);
 ctx.fillText('maxWidth: ' + (boxW - 20) + 'px', 320, 58);
@@ -439,10 +438,10 @@ ctx.fillText('lineHeight: 22px', 320, 76);
 ctx.strokeStyle = '#1a1a2a';
 ctx.strokeRect(320, 100, 160, 230);
 ctx.font = '13px sans-serif';
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 wrapText(ctx, paragraph, 330, 120, 140, 18);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Narrower box:', 320, 95);`;
 
@@ -462,15 +461,15 @@ export const multilineCode = `// A multiline string
 var poem = 'Roses are red,\\nViolets are blue,\\nCanvas is awesome,\\nAnd so are you.';
 
 // WRONG: fillText ignores newlines
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('Without splitting (all on one line):', 20, 25);
 ctx.font = '16px sans-serif';
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.fillText(poem, 20, 50);
 
 // Draw a strikethrough to show this is bad
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 1;
 ctx.beginPath();
 ctx.moveTo(20, 46);
@@ -478,12 +477,12 @@ ctx.lineTo(480, 46);
 ctx.stroke();
 
 // RIGHT: split by \\n and draw each line
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('With line splitting (correct):', 20, 100);
 
 ctx.font = '18px serif';
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 var lines = poem.split('\\n');
 var lineHeight = 26;
 
@@ -492,7 +491,7 @@ lines.forEach(function(line, i) {
 });
 
 // Show the code pattern
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText("var lines = text.split('\\\\n');", 20, 248);
 ctx.fillText('lines.forEach(function(line, i) {', 20, 264);
@@ -524,15 +523,15 @@ ctx.lineTo(500, 45);
 ctx.stroke();
 
 // === Score (left aligned) ===
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = 'bold 11px monospace';
 ctx.fillText('SCORE', 15, 16);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 20px monospace';
 ctx.fillText('00042350', 15, 38);
 
 // === Health bar (center) ===
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = 'bold 11px monospace';
 ctx.textAlign = 'center';
 ctx.fillText('HEALTH', 250, 16);
@@ -543,47 +542,47 @@ ctx.fillRect(190, 22, 120, 16);
 // Health bar fill (75% health)
 var healthPct = 0.75;
 var healthGrad = ctx.createLinearGradient(190, 0, 310, 0);
-healthGrad.addColorStop(0, '#3fb950');
-healthGrad.addColorStop(1, '#2ea043');
+healthGrad.addColorStop(0, 'limegreen');
+healthGrad.addColorStop(1, 'forestgreen');
 ctx.fillStyle = healthGrad;
 ctx.fillRect(190, 22, 120 * healthPct, 16);
 // Border
 ctx.strokeStyle = '#1a1a2a';
 ctx.strokeRect(190, 22, 120, 16);
 // Percentage text
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 11px monospace';
 ctx.fillText(Math.round(healthPct * 100) + '%', 250, 35);
 
 // === Level (right aligned) ===
 ctx.textAlign = 'right';
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = 'bold 11px monospace';
 ctx.fillText('LEVEL', 485, 16);
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 20px monospace';
 ctx.fillText('07', 485, 38);
 
 ctx.textAlign = 'left';
 
 // === Simulated game area ===
-ctx.fillStyle = '#0a0a0f';
+ctx.fillStyle = 'black';
 ctx.fillRect(0, 45, 500, 215);
 
 // Fake game objects
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.beginPath();
 ctx.moveTo(100, 160);
 ctx.lineTo(115, 130);
 ctx.lineTo(130, 160);
 ctx.closePath();
 ctx.fill();
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '10px monospace';
 ctx.fillText('player', 96, 175);
 
 // Enemies
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 for (var e = 0; e < 4; e++) {
   ctx.fillRect(250 + e * 50, 120 + Math.sin(e) * 30, 15, 15);
 }
@@ -604,10 +603,10 @@ ctx.stroke();
 var items = ['Sword', 'Shield', 'Potion', 'Key', '???'];
 items.forEach(function(item, i) {
   var ix = 20 + i * 95;
-  ctx.strokeStyle = i === 0 ? '#d29922' : '#1a1a2a';
+  ctx.strokeStyle = i === 0 ? 'goldenrod' : '#1a1a2a';
   ctx.lineWidth = i === 0 ? 2 : 1;
   ctx.strokeRect(ix, 268, 80, 26);
-  ctx.fillStyle = i === 0 ? '#d29922' : '#7a7a8a';
+  ctx.fillStyle = i === 0 ? 'goldenrod' : 'gray';
   ctx.font = '11px monospace';
   ctx.textAlign = 'center';
   ctx.fillText(item, ix + 40, 285);
@@ -659,14 +658,14 @@ img.height = 100;
 var ictx = img.getContext('2d');
 
 // Draw a smiley face on our source image
-ictx.fillStyle = '#12121a';
+ictx.fillStyle = 'black';
 ictx.fillRect(0, 0, 100, 100);
-ictx.fillStyle = '#00e5ff';
+ictx.fillStyle = 'cyan';
 ictx.beginPath();
 ictx.arc(50, 50, 42, 0, Math.PI * 2);
 ictx.fill();
 // Eyes
-ictx.fillStyle = '#0a0a0f';
+ictx.fillStyle = 'black';
 ictx.beginPath();
 ictx.arc(35, 40, 7, 0, Math.PI * 2);
 ictx.fill();
@@ -676,13 +675,13 @@ ictx.fill();
 // Smile
 ictx.beginPath();
 ictx.arc(50, 52, 20, 0.3, Math.PI - 0.3);
-ictx.strokeStyle = '#0a0a0f';
+ictx.strokeStyle = 'black';
 ictx.lineWidth = 3;
 ictx.stroke();
 
 // === 3-arg: drawImage(img, dx, dy) ===
 ctx.drawImage(img, 20, 20);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('3-arg: original size', 20, 135);
 ctx.fillText('drawImage(img, 20, 20)', 20, 150);
@@ -698,25 +697,25 @@ ctx.fillText('60x60        130x105', 175, 150);
 ctx.drawImage(img, 15, 20, 35, 35, 20, 180, 140, 140);
 
 // Show the source region we cropped
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.setLineDash([4, 3]);
 ctx.strokeRect(20 + 15, 20 + 20, 35, 35); // outline on original
 ctx.setLineDash([]);
 
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('9-arg: crop (15,20,35,35) from source', 20, 340);
 ctx.fillText('then draw scaled at (20,180,140,140)', 20, 355);
 
 // Arrow showing crop-to-dest relationship
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 1;
 ctx.setLineDash([]);
 ctx.beginPath();
 ctx.moveTo(50, 75);
 ctx.lineTo(50, 180);
 ctx.stroke();
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.beginPath();
 ctx.moveTo(50, 180);
 ctx.lineTo(45, 170);
@@ -725,14 +724,14 @@ ctx.closePath();
 ctx.fill();
 
 // Show the destination border
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 2;
 ctx.strokeRect(20, 180, 140, 140);
 
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = '10px monospace';
 ctx.fillText('source crop', 60, 65);
-ctx.fillStyle = '#3fb950';
+ctx.fillStyle = 'limegreen';
 ctx.fillText('dest region', 170, 260);`;
 
 <CanvasRender
@@ -774,16 +773,16 @@ export const imageLoadingCode = `// Since we can't reliably load external images
 // let's show the pattern visually and use generated images
 
 // The correct loading pattern (shown as code diagram):
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 14px sans-serif';
 ctx.fillText('Image Loading Timeline:', 20, 25);
 
 // Timeline visualization
 var steps = [
-  { x: 30,  label: 'new Image()', detail: 'Create element', color: '#00e5ff' },
-  { x: 130, label: '.onload = fn', detail: 'Set callback', color: '#3fb950' },
-  { x: 250, label: '.src = url', detail: 'Start download', color: '#d29922' },
-  { x: 380, label: 'onload fires', detail: 'NOW draw!', color: '#ff2d7b' },
+  { x: 30,  label: 'new Image()', detail: 'Create element', color: 'cyan' },
+  { x: 130, label: '.onload = fn', detail: 'Set callback', color: 'limegreen' },
+  { x: 250, label: '.src = url', detail: 'Start download', color: 'goldenrod' },
+  { x: 380, label: 'onload fires', detail: 'NOW draw!', color: 'deeppink' },
 ];
 
 // Draw timeline line
@@ -814,20 +813,20 @@ steps.forEach(function(s) {
   ctx.font = 'bold 11px monospace';
   ctx.fillText(s.label, s.x, 60);
   ctx.font = '10px sans-serif';
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.fillText(s.detail, s.x + 5, 100);
   ctx.fillStyle = s.color;
 });
 
 // "Downloading..." indicator
 ctx.setLineDash([6, 4]);
-ctx.strokeStyle = '#d29922';
+ctx.strokeStyle = 'goldenrod';
 ctx.beginPath();
 ctx.moveTo(310, 73);
 ctx.lineTo(380, 73);
 ctx.stroke();
 ctx.setLineDash([]);
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = '9px monospace';
 ctx.fillText('downloading...', 315, 70);
 
@@ -838,25 +837,25 @@ loaded.height = 80;
 var lctx = loaded.getContext('2d');
 lctx.fillStyle = '#1a1a2e';
 lctx.fillRect(0, 0, 80, 80);
-lctx.fillStyle = '#00e5ff';
+lctx.fillStyle = 'cyan';
 lctx.fillRect(10, 10, 25, 25);
-lctx.fillStyle = '#ff2d7b';
+lctx.fillStyle = 'deeppink';
 lctx.fillRect(45, 10, 25, 25);
-lctx.fillStyle = '#3fb950';
+lctx.fillStyle = 'limegreen';
 lctx.fillRect(10, 45, 25, 25);
-lctx.fillStyle = '#d29922';
+lctx.fillStyle = 'goldenrod';
 lctx.fillRect(45, 45, 25, 25);
 
 ctx.drawImage(loaded, 30, 130);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('After onload: drawImage works!', 125, 170);
 
 // Error handling note
-ctx.fillStyle = '#ff2d7b';
+ctx.fillStyle = 'deeppink';
 ctx.font = 'bold 11px sans-serif';
 ctx.fillText('Always add img.onerror too!', 125, 200);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Networks fail. Show a placeholder.', 125, 218);`;
 
@@ -907,17 +906,17 @@ for (var row = 0; row < rows; row++) {
     var sy = row * spriteSize;
 
     // Background
-    sctx.fillStyle = (row + col) % 2 === 0 ? '#1a1a2e' : '#12121a';
+    sctx.fillStyle = (row + col) % 2 === 0 ? '#1a1a2e' : 'black';
     sctx.fillRect(sx, sy, spriteSize, spriteSize);
 
     // Simple character: body
-    sctx.fillStyle = ['#00e5ff', '#ff2d7b', '#3fb950'][row];
+    sctx.fillStyle = ['cyan', 'deeppink', 'limegreen'][row];
     // Head
     sctx.beginPath();
     sctx.arc(sx + 20, sy + 12, 6, 0, Math.PI * 2);
     sctx.fill();
     // Body
-    sctx.strokeStyle = ['#00e5ff', '#ff2d7b', '#3fb950'][row];
+    sctx.strokeStyle = ['cyan', 'deeppink', 'limegreen'][row];
     sctx.lineWidth = 2;
     sctx.beginPath();
     sctx.moveTo(sx + 20, sy + 18);
@@ -942,7 +941,7 @@ for (var row = 0; row < rows; row++) {
 }
 
 // === Draw the full sprite sheet ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('Full Sprite Sheet:', 20, 18);
 ctx.drawImage(sheet, 20, 28);
@@ -964,14 +963,14 @@ for (var gc = 0; gc <= cols; gc++) {
 }
 
 // Row labels
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '10px monospace';
 ctx.fillText('walk', 185, 55);
 ctx.fillText('run', 185, 95);
 ctx.fillText('misc', 185, 135);
 
 // === Extracted single sprite (enlarged) ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('Extracted Sprite (row=1, col=2, scaled 3x):', 20, 185);
 
@@ -985,23 +984,23 @@ ctx.drawImage(
   20, 195,                                            // dest x, y
   spriteSize * 3, spriteSize * 3                      // dest w, h (3x bigger)
 );
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 2;
 ctx.strokeRect(20, 195, spriteSize * 3, spriteSize * 3);
 
 // Highlight source on the sheet
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.strokeRect(20 + extractCol * spriteSize, 28 + extractRow * spriteSize, spriteSize, spriteSize);
 
 // === Animated sprite cycling ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('Animated (cycling cols):', 200, 210);
 
 var frame = 0;
 function animate() {
   // Clear animation area
-  ctx.fillStyle = '#0a0a0f';
+  ctx.fillStyle = 'black';
   ctx.fillRect(200, 220, 280, 150);
 
   // Current frame for each row
@@ -1015,7 +1014,7 @@ function animate() {
       220 + aRow * 80, 240,
       spriteSize * 2, spriteSize * 2
     );
-    ctx.fillStyle = '#7a7a8a';
+    ctx.fillStyle = 'gray';
     ctx.font = '10px monospace';
     ctx.fillText('frame ' + currentCol, 222 + aRow * 80, 340);
   }
@@ -1089,16 +1088,16 @@ for (var j = 0; j < nd.length; j += 4) {
 ctx.putImageData(noise, 270, 15);
 
 // Labels
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('R=x, G=y, B=128', 50, 232);
 ctx.fillText('random tinted noise', 310, 232);
 
 // Formula reminder
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = '12px monospace';
 ctx.fillText('index = (y * width + x) * 4', 20, 265);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('data[index+0]=R  [+1]=G  [+2]=B  [+3]=A', 20, 285);`;
 
 <CanvasRender
@@ -1122,17 +1121,17 @@ var sc = srcCanvas.getContext('2d');
 
 // Paint a colorful scene
 var grad = sc.createLinearGradient(0, 0, srcSize, srcSize);
-grad.addColorStop(0, '#00e5ff');
-grad.addColorStop(0.3, '#3fb950');
-grad.addColorStop(0.6, '#ff2d7b');
-grad.addColorStop(1, '#d29922');
+grad.addColorStop(0, 'cyan');
+grad.addColorStop(0.3, 'limegreen');
+grad.addColorStop(0.6, 'deeppink');
+grad.addColorStop(1, 'goldenrod');
 sc.fillStyle = grad;
 sc.fillRect(0, 0, srcSize, srcSize);
-sc.fillStyle = '#ffffff';
+sc.fillStyle = 'white';
 sc.beginPath();
 sc.arc(50, 50, 25, 0, Math.PI * 2);
 sc.fill();
-sc.fillStyle = '#0a0a0f';
+sc.fillStyle = 'black';
 sc.beginPath();
 sc.arc(40, 45, 5, 0, Math.PI * 2);
 sc.fill();
@@ -1141,7 +1140,7 @@ sc.arc(60, 45, 5, 0, Math.PI * 2);
 sc.fill();
 
 // Draw original
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 12px sans-serif';
 ctx.fillText('Original:', 20, 18);
 ctx.drawImage(srcCanvas, 20, 25, srcSize, srcSize);
@@ -1220,7 +1219,7 @@ ctx.fillText('Pixelate:', 145, 155);
 ctx.putImageData(pixData, 145, 162);
 
 // Code explanations
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Grayscale: gray = R*0.299+G*0.587+B*0.114', 20, 290);
 ctx.fillText('Invert:    newR = 255 - oldR', 20, 308);
@@ -1228,7 +1227,7 @@ ctx.fillText('Bright:    newR = min(255, oldR + amount)', 20, 326);
 ctx.fillText('Sepia:     weighted RGB matrix transform', 20, 344);
 ctx.fillText('Pixelate:  sample one pixel per block', 20, 362);
 
-ctx.fillStyle = '#d29922';
+ctx.fillStyle = 'goldenrod';
 ctx.font = '11px sans-serif';
 ctx.fillText('All filters use getImageData -> modify -> putImageData', 20, 390);`;
 
@@ -1265,33 +1264,33 @@ var heart = [
 heart.forEach(function(row, y) {
   for (var x = 0; x < row.length; x++) {
     if (row[x] === 'r') {
-      tc.fillStyle = '#ff2d7b';
+      tc.fillStyle = 'deeppink';
       tc.fillRect(x, y, 1, 1);
     }
   }
 });
 
 // === With smoothing (blurry: bad for pixel art) ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('imageSmoothingEnabled = true (default)', 20, 20);
 ctx.fillText('Blurry! Bad for pixel art.', 20, 38);
 
 ctx.imageSmoothingEnabled = true;
 ctx.drawImage(tinyCanvas, 20, 50, 160, 160);
-ctx.strokeStyle = '#ff2d7b';
+ctx.strokeStyle = 'deeppink';
 ctx.lineWidth = 1;
 ctx.strokeRect(20, 50, 160, 160);
 
 // === Without smoothing (crisp: perfect for pixel art) ===
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 13px sans-serif';
 ctx.fillText('imageSmoothingEnabled = false', 260, 20);
 ctx.fillText('Crisp! Perfect for pixel art.', 260, 38);
 
 ctx.imageSmoothingEnabled = false;
 ctx.drawImage(tinyCanvas, 260, 50, 160, 160);
-ctx.strokeStyle = '#3fb950';
+ctx.strokeStyle = 'limegreen';
 ctx.lineWidth = 1;
 ctx.strokeRect(260, 50, 160, 160);
 
@@ -1299,7 +1298,7 @@ ctx.strokeRect(260, 50, 160, 160);
 ctx.imageSmoothingEnabled = true;
 
 // Show original size
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 ctx.fillText('Original (8x8 pixels):', 20, 240);
 ctx.imageSmoothingEnabled = false;
@@ -1371,7 +1370,7 @@ ctx.closePath();
 ctx.fill();
 
 // Text overlay
-ctx.fillStyle = '#c8c8d0';
+ctx.fillStyle = 'silver';
 ctx.font = 'bold 24px sans-serif';
 ctx.textAlign = 'center';
 ctx.fillText('My Canvas Art', 250, 270);
@@ -1380,16 +1379,16 @@ ctx.textAlign = 'left';
 // Show the toDataURL info
 ctx.fillStyle = 'rgba(0,0,0,0.6)';
 ctx.fillRect(10, 10, 240, 55);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.font = '11px monospace';
 
 // Get just the first bit of the data URL to show
 var dataUrl = canvas.toDataURL('image/png');
 var preview = dataUrl.substring(0, 40) + '...';
 ctx.fillText('toDataURL() returns:', 18, 28);
-ctx.fillStyle = '#00e5ff';
+ctx.fillStyle = 'cyan';
 ctx.fillText(preview, 18, 45);
-ctx.fillStyle = '#7a7a8a';
+ctx.fillStyle = 'gray';
 ctx.fillText('(' + dataUrl.length + ' chars total)', 18, 58);`;
 
 <CanvasRender
@@ -1411,13 +1410,13 @@ var photoH = 300;
 function drawOriginal() {
   // Sky
   var sky = ctx.createLinearGradient(20, 20, 20, 200);
-  sky.addColorStop(0, '#3498db');
-  sky.addColorStop(1, '#85c1e9');
+  sky.addColorStop(0, 'dodgerblue');
+  sky.addColorStop(1, 'lightskyblue');
   ctx.fillStyle = sky;
   ctx.fillRect(20, 20, photoW, 200);
 
   // Sun
-  ctx.fillStyle = '#f9e71c';
+  ctx.fillStyle = 'gold';
   ctx.beginPath();
   ctx.arc(400, 70, 30, 0, Math.PI * 2);
   ctx.fill();
@@ -1433,7 +1432,7 @@ function drawOriginal() {
   });
 
   // Hills
-  ctx.fillStyle = '#27ae60';
+  ctx.fillStyle = 'seagreen';
   ctx.beginPath();
   ctx.moveTo(20, 220);
   ctx.quadraticCurveTo(130, 150, 250, 200);
@@ -1444,15 +1443,15 @@ function drawOriginal() {
   ctx.fill();
 
   // Grass
-  ctx.fillStyle = '#2ecc71';
+  ctx.fillStyle = 'mediumseagreen';
   ctx.fillRect(20, 260, photoW, 60);
 
   // Flowers
-  var flowerColors = ['#e74c3c', '#f39c12', '#9b59b6', '#e91e63', '#ff5722'];
+  var flowerColors = ['tomato', 'orange', 'mediumpurple', 'deeppink', 'orangered'];
   for (var fi = 0; fi < 15; fi++) {
     var fx = 30 + Math.random() * 440;
     var fy = 265 + Math.random() * 45;
-    ctx.fillStyle = '#27ae60';
+    ctx.fillStyle = 'seagreen';
     ctx.fillRect(fx, fy, 2, 10);
     ctx.fillStyle = flowerColors[fi % flowerColors.length];
     ctx.beginPath();
@@ -1509,7 +1508,7 @@ function applyFilter(filterName) {
   // Draw filter label
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(20, 20, 120, 25);
-  ctx.fillStyle = '#c8c8d0';
+  ctx.fillStyle = 'silver';
   ctx.font = 'bold 13px sans-serif';
   ctx.fillText(currentFilter, 30, 38);
 
@@ -1521,10 +1520,10 @@ function applyFilter(filterName) {
 var filters = ['original', 'grayscale', 'invert', 'sepia', 'contrast'];
 
 function drawButtons() {
-  ctx.fillStyle = '#0a0a0f';
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 335, 500, 65);
 
-  ctx.fillStyle = '#7a7a8a';
+  ctx.fillStyle = 'gray';
   ctx.font = '11px sans-serif';
   ctx.fillText('Click a filter:', 20, 350);
 
@@ -1534,11 +1533,11 @@ function drawButtons() {
     var bw = 85;
     var bh = 28;
 
-    ctx.fillStyle = f === currentFilter ? '#00e5ff' : '#1a1a2a';
+    ctx.fillStyle = f === currentFilter ? 'cyan' : '#1a1a2a';
     ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = f === currentFilter ? '#00e5ff' : '#1a1a2a';
+    ctx.strokeStyle = f === currentFilter ? 'cyan' : '#1a1a2a';
     ctx.strokeRect(bx, by, bw, bh);
-    ctx.fillStyle = f === currentFilter ? '#0a0a0f' : '#c8c8d0';
+    ctx.fillStyle = f === currentFilter ? 'black' : 'silver';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(f, bx + bw/2, by + 18);

@@ -1,0 +1,575 @@
+---
+type: wiki
+category: "canvas-lab"
+title: "Appendix: The Math Behind Curves"
+description: "Lerps, Bezier equations, Bernstein polynomials, and why every curve is just nested interpolation."
+createdAt: 2026-05-17
+tags: [canvas, javascript, graphics, tutorial, math]
+---
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+
+## The Math Behind Curves
+
+<p>In <a href="/wiki/canvas-lab/02-paths">Lesson 2</a>, you used <code>quadraticCurveTo</code> and <code>bezierCurveTo</code> to draw curves. This appendix shows you <strong>why they work</strong>: the actual math, derived from scratch, with no prerequisites beyond basic algebra.</p>
+
+<p>Everything starts with one idea: <strong>lerp</strong>.</p>
+
+## Lerp (Linear Interpolation)
+
+<p><strong>Interpolation</strong> = finding values between two known values.<br/>
+<strong>Linear</strong> = in a straight line.<br/>
+<strong>Lerp</strong> = find the point that sits some fraction of the way between A and B.</p>
+
+<Concept>
+<p><strong>Building the formula step by step:</strong></p>
+<pre>{`    Example: A=10, B=50, you want the point 30% of the way.
+
+    Distance from A to B:       B - A = 40
+    30% of that distance:       0.3 x 40 = 12
+    Start at A, walk 12:        10 + 12 = 22
+
+    As a formula:
+        result = A + t * (B - A)
+
+    Distribute the terms:
+        result = A + t*B - t*A
+        result = A*(1 - t) + B*t
+
+    Final form:
+        lerp(A, B, t) = (1-t)*A + t*B`}</pre>
+</Concept>
+
+<p><strong>t</strong> is a fraction from 0 to 1. Think of it as "how far along." <strong>(1-t)</strong> is the leftover. If t is 0.3, then (1-t) is 0.7. Together they are weights that say how much each point contributes:</p>
+
+<Concept>
+<pre>{`    t=0.0  ->  (1.0)*A + (0.0)*B  =  all A, none of B    -> at A
+    t=0.3  ->  (0.7)*A + (0.3)*B  =  mostly A, some B     -> 30% toward B
+    t=0.5  ->  (0.5)*A + (0.5)*B  =  equal mix             -> midpoint
+    t=1.0  ->  (0.0)*A + (1.0)*B  =  none of A, all B     -> at B
+
+    The weights always sum to 1:   (1-t) + t = 1
+
+    This keeps you on the line between A and B.
+    If they didn't sum to 1, you'd fly past the endpoints.`}</pre>
+</Concept>
+
+<p>For 2D points, apply lerp to x and y separately:</p>
+
+<Concept>
+<pre>{`    x = (1-t) * Ax  +  t * Bx
+    y = (1-t) * Ay  +  t * By`}</pre>
+</Concept>
+
+export const lerpCode = `// Visualize lerp: a point sliding from A to B
+var ax = 50, ay = 180;
+var bx = 450, by = 180;
+var t = 0;
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Line from A to B
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(bx, by);
+  ctx.stroke();
+
+  // Lerp calculation
+  var px = (1 - t) * ax + t * bx;
+  var py = (1 - t) * ay + t * by;
+
+  // Point A
+  ctx.fillStyle = 'cyan';
+  ctx.beginPath();
+  ctx.arc(ax, ay, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Point B
+  ctx.fillStyle = 'deeppink';
+  ctx.beginPath();
+  ctx.arc(bx, by, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lerped point
+  ctx.fillStyle = 'limegreen';
+  ctx.beginPath();
+  ctx.arc(px, py, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Labels
+  ctx.fillStyle = 'gray';
+  ctx.font = '14px monospace';
+  ctx.fillText('A', ax - 5, ay - 15);
+  ctx.fillText('B', bx - 5, by - 15);
+  ctx.fillStyle = 'limegreen';
+  ctx.fillText('t = ' + t.toFixed(2), px - 25, py - 20);
+
+  // Formula
+  ctx.fillStyle = 'silver';
+  ctx.font = '13px monospace';
+  ctx.fillText('lerp(A, B, t) = (1-t)*A + t*B', 120, 40);
+
+  t += 0.005;
+  if (t > 1) t = 0;
+  requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="lerp-demo"
+  title="Lerp: A Point Sliding from A to B"
+  width={500}
+  height={220}
+  code={lerpCode}
+  readonly
+/>
+
+<p>That green dot is lerp in action. It computes <code>(1-t)*A + t*B</code> for every value of t from 0 to 1, tracing a straight line. Simple, but this is the only operation you need to build any curve.</p>
+
+## Quadratic Bezier (3 Points, Degree 2)
+
+<p>A quadratic Bezier curve uses 3 points:</p>
+
+<Concept>
+<pre>{`    P0 = start       (curve passes through this)
+    P1 = control      (the "magnet" that pulls the curve)
+    P2 = end          (curve passes through this)
+
+    The curve always starts at P0 and ends at P2.
+    It bends toward P1 but never touches it.`}</pre>
+</Concept>
+
+<p>The curve is built from <strong>two levels of lerp</strong>:</p>
+
+<Concept>
+<p><strong>Level 1:</strong> Two lerps running in parallel.</p>
+<pre>{`    A(t) = lerp(P0, P1, t) = (1-t)*P0 + t*P1
+                               slide along P0 -> P1
+
+    B(t) = lerp(P1, P2, t) = (1-t)*P1 + t*P2
+                               slide along P1 -> P2`}</pre>
+
+<p><strong>Level 2:</strong> Lerp between those two results.</p>
+<pre>{`    C(t) = lerp(A, B, t) = (1-t)*A(t) + t*B(t)
+                             this is the curve point`}</pre>
+</Concept>
+
+### Deriving the Formula
+
+<p>Substitute Level 1 into Level 2:</p>
+
+<Concept>
+<pre>{`    C(t) = (1-t) * A(t) + t * B(t)
+
+    Replace A(t) and B(t) with their definitions:
+
+    C(t) = (1-t) * [(1-t)*P0 + t*P1]
+         + t     * [(1-t)*P1 + t*P2]
+
+    Multiply through each bracket:
+
+    C(t) = (1-t)(1-t)*P0 + (1-t)*t*P1
+         + t*(1-t)*P1    + t*t*P2
+
+    Simplify the powers:
+
+    C(t) = (1-t)^2 * P0
+         + (1-t)*t * P1
+         + t*(1-t) * P1
+         + t^2     * P2
+
+    The two middle terms both have P1.
+    Combine them:
+
+         (1-t)*t + t*(1-t) = 2*(1-t)*t
+
+    Final result:
+
+    C(t) = (1-t)^2 * P0  +  2*(1-t)*t * P1  +  t^2 * P2
+           ---------        -----------        ------
+           weight of P0     weight of P1     weight of P2`}</pre>
+</Concept>
+
+export const quadDemoCode = `// De Casteljau construction: see the lerps build the curve
+var p0 = { x: 60, y: 280 };
+var p1 = { x: 250, y: 30 };
+var p2 = { x: 440, y: 280 };
+var t = 0;
+var trail = [];
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Control polygon
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(p0.x, p0.y);
+  ctx.lineTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Level 1 lerps
+  var ax = (1 - t) * p0.x + t * p1.x;
+  var ay = (1 - t) * p0.y + t * p1.y;
+  var bx = (1 - t) * p1.x + t * p2.x;
+  var by = (1 - t) * p1.y + t * p2.y;
+
+  // Level 1 line
+  ctx.strokeStyle = 'goldenrod';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(bx, by);
+  ctx.stroke();
+
+  // Level 2 lerp = curve point
+  var cx = (1 - t) * ax + t * bx;
+  var cy = (1 - t) * ay + t * by;
+  trail.push({ x: cx, y: cy });
+
+  // Draw the curve trail
+  if (trail.length > 1) {
+    ctx.strokeStyle = 'cyan';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(trail[0].x, trail[0].y);
+    for (var i = 1; i < trail.length; i++) {
+      ctx.lineTo(trail[i].x, trail[i].y);
+    }
+    ctx.stroke();
+  }
+
+  // Control points
+  ctx.fillStyle = 'cyan';
+  ctx.beginPath(); ctx.arc(p0.x, p0.y, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p2.x, p2.y, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'deeppink';
+  ctx.beginPath(); ctx.arc(p1.x, p1.y, 5, 0, Math.PI * 2); ctx.fill();
+
+  // Intermediate points
+  ctx.fillStyle = 'goldenrod';
+  ctx.beginPath(); ctx.arc(ax, ay, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.fill();
+
+  // Curve point
+  ctx.fillStyle = 'limegreen';
+  ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.fill();
+
+  // Labels
+  ctx.font = '13px monospace';
+  ctx.fillStyle = 'cyan';
+  ctx.fillText('P0', p0.x - 20, p0.y + 20);
+  ctx.fillText('P2', p2.x + 8, p2.y + 20);
+  ctx.fillStyle = 'deeppink';
+  ctx.fillText('P1', p1.x + 8, p1.y - 5);
+  ctx.fillStyle = 'limegreen';
+  ctx.fillText('t=' + t.toFixed(2), cx + 12, cy - 5);
+
+  t += 0.004;
+  if (t > 1) { t = 0; trail = []; }
+  requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="quad-construction"
+  title="Quadratic Bezier: Seeing the Lerps"
+  width={500}
+  height={320}
+  code={quadDemoCode}
+  readonly
+/>
+
+<p>Watch the yellow line (Level 1 lerps) slide along the control polygon. The green dot (Level 2 lerp) traces the curve. That's all a Bezier curve is: lerps of lerps, evaluated at every t from 0 to 1.</p>
+
+## Cubic Bezier (4 Points, Degree 3)
+
+<p>A cubic Bezier adds one more point and one more level of lerp:</p>
+
+<Concept>
+<pre>{`    P0 = start           (curve passes through)
+    P1 = control point 1  (pulls curve near the start)
+    P2 = control point 2  (pulls curve near the end)
+    P3 = end              (curve passes through)
+
+    Two control points allow S-curves:
+    P1 pulls one direction, P2 pulls another.`}</pre>
+</Concept>
+
+<p><strong>Three levels of lerp:</strong></p>
+
+<Concept>
+<pre>{`    Level 1 (3 lerps):
+        A = lerp(P0, P1, t)
+        B = lerp(P1, P2, t)
+        C = lerp(P2, P3, t)
+
+    Level 2 (2 lerps):
+        D = lerp(A, B, t)
+        E = lerp(B, C, t)
+
+    Level 3 (1 lerp):
+        F = lerp(D, E, t)     <- the curve point`}</pre>
+</Concept>
+
+### Deriving the Formula
+
+<p>Same substitution process as quadratic, one more level deep:</p>
+
+<Concept>
+<pre>{`    F(t) = lerp(D, E, t)
+         = (1-t)*D(t) + t*E(t)
+
+    D(t) = (1-t)*A(t) + t*B(t)
+    E(t) = (1-t)*B(t) + t*C(t)
+
+    A(t) = (1-t)*P0 + t*P1
+    B(t) = (1-t)*P1 + t*P2
+    C(t) = (1-t)*P2 + t*P3
+
+    Substituting all the way down and collecting terms:
+
+    F(t) = (1-t)^3 * P0
+         + 3*(1-t)^2*t * P1
+         + 3*(1-t)*t^2 * P2
+         + t^3 * P3`}</pre>
+</Concept>
+
+export const cubicDemoCode = `// De Casteljau construction for cubic bezier
+var p0 = { x: 50, y: 280 };
+var p1 = { x: 150, y: 30 };
+var p2 = { x: 350, y: 30 };
+var p3 = { x: 450, y: 280 };
+var t = 0;
+var trail = [];
+
+function lerp(a, b, t) {
+  return { x: (1-t)*a.x + t*b.x, y: (1-t)*a.y + t*b.y };
+}
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Control polygon
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(p0.x, p0.y);
+  ctx.lineTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.lineTo(p3.x, p3.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Level 1
+  var a = lerp(p0, p1, t);
+  var b = lerp(p1, p2, t);
+  var c = lerp(p2, p3, t);
+
+  // Level 2
+  var d = lerp(a, b, t);
+  var e = lerp(b, c, t);
+
+  // Level 3 = curve point
+  var f = lerp(d, e, t);
+  trail.push(f);
+
+  // Level 1 lines
+  ctx.strokeStyle = 'goldenrod';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.lineTo(c.x, c.y);
+  ctx.stroke();
+
+  // Level 2 line
+  ctx.strokeStyle = 'mediumpurple';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(d.x, d.y);
+  ctx.lineTo(e.x, e.y);
+  ctx.stroke();
+
+  // Curve trail
+  if (trail.length > 1) {
+    ctx.strokeStyle = 'cyan';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(trail[0].x, trail[0].y);
+    for (var i = 1; i < trail.length; i++) {
+      ctx.lineTo(trail[i].x, trail[i].y);
+    }
+    ctx.stroke();
+  }
+
+  // Control points
+  ctx.fillStyle = 'cyan';
+  ctx.beginPath(); ctx.arc(p0.x, p0.y, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p3.x, p3.y, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'deeppink';
+  ctx.beginPath(); ctx.arc(p1.x, p1.y, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p2.x, p2.y, 5, 0, Math.PI * 2); ctx.fill();
+
+  // Level 1 points
+  ctx.fillStyle = 'goldenrod';
+  ctx.beginPath(); ctx.arc(a.x, a.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2); ctx.fill();
+
+  // Level 2 points
+  ctx.fillStyle = 'mediumpurple';
+  ctx.beginPath(); ctx.arc(d.x, d.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI * 2); ctx.fill();
+
+  // Curve point
+  ctx.fillStyle = 'limegreen';
+  ctx.beginPath(); ctx.arc(f.x, f.y, 7, 0, Math.PI * 2); ctx.fill();
+
+  // Labels
+  ctx.font = '12px monospace';
+  ctx.fillStyle = 'cyan';
+  ctx.fillText('P0', p0.x - 20, p0.y + 18);
+  ctx.fillText('P3', p3.x + 8, p3.y + 18);
+  ctx.fillStyle = 'deeppink';
+  ctx.fillText('P1', p1.x + 8, p1.y - 5);
+  ctx.fillText('P2', p2.x + 8, p2.y - 5);
+  ctx.fillStyle = 'limegreen';
+  ctx.fillText('t=' + t.toFixed(2), f.x + 12, f.y - 5);
+
+  t += 0.003;
+  if (t > 1) { t = 0; trail = []; }
+  requestAnimationFrame(draw);
+}
+draw();`;
+
+<CanvasRender
+  id="cubic-construction"
+  title="Cubic Bezier: Three Levels of Lerp"
+  width={500}
+  height={320}
+  code={cubicDemoCode}
+  readonly
+/>
+
+<p>Three lerp levels visible: yellow (Level 1), purple (Level 2), green dot (Level 3 = curve point). More levels = more control = smoother shapes.</p>
+
+## Why the Coefficients Work
+
+<p>The coefficients in the Bezier formulas aren't arbitrary. They come from a fundamental identity: <strong>(1-t) + t = 1</strong>. Raise both sides to any power and expand:</p>
+
+<Concept>
+<p><strong>The binomial theorem</strong> says: if a + b = 1, then (a + b)^n = 1 for any n.</p>
+<p>Here a = (1-t), b = t, so:</p>
+<pre>{`    Degree 2 (quadratic):
+        ((1-t) + t)^2 = 1
+        (1-t)^2 + 2*(1-t)*t + t^2 = 1
+                                     ^
+                  these are the coefficients
+                  from the quadratic formula!
+
+    Degree 3 (cubic):
+        ((1-t) + t)^3 = 1
+        (1-t)^3 + 3*(1-t)^2*t + 3*(1-t)*t^2 + t^3 = 1
+                                                       ^
+                  these are the coefficients
+                  from the cubic formula!`}</pre>
+</Concept>
+
+<p>These weight functions are called <strong>Bernstein polynomials</strong> (named after Sergei Bernstein, a Russian mathematician). Because they always sum to 1, the curve point is always a <strong>weighted average</strong> of the control points. It can never escape the shape formed by connecting the outermost points (the <strong>convex hull</strong>).</p>
+
+<p>The numbers in front (1, 2, 1 for quadratic; 1, 3, 3, 1 for cubic) are <strong>binomial coefficients</strong>. They come from <strong>Pascal's triangle</strong>, where each number is the sum of the two above it:</p>
+
+<Concept>
+<pre>{`    Pascal's triangle:
+
+        Row 0:       1
+        Row 1:      1   1
+        Row 2:     1   2   1           <- quadratic
+        Row 3:    1   3   3   1        <- cubic
+        Row 4:   1   4   6   4   1    <- quartic (degree 4)
+
+    Each row gives the coefficients for that degree.
+    The numbers tell you "how many ways" each weight
+    appears when you expand the nested lerps.`}</pre>
+</Concept>
+
+### Verifying the Endpoints
+
+<p>You can check that the curve really passes through P0 and the last point by plugging in t=0 and t=1:</p>
+
+<Concept>
+<pre>{`    Quadratic at t=0:
+        (1-0)^2*P0 + 2*(1-0)*0*P1 + 0^2*P2
+        = 1*P0 + 0 + 0
+        = P0                                  at start
+
+    Quadratic at t=1:
+        (1-1)^2*P0 + 2*(1-1)*1*P1 + 1^2*P2
+        = 0 + 0 + 1*P2
+        = P2                                  at end
+
+    Same logic for cubic:
+        t=0 gives P0 (only the first term survives)
+        t=1 gives P3 (only the last term survives)
+
+    Control points get zero weight at both endpoints.
+    They only have influence between 0 and 1.`}</pre>
+</Concept>
+
+## The General Pattern
+
+<Concept>
+<pre>{`    Degree  Points  Endpoints  Control pts  Pascal's row
+      1       2        2           0          1, 1           line
+      2       3        2           1          1, 2, 1        one bend
+      3       4        2           2          1, 3, 3, 1     S-curve
+      n      n+1       2          n-1         row n
+
+    Always 2 endpoints (start and end).
+    Everything else is a control point.`}</pre>
+</Concept>
+
+## Why Canvas Stops at Cubic
+
+<p>Higher degrees (4+ control points) are mathematically valid. You could build a degree-10 curve with 11 points. But nobody does, for three reasons:</p>
+
+<Concept>
+<pre>{`    1. INSTABILITY
+       Move one control point slightly and the
+       entire curve wobbles unpredictably.
+
+    2. UNNECESSARY
+       Any shape can be made by chaining multiple
+       cubics end to end. Fonts, SVG, Figma, and
+       Photoshop all do this.
+
+    3. PERFORMANCE
+       More levels = more lerps per point.
+       Cubic is the sweet spot.
+
+    One degree-10 curve:          Chained cubics:
+      hard to control               3-4 points each
+      wobbles everywhere             edit one, rest stays
+      slow to compute                fast and predictable`}</pre>
+</Concept>
+
+<p>Canvas only provides <code>quadraticCurveTo</code> (degree 2) and <code>bezierCurveTo</code> (degree 3) because that's all anyone needs. Complex shapes like font glyphs and vector illustrations are made from dozens of short cubics stitched together, not one high-degree monster.</p>
+
+## The Core Insight
+
+<p>Every smooth curve in computer graphics is <strong>lerps stacked on lerps</strong>. One level = line. Two levels = quadratic. Three levels = cubic. The operation never changes; you just add layers.</p>
+
+<p>The Bezier formula, Bernstein polynomials, and binomial coefficients are all just the algebra that falls out when you substitute nested lerps into each other. If you understand <code>(1-t)*A + t*B</code>, you understand the whole thing.</p>
+
+<LessonNav
+  prev={{ href: "/wiki/canvas-lab/08-particle-system", title: "Particle System" }}
+/>
