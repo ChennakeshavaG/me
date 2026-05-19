@@ -128,54 +128,104 @@ const wrapperClasses = [
   }
 
   function highlightJS(code) {
-    var escaped = code
+    var src = code
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    var tokens = [];
+    var KEYWORDS = {
+      var:1, let:1, const:1, function:1, return:1, if:1, else:1, for:1,
+      while:1, do:1, switch:1, case:1, break:1, continue:1, new:1,
+      typeof:1, instanceof:1, this:1, true:1, false:1, null:1, undefined:1,
+      Math:1, console:1, window:1, document:1
+    };
 
-    function ph(match, cls) {
-      var i = tokens.length;
-      tokens.push('<span class="' + cls + '">' + match + '</span>');
-      return '\\x01T' + i + '\\x02';
+    function isIdStart(c) {
+      return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || c === '$';
+    }
+    function isIdCont(c) {
+      return isIdStart(c) || (c >= '0' && c <= '9');
+    }
+    function isDigit(c) { return c >= '0' && c <= '9'; }
+
+    var out = '';
+    var i = 0;
+    var n = src.length;
+
+    // Single-pass scanner. Comments and strings are mutually exclusive
+    // contexts, so we pick whichever opens at the current position and
+    // consume to its end before continuing.
+    while (i < n) {
+      var c = src.charAt(i);
+      var c2 = src.charAt(i + 1);
+
+      if (c === '/' && c2 === '*') {
+        var end = src.indexOf('*/', i + 2);
+        end = end === -1 ? n : end + 2;
+        out += '<span class="cl-hl-comment">' + src.substring(i, end) + '</span>';
+        i = end;
+        continue;
+      }
+
+      if (c === '/' && c2 === '/') {
+        var nl = src.indexOf('\\n', i);
+        nl = nl === -1 ? n : nl;
+        out += '<span class="cl-hl-comment">' + src.substring(i, nl) + '</span>';
+        i = nl;
+        continue;
+      }
+
+      if (c === "'" || c === '"' || c === '\`') {
+        var quote = c;
+        var j = i + 1;
+        while (j < n) {
+          var ch = src.charAt(j);
+          if (ch === '\\\\') { j += 2; continue; }
+          if (ch === quote) { j++; break; }
+          if (ch === '\\n' && quote !== '\`') break;
+          j++;
+        }
+        out += '<span class="cl-hl-string">' + src.substring(i, j) + '</span>';
+        i = j;
+        continue;
+      }
+
+      if (isIdStart(c)) {
+        var k = i + 1;
+        while (k < n && isIdCont(src.charAt(k))) k++;
+        var word = src.substring(i, k);
+        if (KEYWORDS[word]) {
+          out += '<span class="cl-hl-keyword">' + word + '</span>';
+        } else {
+          out += word;
+        }
+        i = k;
+        continue;
+      }
+
+      if (isDigit(c)) {
+        var k = i + 1;
+        while (k < n) {
+          var cc = src.charAt(k);
+          if (isDigit(cc) || cc === '.') { k++; continue; }
+          if (cc === 'e' || cc === 'E') {
+            k++;
+            var nxt = src.charAt(k);
+            if (nxt === '+' || nxt === '-') k++;
+            continue;
+          }
+          break;
+        }
+        out += '<span class="cl-hl-number">' + src.substring(i, k) + '</span>';
+        i = k;
+        continue;
+      }
+
+      out += c;
+      i++;
     }
 
-    // Order matters: block comments, then strings, then line comments.
-    // Strings must beat line comments so URLs ('http://...') aren't eaten.
-    escaped = escaped.replace(
-      /(\\/\\*[\\s\\S]*?\\*\\/)/g,
-      function(m) { return ph(m, 'cl-hl-comment'); }
-    );
-    escaped = escaped.replace(
-      /('(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")/g,
-      function(m) { return ph(m, 'cl-hl-string'); }
-    );
-    escaped = escaped.replace(
-      /(\\/\\/.*)/g,
-      function(m) { return ph(m, 'cl-hl-comment'); }
-    );
-    escaped = escaped.replace(
-      /\\b(\\d+\\.?\\d*(?:e[+-]?\\d+)?)\\b/g,
-      function(m) { return ph(m, 'cl-hl-number'); }
-    );
-    escaped = escaped.replace(
-      /\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|new|typeof|instanceof|this|true|false|null|undefined|Math|console|window|document)\\b/g,
-      function(m) { return ph(m, 'cl-hl-keyword'); }
-    );
-
-    // Loop restoration so any placeholder captured inside a later token
-    // (e.g. a string containing the placeholder of a prior pass) still expands.
-    var prev;
-    do {
-      prev = escaped;
-      escaped = escaped.replace(
-        /\\x01T(\\d+)\\x02/g,
-        function(_, i) { return tokens[parseInt(i)]; }
-      );
-    } while (escaped !== prev);
-
-    return escaped;
+    return out;
   }
 
   var highlightEl = document.getElementById(id + '-highlight');
