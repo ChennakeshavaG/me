@@ -175,14 +175,14 @@ const wrapperClasses = [
         continue;
       }
 
-      if (c === "'" || c === '"' || c === '\`') {
+      if (c === "'" || c === '"') {
         var quote = c;
         var j = i + 1;
         while (j < n) {
           var ch = src.charAt(j);
           if (ch === '\\\\') { j += 2; continue; }
           if (ch === quote) { j++; break; }
-          if (ch === '\\n' && quote !== '\`') break;
+          if (ch === '\\n') break;
           j++;
         }
         out += '<span class="cl-hl-string">' + src.substring(i, j) + '</span>';
