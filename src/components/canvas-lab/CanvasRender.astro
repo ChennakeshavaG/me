@@ -141,10 +141,8 @@ const wrapperClasses = [
       return '\\x01T' + i + '\\x02';
     }
 
-    escaped = escaped.replace(
-      /(\\/\\/.*)/g,
-      function(m) { return ph(m, 'cl-hl-comment'); }
-    );
+    // Order matters: block comments, then strings, then line comments.
+    // Strings must beat line comments so URLs ('http://...') aren't eaten.
     escaped = escaped.replace(
       /(\\/\\*[\\s\\S]*?\\*\\/)/g,
       function(m) { return ph(m, 'cl-hl-comment'); }
@@ -152,6 +150,10 @@ const wrapperClasses = [
     escaped = escaped.replace(
       /('(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")/g,
       function(m) { return ph(m, 'cl-hl-string'); }
+    );
+    escaped = escaped.replace(
+      /(\\/\\/.*)/g,
+      function(m) { return ph(m, 'cl-hl-comment'); }
     );
     escaped = escaped.replace(
       /\\b(\\d+\\.?\\d*(?:e[+-]?\\d+)?)\\b/g,
@@ -162,10 +164,16 @@ const wrapperClasses = [
       function(m) { return ph(m, 'cl-hl-keyword'); }
     );
 
-    escaped = escaped.replace(
-      /\\x01T(\\d+)\\x02/g,
-      function(_, i) { return tokens[parseInt(i)]; }
-    );
+    // Loop restoration so any placeholder captured inside a later token
+    // (e.g. a string containing the placeholder of a prior pass) still expands.
+    var prev;
+    do {
+      prev = escaped;
+      escaped = escaped.replace(
+        /\\x01T(\\d+)\\x02/g,
+        function(_, i) { return tokens[parseInt(i)]; }
+      );
+    } while (escaped !== prev);
 
     return escaped;
   }
