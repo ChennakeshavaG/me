@@ -21,7 +21,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
 <p><strong>fillRect parameters:</strong></p>
-<pre>{`    ctx.fillRect(x, y, width, height)
+<pre>{`
+    ctx.fillRect(x, y, width, height)
                  │  │    │       │
                  │  │    │       └── how tall (in pixels)
                  │  │    └────────── how wide (in pixels)
@@ -165,7 +166,8 @@ ctx.setLineDash([]);`;
 
 <Concept>
 <p><strong>How lineWidth works:</strong> The stroke is centered on the edge of the rectangle. A <code>lineWidth</code> of 10 means 5 pixels inside the edge and 5 pixels outside. This is why thick outlines can look like they're "growing" the rectangle.</p>
-<pre>{`    lineWidth = 10
+<pre>{`
+    lineWidth = 10
 
        5px outside
     ──────████████████──────
@@ -212,7 +214,8 @@ ctx.fillText('cleared areas become transparent', 50, 290);`;
 <p>The most common use of <code>clearRect</code> is clearing the <strong>entire</strong> canvas before redrawing (for animation):</p>
 
 <Concept>
-<pre>{`    // Clear everything:
+<pre>{`
+    // Clear everything:
     ctx.clearRect(0, 0, canvas.width, canvas.height);`}</pre>
 </Concept>
 
@@ -525,7 +528,8 @@ for (var i = 0; i < 10; i++) {
 
 <Concept>
 <p><strong>Challenge 1: Traffic Light</strong></p>
-<pre>{`    Draw a traffic light:
+<pre>{`
+    Draw a traffic light:
     - A tall dark rectangle for the housing
     - Three circles (red, yellow, green) stacked vertically
     - A pole (thin rectangle) below
@@ -540,7 +544,8 @@ for (var i = 0; i < 10; i++) {
 
 <Concept>
 <p><strong>Challenge 2: Checkerboard</strong></p>
-<pre>{`    Draw an 8x8 checkerboard pattern:
+<pre>{`
+    Draw an 8x8 checkerboard pattern:
     - Use a nested for loop (row and column)
     - Alternate colors based on (row + col) % 2
     - Each square should be 40x40 pixels
@@ -560,7 +565,8 @@ for (var i = 0; i < 10; i++) {
 
 <Concept>
 <p><strong>Challenge 3: Bar Chart</strong></p>
-<pre>{`    Draw a bar chart from an array of data:
+<pre>{`
+    Draw a bar chart from an array of data:
       var data = [80, 150, 60, 200, 120];
 
     - Each bar is 50px wide with 20px gaps
@@ -574,7 +580,8 @@ for (var i = 0; i < 10; i++) {
 
 <Concept>
 <p><strong>What you learned in this lesson:</strong></p>
-<pre>{`    Concept              How to do it
+<pre>{`
+    Concept              How to do it
     ──────────────────── ───────────────────────────────
     Set fill color       ctx.fillStyle = '#ff0000'
     Set stroke color     ctx.strokeStyle = '#00ff00'

@@ -1,10 +1,10 @@
 ---
-type: wiki
-category: "canvas-lab"
+type: blog
 title: "Particle System"
 description: "Capstone: build a complete particle system combining everything you've learned."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
+category: "Canvas Lab"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
 import Concept from '../../../components/canvas-lab/Concept.astro';
@@ -21,7 +21,7 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>Real-world examples of particle systems:</strong></p>
-  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+  <ul>
     <li>Fireworks exploding in the sky</li>
     <li>Snow falling in a video game</li>
     <li>Sparks flying off a sword in an action game</li>
@@ -39,7 +39,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>The particle lifecycle, running 60 times per second:</strong></p>
-  <pre>{`  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+  <pre>{`
+  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
   │  BIRTH   │────→│  UPDATE  │────→│  DEATH   │────→│   DRAW   │
   │          │     │          │     │          │     │          │
   │ Create   │     │ Move it  │     │ Remove   │     │ Render   │
@@ -57,7 +58,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 <p>A particle is just a plain JavaScript object with properties. Here is the anatomy of a typical particle:</p>
 
 <Concept>
-  <pre>{`  {
+  <pre>{`
+  {
     x: 250,          // position (where it is)
     y: 200,
     vx: 30,          // velocity (how fast it moves)
@@ -76,34 +78,34 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 export const basicParticlesCode = `var particles = [];                // the array holding all particles
 var last = performance.now();      // for delta time calculation
 
-// BIRTH: create new particles at a position
-function emit(x, y) {
+// BIRTH: create new particles along the top edge
+function emit() {
   for (var i = 0; i < 3; i++) {   // spawn 3 per call
     particles.push({
-      x: x,                       // start position
-      y: y,
-      vx: (Math.random() - 0.5) * 100,  // random horizontal speed
-      vy: -100 - Math.random() * 100,    // upward speed
+      x: Math.random() * 500,     // anywhere across the top
+      y: -10,                     // just above canvas
+      vx: (Math.random() - 0.5) * 40,   // slight horizontal drift
+      vy: 20 + Math.random() * 30,      // small downward speed
       life: 1,                    // starts fully alive
-      decay: 0.3 + Math.random() * 0.5,  // random death speed
-      r: 3 + Math.random() * 4,  // random size
-      hue: 200 + Math.random() * 40,     // blue-ish color
+      decay: 0.2 + Math.random() * 0.3, // random death speed
+      r: 2 + Math.random() * 3,   // random size
+      hue: 200 + Math.random() * 40,    // blue-ish color
     });
   }
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;   // seconds since last frame
+  var dt = Math.min(0.1, (now - last) / 1000);   // seconds since last frame
   last = now;
 
   ctx.clearRect(0, 0, 500, 400);
 
-  // BIRTH: emit from center bottom
-  emit(250, 300);
+  // BIRTH: spawn at top edge
+  emit();
 
   // UPDATE: move each particle, apply gravity, age it
   particles.forEach(function(p) {
-    p.vy += 200 * dt;            // gravity pulls down
+    p.vy += 300 * dt;            // gravity pulls down
     p.x += p.vx * dt;           // move horizontally
     p.y += p.vy * dt;           // move vertically
     p.life -= p.decay * dt;     // age toward death
@@ -147,7 +149,7 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Key takeaways from Step 1:</strong></p>
-  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+  <ul>
     <li><code>particles</code> is just a regular array, nothing fancy</li>
     <li>Each frame: emit, update, filter dead, draw survivors</li>
     <li><code>p.life</code> goes from 1 to 0; we use it for opacity AND size</li>
@@ -163,11 +165,19 @@ export const mouseParticlesCode = `var particles = [];
 var mx = 250, my = 200;           // mouse position
 var last = performance.now();
 
-// Track mouse position
-addListener(canvas, 'mousemove', function(e) {
+// Track pointer position (mouse or touch)
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (500 / rect.width);
+  my = (clientY - rect.top) * (400 / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 function emit(x, y, count) {
@@ -187,7 +197,7 @@ function emit(x, y, count) {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   ctx.clearRect(0, 0, 500, 400);
 
@@ -234,7 +244,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Common emitter shapes:</strong></p>
-  <pre>{`  POINT            LINE             CIRCLE           CONE
+  <pre>{`
+  POINT            LINE             CIRCLE           CONE
   All from         Along a          Around a         Within an
   one spot         segment          ring             angle range
 
@@ -319,7 +330,7 @@ function emitCone() {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   ctx.clearRect(0, 0, 500, 400);
 
@@ -373,7 +384,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>How forces modify velocity:</strong></p>
-  <pre>{`  Each frame:
+  <pre>{`
+  Each frame:
     p.vy += gravity * dt;                    // gravity: constant downward pull
     p.vx += wind * dt;                       // wind: constant sideways push
     p.vx += (random-0.5) * turbulence * dt;  // turbulence: random jitter
@@ -397,14 +409,14 @@ addListener(canvas, 'click', function() {
 });
 
 function emit() {
-  for (var i = 0; i < 3; i++) {
-    var angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5;
-    var speed = 100 + Math.random() * 80;
+  for (var i = 0; i < 2; i++) {
+    var angle = -Math.PI / 2 + (Math.random() - 0.5);
+    var speed = 300 + Math.random() * 80;
     particles.push({
       x: 250, y: 350,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 1, decay: 0.2 + Math.random() * 0.3,
+      life: 1.5, decay: 0.2 + Math.random() * 0.3,
       r: 3 + Math.random() * 3,
       hue: 200 + Math.random() * 40,
     });
@@ -412,7 +424,7 @@ function emit() {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
   ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
@@ -424,8 +436,8 @@ function loop(now) {
     // Apply forces based on mode
     var gravity = 0, windX = 0, turb = 0;
     if (forceMode === 0 || forceMode === 3) gravity = 150;
-    if (forceMode === 1 || forceMode === 3) windX = 80;
-    if (forceMode === 2 || forceMode === 3) turb = 300;
+    if (forceMode === 1 || forceMode === 3) windX = 100;
+    if (forceMode === 2 || forceMode === 3) turb = 2500;
 
     p.vy += gravity * dt;                           // gravity
     p.vx += windX * dt;                             // wind
@@ -475,14 +487,22 @@ __raf = requestAnimationFrame(loop);`;
 <p>One of the coolest forces is <strong>attraction</strong>, where particles are pulled toward a point (like gravity toward a planet). The opposite is <strong>repulsion</strong>, where particles are pushed away. The force gets stronger as particles get closer.</p>
 
 export const attractionCode = `var particles = [];
-var mx = 250, my = 200;
+var mx = w / 2, my = h / 2;
 var repel = false;
 var last = performance.now();
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (w / rect.width);
+  my = (clientY - rect.top) * (h / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 addListener(canvas, 'click', function() {
@@ -490,10 +510,10 @@ addListener(canvas, 'click', function() {
 });
 
 // Spawn particles across the canvas
-for (var i = 0; i < 200; i++) {
+for (var i = 0; i < 300; i++) {
   particles.push({
-    x: Math.random() * 500,
-    y: Math.random() * 400,
+    x: Math.random() * w,
+    y: Math.random() * h,
     vx: 0, vy: 0,
     r: 2 + Math.random() * 3,
     hue: Math.random() * 360,
@@ -501,9 +521,9 @@ for (var i = 0; i < 200; i++) {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  ctx.clearRect(0, 0, 500, 400);
+  ctx.clearRect(0, 0, w, h);
 
   particles.forEach(function(p) {
     // Vector from particle to mouse
@@ -532,11 +552,11 @@ function loop(now) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
 
-    // Wrap around screen edges
-    if (p.x < 0) p.x += 500;
-    if (p.x > 500) p.x -= 500;
-    if (p.y < 0) p.y += 400;
-    if (p.y > 400) p.y -= 400;
+    // Bounce off edges with damping
+    if (p.x < 0) { p.x = 0; p.vx = -p.vx * 0.6; }
+    if (p.x > w) { p.x = w; p.vx = -p.vx * 0.6; }
+    if (p.y < 0) { p.y = 0; p.vy = -p.vy * 0.6; }
+    if (p.y > h) { p.y = h; p.vy = -p.vy * 0.6; }
   });
 
   // Draw particles
@@ -569,6 +589,7 @@ __raf = requestAnimationFrame(loop);`;
 <CanvasRender
   id="attraction"
   layout="stack"
+  fluid
   title="Mouse Attracts / Click to Toggle Repulsion"
   width={500}
   height={400}
@@ -610,7 +631,7 @@ addListener(canvas, 'click', function(e) {
 explode(250, 200);
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
   // Fade trail (don't fully clear: leaves ghost trails)
@@ -658,7 +679,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>The algorithm:</strong></p>
-  <pre>{`  For each pair of particles (i, j):
+  <pre>{`
+  For each pair of particles (i, j):
     distance = sqrt((xi-xj)^2 + (yi-yj)^2)
     if distance < threshold:
       opacity = 1 - (distance / threshold)
@@ -671,33 +693,54 @@ __raf = requestAnimationFrame(loop);`;
 </Concept>
 
 export const constellationCode = `var particles = [];
-var mx = 250, my = 200;
-var numParticles = 80;
+var mx = w / 2, my = h / 2;
+var numParticles = Math.round(w * h / 2500);  // density-based count
 var connectDist = 100;           // max distance to draw lines
 
 // Create particles with gentle drift
 for (var i = 0; i < numParticles; i++) {
   particles.push({
-    x: Math.random() * 500,
-    y: Math.random() * 400,
+    x: Math.random() * w,
+    y: Math.random() * h,
     vx: (Math.random() - 0.5) * 30,
     vy: (Math.random() - 0.5) * 30,
     r: 2 + Math.random() * 2,
   });
 }
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (w / rect.width);
+  my = (clientY - rect.top) * (h / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 var last = performance.now();
+var fps = 0;
+var fpsAccum = 0;        // frames counted in current window
+var fpsWindow = 0;       // seconds elapsed in current window
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  ctx.clearRect(0, 0, 500, 400);
+
+  // FPS: count frames over a 0.5s sliding window for a smooth readout
+  fpsAccum++;
+  fpsWindow += dt;
+  if (fpsWindow >= 0.5) {
+    fps = Math.round(fpsAccum / fpsWindow);
+    fpsAccum = 0;
+    fpsWindow = 0;
+  }
+
+  ctx.clearRect(0, 0, w, h);
 
   // Update positions
   particles.forEach(function(p) {
@@ -705,10 +748,10 @@ function loop(now) {
     p.y += p.vy * dt;
 
     // Bounce off edges
-    if (p.x < 0 || p.x > 500) p.vx *= -1;
-    if (p.y < 0 || p.y > 400) p.vy *= -1;
-    p.x = Math.max(0, Math.min(500, p.x));
-    p.y = Math.max(0, Math.min(400, p.y));
+    if (p.x < 0 || p.x > w) p.vx *= -1;
+    if (p.y < 0 || p.y > h) p.vy *= -1;
+    p.x = Math.max(0, Math.min(w, p.x));
+    p.y = Math.max(0, Math.min(h, p.y));
   });
 
   // Draw connecting lines between nearby particles
@@ -761,6 +804,8 @@ function loop(now) {
   ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
   ctx.fillText('Move mouse to interact | ' + numParticles + ' particles', 10, 20);
+  ctx.fillStyle = fps < 30 ? 'tomato' : fps < 55 ? 'gold' : 'lightgreen';
+  ctx.fillText(fps + ' fps', w - 60, 20);
 
   __raf = requestAnimationFrame(loop);
 }
@@ -769,6 +814,7 @@ __raf = requestAnimationFrame(loop);`;
 <CanvasRender
   id="constellation"
   layout="stack"
+  fluid
   title="Interactive Constellation"
   width={500}
   height={400}
@@ -781,7 +827,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Key blending modes for particles:</strong></p>
-  <pre>{`  'source-over' → Default. New covers old.
+  <pre>{`
+  'source-over' → Default. New covers old.
   'lighter'     → Additive. Colors add up → bright overlaps.
   'multiply'    → Colors darken where they overlap.
   'screen'      → Opposite of multiply, lightens.
@@ -802,10 +849,18 @@ export const blendingCode = `var particles = [];
 var mx = 250, my = 200;
 var last = performance.now();
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (500 / rect.width);
+  my = (clientY - rect.top) * (400 / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 function emit(x, y) {
@@ -825,7 +880,7 @@ function emit(x, y) {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
   // Dark background (fully clear for black)
@@ -889,64 +944,84 @@ export const fireCode = `var particles = [];
 var last = performance.now();
 
 function emit(x, y) {
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 6; i++) {
+    var spread = (Math.random() - 0.5) * 50;       // wide base
     particles.push({
-      x: x + (Math.random() - 0.5) * 40,  // spread at base
-      y: y,
-      vx: (Math.random() - 0.5) * 30,
-      vy: -80 - Math.random() * 120,       // upward
+      x: x + spread,
+      y: y + Math.random() * 6,
+      vx: spread * 0.4 + (Math.random() - 0.5) * 20,
+      vy: -60 - Math.random() * 60,                 // upward
       life: 1,
-      decay: 0.6 + Math.random() * 0.8,
-      r: 8 + Math.random() * 12,
-      hue: 15 + Math.random() * 30,        // orange-yellow
+      decay: 0.45 + Math.random() * 0.35,
+      r: 14 + Math.random() * 10,
+      flicker: Math.random() * Math.PI * 2,
     });
   }
 }
 
+// Map remaining life to a fire color: white-hot core → yellow → orange → red ember
+function fireColor(life) {
+  if (life > 0.75) return 'rgba(255, 245, 200, 1)';   // white-hot
+  if (life > 0.55) return 'rgba(255, 210, 90, 1)';    // yellow
+  if (life > 0.35) return 'rgba(255, 140, 40, 1)';    // orange
+  if (life > 0.18) return 'rgba(220, 60, 20, 1)';     // red
+  return 'rgba(80, 20, 10, 1)';                       // dark ember
+}
+
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
-  // Fade trail for motion blur effect
-  ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+  // Solid black base every frame so additive blending pops
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(8, 6, 10, 0.35)';            // mild trail
   ctx.fillRect(0, 0, 500, 400);
 
+  // Base glow under the flame
+  var baseGlow = ctx.createRadialGradient(250, 380, 5, 250, 380, 90);
+  baseGlow.addColorStop(0, 'rgba(255, 130, 40, 0.45)');
+  baseGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = baseGlow;
+  ctx.fillRect(150, 310, 200, 90);
+
   // Emit from the base
-  emit(250, 370);
-  emit(250, 370);
+  emit(250, 375);
+  emit(250, 375);
 
   particles.forEach(function(p) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
-    p.vx += (Math.random() - 0.5) * 50 * dt;  // turbulence
-    p.vy -= 20 * dt;                            // accelerate upward
+    p.vx += (Math.random() - 0.5) * 80 * dt;         // turbulent flicker
+    p.vx *= 0.96;                                     // converge upward
+    p.vy -= 90 * dt;                                  // buoyancy
     p.life -= p.decay * dt;
+    p.flicker += dt * 8;
   });
 
   particles = particles.filter(function(p) { return p.life > 0; });
 
-  particles.forEach(function(p) {
-    var size = p.r * p.life;
-    ctx.globalAlpha = p.life * 0.7;
+  // Additive blending: overlapping flames sum into bright cores
+  ctx.globalCompositeOperation = 'lighter';
 
-    // Radial gradient for soft glow
-    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-    g.addColorStop(0, 'hsl(' + (p.hue + 20) + ', 100%, 70%)');
-    g.addColorStop(0.4, 'hsl(' + p.hue + ', 90%, 50%)');
-    g.addColorStop(1, 'transparent');
+  particles.forEach(function(p) {
+    var size = p.r * (0.4 + 0.6 * p.life);            // shrink with age
+    var wobble = Math.sin(p.flicker) * 0.15 + 1;
+    var radius = size * wobble;
+
+    var core = fireColor(Math.min(1, p.life + 0.1));
+    var edge = fireColor(p.life);
+
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
+    g.addColorStop(0, core);
+    g.addColorStop(0.5, edge);
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fill();
   });
-  ctx.globalAlpha = 1;
 
-  // Glow at the base
-  var baseGlow = ctx.createRadialGradient(250, 380, 5, 250, 380, 60);
-  baseGlow.addColorStop(0, 'rgba(255, 150, 50, 0.3)');
-  baseGlow.addColorStop(1, 'transparent');
-  ctx.fillStyle = baseGlow;
-  ctx.fillRect(180, 320, 140, 80);
+  ctx.globalCompositeOperation = 'source-over';
 
   __raf = requestAnimationFrame(loop);
 }
@@ -964,99 +1039,111 @@ __raf = requestAnimationFrame(loop);`;
 
 <p>Weather effects use the same particle system with different parameters: snow falls slowly and drifts sideways, rain falls fast in straight lines.</p>
 
-export const snowRainCode = `var particles = [];
-var last = performance.now();
+export const snowRainCode = `var W = 500, H = 400;
 var isSnow = true;
+var angle = 0;
 
-addListener(canvas, 'click', function() {
-  isSnow = !isSnow;
-  particles = [];
-});
+// Persistent pools: flakes/drops never deleted, just recycled to top
+var SNOW_COUNT = 80;
+var RAIN_COUNT = 220;
 
-function emit() {
-  var count = isSnow ? 2 : 5;
-  for (var i = 0; i < count; i++) {
-    if (isSnow) {
-      particles.push({
-        x: Math.random() * 520 - 10,     // slightly wider than canvas
-        y: -10,
-        vx: (Math.random() - 0.5) * 20,  // gentle drift
-        vy: 30 + Math.random() * 40,      // slow fall
-        r: 2 + Math.random() * 4,
-        wobble: Math.random() * Math.PI * 2,  // for sine wave drift
-        wobbleSpeed: 1 + Math.random() * 2,
-      });
-    } else {
-      particles.push({
-        x: Math.random() * 520 - 10,
-        y: -10,
-        vx: -20,                          // slight wind angle
-        vy: 300 + Math.random() * 200,    // fast fall
-        r: 1,
-        length: 10 + Math.random() * 15,  // rain drop length
-      });
+var snowflakes = [];
+for (var i = 0; i < SNOW_COUNT; i++) {
+  snowflakes.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: 1 + Math.random() * 3,           // 1 - 4 px
+    d: Math.random() * SNOW_COUNT,      // density / phase offset
+  });
+}
+
+var raindrops = [];
+for (var i = 0; i < RAIN_COUNT; i++) {
+  raindrops.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    len: 14 + Math.random() * 12,       // streak length
+    speed: 12 + Math.random() * 6,      // px per frame
+  });
+}
+
+addListener(canvas, 'click', function() { isSnow = !isSnow; });
+
+function drawSnow() {
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.beginPath();
+  for (var i = 0; i < snowflakes.length; i++) {
+    var p = snowflakes[i];
+    ctx.moveTo(p.x, p.y);
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+
+  // thecodeplayer-style update: global angle + per-flake density offset
+  angle += 0.01;
+  for (var i = 0; i < snowflakes.length; i++) {
+    var p = snowflakes[i];
+    p.y += Math.cos(angle + p.d) + 1 + p.r / 2;   // bigger flakes fall faster
+    p.x += Math.sin(angle) * 2;                    // global wind wobble
+
+    if (p.y > H || p.x > W + 5 || p.x < -5) {
+      // recycle: respawn at top with new x
+      if (i % 3 > 0) {
+        snowflakes[i] = { x: Math.random() * W, y: -10, r: p.r, d: p.d };
+      } else {
+        // re-enter from a side (depending on wind direction)
+        if (Math.sin(angle) > 0) {
+          snowflakes[i] = { x: -5, y: Math.random() * H, r: p.r, d: p.d };
+        } else {
+          snowflakes[i] = { x: W + 5, y: Math.random() * H, r: p.r, d: p.d };
+        }
+      }
     }
   }
 }
 
-function loop(now) {
-  var dt = (now - last) / 1000;
-  last = now;
+function drawRain() {
+  ctx.fillStyle = 'rgb(8, 10, 18)';
+  ctx.fillRect(0, 0, W, H);
 
-  // Background
-  if (isSnow) {
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, 500, 400);
-  } else {
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
-    ctx.fillRect(0, 0, 500, 400);
+  // wind tilt — small constant, so streaks are nearly vertical
+  var tiltX = -2;
+
+  ctx.strokeStyle = 'rgba(174, 214, 255, 0.55)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (var i = 0; i < raindrops.length; i++) {
+    var p = raindrops[i];
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + tiltX, p.y + p.len);
   }
+  ctx.stroke();
 
-  emit();
-
-  particles.forEach(function(p) {
-    if (isSnow) {
-      p.wobble += p.wobbleSpeed * dt;
-      p.x += Math.sin(p.wobble) * 20 * dt + p.vx * dt;  // sine drift
-      p.y += p.vy * dt;
-    } else {
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+  for (var i = 0; i < raindrops.length; i++) {
+    var p = raindrops[i];
+    p.x += tiltX * 0.5;
+    p.y += p.speed;
+    if (p.y > H) {
+      p.y = -p.len;
+      p.x = Math.random() * (W + 40) - 20;
     }
-  });
-
-  // Remove off-screen particles
-  particles = particles.filter(function(p) {
-    return p.y < 410 && p.x > -20 && p.x < 520;
-  });
-  if (particles.length > 600) particles.splice(0, particles.length - 600);
-
-  // Draw
-  if (isSnow) {
-    particles.forEach(function(p) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  } else {
-    ctx.strokeStyle = 'rgba(150, 200, 255, 0.4)';
-    ctx.lineWidth = 1;
-    particles.forEach(function(p) {
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x + p.vx * 0.3, p.y + p.length);
-      ctx.stroke();
-    });
   }
+}
 
-  // Ground line
+function loop() {
+  if (isSnow) drawSnow();
+  else drawRain();
+
+  // Ground strip
   ctx.fillStyle = 'black';
-  ctx.fillRect(0, 380, 500, 20);
+  ctx.fillRect(0, 380, W, 20);
 
   ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
-  ctx.fillText((isSnow ? 'Snow' : 'Rain') + ' | Click to toggle | ' + particles.length, 10, 20);
+  ctx.fillText((isSnow ? 'Snow' : 'Rain') + ' | Click to toggle', 10, 20);
 
   __raf = requestAnimationFrame(loop);
 }
@@ -1108,7 +1195,7 @@ addListener(canvas, 'click', function(e) {
 burst(250, 200);
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
   ctx.clearRect(0, 0, 500, 400);
@@ -1160,10 +1247,18 @@ var cx = 250, cy = 200;           // center point (vanishing point)
 var mx = 250, my = 200;           // mouse position for steering
 var numStars = 150;
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (500 / rect.width);
+  my = (clientY - rect.top) * (400 / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 // Initialize stars at random depths
@@ -1178,7 +1273,7 @@ for (var i = 0; i < numStars; i++) {
 var last = performance.now();
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
   ctx.fillStyle = 'black';
@@ -1248,7 +1343,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>How object pooling works:</strong></p>
-  <pre>{`  Without pooling:
+  <pre>{`
+  Without pooling:
   emit() → push new object  → GC cleans up dead objects
   emit() → push new object  → GC cleans up (STUTTER!)
   emit() → push new object  → ...
@@ -1280,10 +1376,18 @@ var activeCount = 0;
 var mx = 250, my = 200;
 var last = performance.now();
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (500 / rect.width);
+  my = (clientY - rect.top) * (400 / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 // Find a dead particle and reuse it
@@ -1308,7 +1412,7 @@ function emit(x, y) {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   ctx.clearRect(0, 0, 500, 400);
 
@@ -1370,23 +1474,31 @@ export const completeCode = `var particles = [];
 var mode = 0;
 var modes = ['fountain', 'fireworks', 'vortex'];
 var last = performance.now();
-var mx = 250, my = 200;
+var mx = w / 2, my = h / 2;
 
 addListener(canvas, 'click', function() {
   mode = (mode + 1) % modes.length;
   particles = [];
 });
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  mx = (e.clientX - rect.left) * (500 / rect.width);
-  my = (e.clientY - rect.top) * (400 / rect.height);
+  mx = (clientX - rect.left) * (w / rect.width);
+  my = (clientY - rect.top) * (h / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 function emitFountain() {
   for (var i = 0; i < 3; i++) {
     particles.push({
-      x: 250, y: 380,
+      x: w / 2, y: h - 20,
       vx: (Math.random() - 0.5) * 80,
       vy: -200 - Math.random() * 200,
       life: 1, decay: 0.3 + Math.random() * 0.4,
@@ -1398,8 +1510,8 @@ function emitFountain() {
 
 function emitFireworks() {
   if (Math.random() < 0.03) {
-    var ex = 100 + Math.random() * 300;
-    var ey = 50 + Math.random() * 200;
+    var ex = w * 0.2 + Math.random() * w * 0.6;
+    var ey = h * 0.125 + Math.random() * h * 0.5;
     var hue = Math.random() * 360;
     for (var i = 0; i < 40; i++) {
       var a = Math.random() * Math.PI * 2;
@@ -1430,11 +1542,11 @@ function emitVortex() {
 }
 
 function loop(now) {
-  var dt = (now - last) / 1000;
+  var dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
   ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
-  ctx.fillRect(0, 0, 500, 400);
+  ctx.fillRect(0, 0, w, h);
 
   if (modes[mode] === 'fountain') emitFountain();
   else if (modes[mode] === 'fireworks') emitFireworks();
@@ -1480,6 +1592,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <CanvasRender
   id="complete"
+  layout="stack"
+  fluid
   title="Complete Particle System: Click to Switch Effects"
   width={500}
   height={400}
@@ -1490,7 +1604,7 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>How to keep your particle system fast:</strong></p>
-  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+  <ul>
     <li><strong>Limit particle count.</strong> Set a max (e.g. 500-1000) and stop emitting or remove oldest when you hit it.</li>
     <li><strong>Use object pooling</strong> (shown above) for high-throughput systems to avoid garbage collection pauses.</li>
     <li><strong>Avoid per-particle gradients</strong> when possible. Flat circles are 5-10x faster than radial gradient circles.</li>
@@ -1504,7 +1618,7 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>What you learned in this lesson:</strong></p>
-  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+  <ul>
     <li>A particle system manages arrays of short-lived objects with position, velocity, and lifetime</li>
     <li>The lifecycle: birth (emit) → update (physics) → death (filter) → draw</li>
     <li>Emitter patterns: point, line, circle, and cone shapes</li>
@@ -1516,11 +1630,389 @@ __raf = requestAnimationFrame(loop);`;
   </ul>
 </Concept>
 
+## Drift (Flow Field, macOS Screensaver Style)
+
+<p>One of the most hypnotic particle effects is a <strong>flow field</strong>. Instead of giving each particle its own velocity, you treat the canvas as an invisible vector field — a grid where every point has a direction. Particles read the direction at their current position and drift along it. The result is smooth, curving, organic trails. macOS's "Drift" screensaver uses this exact technique with a noise-driven field.</p>
+
+<Concept>
+  <p><strong>How a flow field works:</strong></p>
+  <pre>{`
+  Every (x, y) position has an angle.
+  Angle changes smoothly as you move across the canvas.
+
+    ↘ ↘ → → ↗ ↗
+    ↘ → → → ↗ ↑
+    → → ↗ ↑ ↑ ↑
+    → ↗ ↑ ↑ ↖ ↖
+    ↗ ↑ ↑ ↖ ↖ ←
+
+  Each frame, for each particle:
+    1. Read the angle at its current (x, y)
+    2. Convert angle → velocity: (cos(a), sin(a)) * speed
+    3. Move particle
+    4. Draw a tiny line segment from old → new position
+
+  The field itself slowly evolves over time, so the curves
+  keep shifting. Particles wrap around edges, giving the
+  illusion of an infinite drifting flow.`}</pre>
+</Concept>
+
+<p>The macOS Catalina "Drift" screensaver looks like moving particles but actually isn't — peek at <a href="https://github.com/sandydoo/flux" style="color: var(--color-accent);">sandydoo/flux</a> (the open-source tribute) and you'll see the trick: it's a <strong>fixed grid of lines</strong>, where each line points along a velocity field and stretches based on its magnitude. The grid never moves. Everything you see is the field underneath flowing.</p>
+
+<p>And here is the part I missed on my first attempt: that field is not noise. It's a real <strong>fluid simulation</strong> — Jos Stam's "Stable Fluids" algorithm running on a coarse grid. Each frame: noise injects swirling forces at scattered cells, diffusion spreads them, advection has the velocity carry itself (this is what makes a fluid look <em>fluid</em>: disturbances flow downstream instead of wiggling in place), and pressure projection enforces incompressibility (no sources, no sinks). Without advection and projection, you get sine-wave wobble. With them, you get currents, eddies, and the unmistakable plasma look.</p>
+
+<p>Lines sample the velocity field bilinearly at their grid position, compute angle from <code>atan2(vy, vx)</code> and length from <code>|v|</code>, and ease toward those targets so they curl smoothly. The 80-cell-wide fluid grid is small enough that the CPU solver runs comfortably at 60fps in JS.</p>
+
+export const driftCode = `// Drift's signature look comes from a real fluid simulation: noise
+// injects forces, the fluid carries them via advection, and pressure
+// projection keeps the flow incompressible. Without advection +
+// projection it just looks like wiggling sine waves. We port Jos
+// Stam's "Stable Fluids" to a coarse CPU grid; lines sample the
+// resulting velocity field.
+
+// Everything that should scale with the actual canvas size lives here.
+// Mobile/small canvas → fewer lines, smaller fluid grid; large canvas
+// → denser detail. No magic numbers in the hot path.
+var GRID_SPACING = Math.max(20, Math.round(w / 55));
+var LINE_LENGTH  = Math.max(60, w / 8);
+var LINE_WIDTH   = Math.max(2,  w / 240);
+var MIN_LINE     = 2;                       // cull lines shorter than this
+// EASE controls how fast lines turn toward the local current.
+// Low value = lines lag the field, which is what real flowing ribbons
+// look like (they curl OVER TIME, they don't snap to direction).
+var EASE         = 1.5;
+var t = 0;
+var last = performance.now();
+
+// --- FLUID GRID ---------------------------------------------------
+// Grid resolution from canvas width, clamped to a CPU-friendly band.
+// Bigger = more detail but quadratic cost in the solver.
+var NX = Math.max(40, Math.min(96, Math.round(w / 14)));
+var NY = Math.max(28, Math.round(NX * h / w));
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+// Velocity field + scratch buffers. Float32Array = fast, no GC.
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+var pf  = new Float32Array(N);
+var dvg = new Float32Array(N);
+
+// Reflective boundaries: tangential component mirrors, normal flips.
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+// Gauss-Seidel diffusion: each cell drifts toward the average of
+// its neighbors. Real Flux runs ~3 iterations.
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+// Semi-Lagrangian advection: for each cell, trace back along its
+// velocity and sample from where the fluid came from.
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+// Pressure projection: enforces incompressibility by solving Poisson
+// for pressure, then subtracting its gradient. This is the step that
+// turns "noise wiggling" into "flowing fluid".
+function project(vxF, vyF, p, div) {
+  var hx = 1.0 / NX;
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      div[IX(i, j)] = -0.5 * hx * (
+        vxF[IX(i + 1, j)] - vxF[IX(i - 1, j)] +
+        vyF[IX(i, j + 1)] - vyF[IX(i, j - 1)]
+      );
+      p[IX(i, j)] = 0;
+    }
+  }
+  setBnd(0, div); setBnd(0, p);
+  for (var k = 0; k < 18; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        p[IX(i, j)] = (div[IX(i, j)] +
+          p[IX(i - 1, j)] + p[IX(i + 1, j)] +
+          p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+      }
+    }
+    setBnd(0, p);
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      vxF[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / hx;
+      vyF[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / hx;
+    }
+  }
+  setBnd(1, vxF); setBnd(2, vyF);
+}
+
+// Pseudo-noise (layered sines) to drive force injection.
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+// Inject swirling forces at a scattered set of grid cells. This is
+// the "noise channel" that constantly perturbs the fluid. Force
+// strength is calibrated so the solver reaches steady-state velocity
+// of ~0.5-1.0 cells/frame, which is what gives lines visible length.
+// Inject VORTEX SEEDS instead of single-cell impulses. Each seed is
+// a tiny rotation: the 8 neighbors around (ci, cj) get tangential
+// velocity = perpendicular to their radial vector. This plants actual
+// rotational structure that the solver propagates into long-lived
+// eddies, giving lots of small distinct vortices instead of one
+// chaotic flow.
+// Inject a small number of LARGE vortex seeds. Each is a 5-cell-radius
+// rotation with strength falling off toward the edge (Gaussian-ish).
+// Fewer, bigger seeds = many coherent eddies instead of fragmented
+// chaos. The solver then carries each eddy into long curving streams.
+// Deterministic noise-driven forcing: every frame, every cell gets a
+// small force whose direction comes from a smooth noise function of
+// (position, time). No randomness in the hot loop → no jitter. The
+// noise is spatially smooth (neighboring cells point in similar
+// directions, so eddies form naturally) and temporally smooth (the
+// pattern slowly drifts and morphs over many seconds). Sparse sample
+// (every 2nd cell) for speed.
+function injectForces(dt) {
+  // Lower spatial frequency = larger features = fewer eddies (~1-2).
+  // Eddies TRANSLATE across the canvas by shifting the noise sample
+  // origin over time. The shift itself wanders (two slow oscillators
+  // at different frequencies) so eddies drift in changing directions
+  // instead of moving in a straight line. Result: 1-2 big eddies
+  // gliding around the canvas, never sticking to one spot.
+  var driftX = Math.sin(t * 0.07) * 60 + Math.cos(t * 0.041) * 40;
+  var driftY = Math.cos(t * 0.063) * 45 + Math.sin(t * 0.033) * 30;
+  var s = 800;
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(
+        (i + driftX) * 0.035,
+        (j + driftY) * 0.035,
+        t * 0.04
+      ) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * s * dt;
+      vy[IX(i, j)] += Math.sin(a) * s * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+
+  // diffuse → project → advect → project (Stam's canonical order)
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.00002, dt);
+  diffuse(2, vy, vy0, 0.00002, dt);
+  project(vx, vy, pf, dvg);
+
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+  project(vx, vy, pf, dvg);
+
+  // Very light damping so big eddies persist between injection bursts.
+  for (var i = 0; i < N; i++) {
+    vx[i] *= 0.9995;
+    vy[i] *= 0.9995;
+  }
+}
+
+// Pre-warm: 240 steps = 4s of simulated time → several injection
+// bursts have happened before the first frame draws.
+for (var w_ = 0; w_ < 240; w_++) fluidStep(1 / 60);
+
+// Bilinear sample of velocity at canvas pixel (px, py).
+function sampleVelocity(px, py) {
+  var fi = (px / w) * (NX - 2) + 1;
+  var fj = (py / h) * (NY - 2) + 1;
+  if (fi < 0.5) fi = 0.5; if (fi > NX - 1.5) fi = NX - 1.5;
+  if (fj < 0.5) fj = 0.5; if (fj > NY - 1.5) fj = NY - 1.5;
+  var i0 = Math.floor(fi), j0 = Math.floor(fj);
+  var s = fi - i0, u = fj - j0;
+  var a = IX(i0, j0), b = IX(i0 + 1, j0);
+  var c = IX(i0, j0 + 1), d = IX(i0 + 1, j0 + 1);
+  return {
+    x: (1 - s) * (1 - u) * vx[a] + s * (1 - u) * vx[b] + (1 - s) * u * vx[c] + s * u * vx[d],
+    y: (1 - s) * (1 - u) * vy[a] + s * (1 - u) * vy[b] + (1 - s) * u * vy[c] + s * u * vy[d],
+  };
+}
+
+// Plasma-ish palette: deep violet → magenta → coral → gold → cyan.
+// Each entry is [h, s, l]. We blend along this gradient by field strength.
+var PALETTE = [
+  [275, 80, 32],   // deep violet
+  [320, 85, 50],   // magenta
+  [10,  90, 60],   // coral
+  [45,  95, 65],   // gold
+  [185, 90, 65],   // cyan
+];
+
+function paletteColor(t01, alpha) {
+  // sample the palette at t01 in [0,1], interpolating between stops
+  var n = PALETTE.length - 1;
+  var f = Math.max(0, Math.min(1, t01)) * n;
+  var i = Math.floor(f);
+  var k = f - i;
+  var a = PALETTE[i], b = PALETTE[Math.min(n, i + 1)];
+  var h = a[0] + (b[0] - a[0]) * k;
+  var s = a[1] + (b[1] - a[1]) * k;
+  var l = a[2] + (b[2] - a[2]) * k;
+  return 'hsla(' + h + ',' + s + '%,' + l + '%,' + alpha + ')';
+}
+
+// --- POOL (fixed grid of line objects, allocated once) ---
+// One line per grid cell, reused every frame. No allocation in the
+// hot loop, no GC stalls.
+var lines = [];
+function buildGrid() {
+  lines.length = 0;
+  for (var gy = GRID_SPACING / 2; gy < h; gy += GRID_SPACING) {
+    for (var gx = GRID_SPACING / 2; gx < w; gx += GRID_SPACING) {
+      lines.push({
+        x: gx, y: gy,
+        angle: 0,          // current direction
+        len: 0,            // current length
+        tone: 0,           // current color position in palette
+      });
+    }
+  }
+}
+buildGrid();
+
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  // Step the fluid simulation. Even slower dt = lazier flow; vortices
+  // still form because forces inject every frame.
+  fluidStep(1 / 220);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  // 'screen' caps overlaps at white, so dense crossings glow softly
+  // instead of blowing out into harsh additive X-shapes.
+  ctx.globalCompositeOperation = 'screen';
+  ctx.lineWidth = LINE_WIDTH;
+  ctx.lineCap = 'round';
+
+  var k = 1 - Math.exp(-EASE * dt);
+
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    var v = sampleVelocity(L.x, L.y);
+    var mag = Math.sqrt(v.x * v.x + v.y * v.y);
+    var targetAngle = Math.atan2(v.y, v.x);
+    // Map velocity → line length with a sqrt curve so even modest flow
+    // gives a visible line; cap at 1.0 of LINE_LENGTH for strong eddies.
+    var norm = Math.min(1, Math.sqrt(mag) * 0.5);
+    var targetLen  = LINE_LENGTH * norm;
+    // Tone now blends three signals so colors shift across space and
+    // time instead of just tracking velocity. Result: bands of color
+    // sweep across the canvas as the fluid carries them.
+    var positional = (L.x / w + L.y / h) * 0.5;        // diagonal gradient
+    var temporal   = 0.5 + 0.5 * Math.sin(t * 0.12);   // slow palette breathe
+    var targetTone = (norm * 0.5 + positional * 0.3 + temporal * 0.2);
+
+    var da = targetAngle - L.angle;
+    while (da >  Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    L.angle += da * k;
+    L.len   += (targetLen  - L.len)  * k;
+    L.tone  += (targetTone - L.tone) * k;
+
+    // Cull: skip cells where the flow is too weak to draw anything
+    // meaningful. Cuts draw cost roughly in half in calm regions.
+    if (L.len < MIN_LINE) continue;
+
+    var ex = L.x + Math.cos(L.angle) * L.len;
+    var ey = L.y + Math.sin(L.angle) * L.len;
+
+    // Gradient along the line: transparent at anchor (begin offset 0.4
+    // like Flux), softly opaque at the tip. Lower tip alpha than before
+    // (0.55 vs 0.9) so 'screen' blending stays in glow territory and
+    // never hits pure white at crossings.
+    var grad = ctx.createLinearGradient(L.x, L.y, ex, ey);
+    grad.addColorStop(0.0,  paletteColor(L.tone, 0));
+    grad.addColorStop(0.4,  paletteColor(L.tone, 0.08));
+    grad.addColorStop(1.0,  paletteColor(L.tone, 0.55));
+
+    ctx.strokeStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="drift"
+  layout="stack"
+  fluid
+  title="Drift: Flow Field Trails"
+  width={500}
+  height={400}
+  code={driftCode}
+/>
+
+<Concept variant="note">
+**Try this:** Comment out the `project()` calls in `fluidStep` and watch the flow lose its incompressibility — currents stop curling and instead pile up or vanish into nothing, exactly like the visual difference between Drift and a noise-only field. Push the force-injection count from `20` to `60` for a violent, hurricane-y fluid. Drop the damping from `0.995` to `0.999` and disturbances persist much longer, building up into massive vortices. Swap the `PALETTE` for cool blues (`[200, 90, 30]`, `[195, 85, 50]`, `[180, 80, 65]`, `[165, 70, 75]`, `[210, 60, 85]`) for the Poolside theme.
+</Concept>
+
 ## Where to Go Next
 
 <p>Congratulations. You have built a complete particle system from scratch and learned the core Canvas 2D API! Here are directions to explore next:</p>
 
-<ul style="color: var(--color-muted); margin-left: 1.5rem;">
+<ul>
   <li><strong>Sprite sheets:</strong> animate characters using <code>drawImage()</code> source cropping instead of drawing shapes</li>
   <li><strong>Tile maps:</strong> build game levels from grid data, combine with keyboard controls from <a href="/wiki/canvas-lab/07-interaction">Lesson 7</a></li>
   <li><strong>Physics engines:</strong> <a href="https://brm.io/matter-js/" style="color: var(--color-accent);">Matter.js</a> adds rigid body physics (bouncing, stacking, constraints)</li>
@@ -1537,5 +2029,5 @@ __raf = requestAnimationFrame(loop);`;
 
 <LessonNav
   prev={{ href: '/wiki/canvas-lab/07-interaction', title: 'Interaction' }}
-  next={{ href: '/wiki/canvas-lab/appendix-bezier-math', title: 'Appendix: Bezier Math' }}
+  next={{ href: '/wiki/canvas-lab/09-drift', title: 'Final Boss: The Drift' }}
 />

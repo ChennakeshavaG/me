@@ -1,10 +1,10 @@
 ---
-type: wiki
-category: "canvas-lab"
+type: blog
 title: "Text & Images"
 description: "Everything about rendering text, loading and drawing images, sprite sheets, pixel manipulation, and saving your canvas."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
+category: "Learn Canvas"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
 import Concept from '../../../components/canvas-lab/Concept.astro';
@@ -23,7 +23,8 @@ Most real Canvas projects need more than shapes. Labels on a chart, scores in a 
   <p><strong>fillText(text, x, y)</strong> draws solid, filled text. This is what you'll use 90% of the time.</p>
   <p><strong>strokeText(text, x, y)</strong> draws only the outlines of each letter. Great for decorative effects.</p>
   <p>Both methods place the text starting at (x, y), where y refers to the text <strong>baseline</strong>, the invisible line that letters "sit" on (like ruled paper).</p>
-  <pre>{`                       x
+  <pre>{`
+                       x
                        │
   y (baseline) ────────┼─── H e l l o ───
                        │        │
@@ -82,7 +83,8 @@ ctx.fillText('for outlined text with a filled interior', 30, 296);`;
 
 <Concept>
   <p><strong>Font string format:</strong> <code>"[style] [weight] size family"</code></p>
-  <pre>{`  ctx.font = "italic bold 24px serif"
+  <pre>{`
+  ctx.font = "italic bold 24px serif"
               │      │    │    │
               │      │    │    └── family: serif, sans-serif,
               │      │    │        monospace, system-ui, or
@@ -139,13 +141,15 @@ ctx.fillText('Custom fonts must be loaded before drawing!', 20, 330);`;
 
 <Concept>
   <p><strong>textAlign</strong>: horizontal position relative to the x coordinate:</p>
-  <pre>{`  "left"       "center"       "right"
+  <pre>{`
+  "left"       "center"       "right"
    x│Hello      He│llo         Hello│x
    Text         Text is        Text ends
    starts       centered       at x
    at x         on x`}</pre>
   <p><strong>textBaseline</strong>: vertical position relative to the y coordinate:</p>
-  <pre>{`  "top"          Text hangs below y  ────
+  <pre>{`
+  "top"          Text hangs below y  ────
   "middle"       Text centered on y  ────
   "alphabetic"   Baseline sits on y  ──── (default, most common)
   "bottom"       Text sits above y   ────`}</pre>
@@ -367,7 +371,8 @@ widths.forEach(function(mw, i) {
 
 <Concept>
   <p><strong>The word-wrap algorithm:</strong></p>
-  <pre>{`  1. Split text into words
+  <pre>{`
+  1. Split text into words
   2. Start with an empty line
   3. For each word:
      ├─ Measure (current line + word) width
@@ -628,7 +633,8 @@ ctx.textAlign = 'left';`;
 
 <Concept>
   <p><strong>The three forms of drawImage:</strong></p>
-  <pre>{`  3-arg: drawImage(img, dx, dy)
+  <pre>{`
+  3-arg: drawImage(img, dx, dy)
          Draw at position, original size
 
   5-arg: drawImage(img, dx, dy, dw, dh)
@@ -896,7 +902,8 @@ img.src = 'data:image/svg+xml;base64,' + btoa(svg);`;
 
 <Concept>
   <p><strong>How sprite sheets work:</strong></p>
-  <pre>{`  Sprite Sheet (one PNG file):
+  <pre>{`
+  Sprite Sheet (one PNG file):
   +────+────+────+────+
   │ W1 │ W2 │ W3 │ W4 │  Row 0: Walking animation
   +────+────+────+────+
@@ -1061,7 +1068,8 @@ animate();`;
 
 <Concept>
   <p><strong>How pixel data is stored:</strong></p>
-  <pre>{`  ImageData.data is a flat Uint8ClampedArray:
+  <pre>{`
+  ImageData.data is a flat Uint8ClampedArray:
   [ R, G, B, A,  R, G, B, A,  R, G, B, A, ... ]
     pixel 0       pixel 1       pixel 2
 
@@ -1343,7 +1351,8 @@ ctx.fillText('Scaled to 160x160 (20x zoom)', 20, 275);`;
 
 <Concept>
   <p><strong>toDataURL(type, quality)</strong></p>
-  <pre>{`  canvas.toDataURL()                   // PNG (default)
+  <pre>{`
+  canvas.toDataURL()                   // PNG (default)
   canvas.toDataURL('image/png')        // PNG explicitly
   canvas.toDataURL('image/jpeg', 0.8)  // JPEG at 80% quality
   canvas.toDataURL('image/webp', 0.9)  // WebP at 90% quality

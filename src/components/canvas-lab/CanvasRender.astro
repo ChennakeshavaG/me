@@ -8,9 +8,10 @@ interface Props {
   readonly?: boolean;
   layout?: 'side' | 'stack';
   hideCode?: boolean;
+  fluid?: boolean;
 }
 
-const { id, title, width = 500, height = 400, code, readonly = false, layout = 'side', hideCode = false } = Astro.props;
+const { id, title, width = 500, height = 400, code, readonly = false, layout = 'side', hideCode = false, fluid = false } = Astro.props;
 const trimmedCode = code.trim();
 
 const wrapperClasses = [
@@ -21,12 +22,26 @@ const wrapperClasses = [
 ---
 
 <div class={wrapperClasses}>
-  {title && <div class="cl-render__title">{title}</div>}
+  <div class="cl-render__title">
+    {title && <span class="cl-render__title-text">{title}</span>}
+    <span class="cl-render__title-status" data-hint={id}>paused</span>
+    <button
+      class="cl-render__play"
+      data-toggle={id}
+      aria-label="Play"
+      type="button"
+    >
+      <svg class="cl-render__play-icon cl-render__play-icon--play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+      <svg class="cl-render__play-icon cl-render__play-icon--pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg>
+    </button>
+  </div>
   <div class="cl-render__body">
     <div class="cl-render__canvas-wrap">
       <canvas
         id={id}
-        style={`aspect-ratio: ${width} / ${height}; max-width: ${width}px; width: 100%;`}
+        style={fluid
+          ? `aspect-ratio: ${width} / ${height}; width: 100%;`
+          : `aspect-ratio: ${width} / ${height}; max-width: ${width}px; width: 100%;`}
         aria-label={title ? `Canvas: ${title}` : 'Canvas demo'}
       ></canvas>
     </div>
@@ -77,20 +92,31 @@ const wrapperClasses = [
   var originalCode = ${JSON.stringify(trimmedCode)};
 
   var dpr = window.devicePixelRatio || 1;
-  var w = ${width};
-  var h = ${height};
+  var isFluid = ${fluid};
+  var baseW = ${width};
+  var baseH = ${height};
+
+  var measured = canvas.parentElement ? canvas.parentElement.clientWidth : baseW;
+  var w = isFluid && measured > 0 ? Math.round(measured) : baseW;
+  var h = isFluid ? Math.round(w * (baseH / baseW)) : baseH;
 
   canvas.width = w * dpr;
   canvas.height = h * dpr;
-  canvas.style.width = w + 'px';
+  if (isFluid) {
+    canvas.style.width = '100%';
+  } else {
+    canvas.style.width = w + 'px';
+    canvas.style.maxWidth = '100%';
+  }
   canvas.style.height = 'auto';
-  canvas.style.maxWidth = '100%';
   canvas.style.aspectRatio = w + ' / ' + h;
   ctx.scale(dpr, dpr);
 
   var __rafRef = { current: null };
   var __demoListeners = [];
   var __editorListeners = [];
+  var __paused = false;
+  var __pendingCb = null;   // holds the next-frame callback while paused
 
   function addDemoListener(target, event, fn) {
     target.addEventListener(event, fn);
@@ -102,12 +128,31 @@ const wrapperClasses = [
     __editorListeners.push({ target: target, event: event, fn: fn });
   }
 
+  // Demo-facing requestAnimationFrame: when paused, stash the callback
+  // instead of scheduling it. Resume calls __pendingCb to continue from
+  // the exact same closure (state preserved).
+  function wrappedRAF(cb) {
+    if (__paused) {
+      __pendingCb = cb;
+      return 0;
+    }
+    var rid = window.requestAnimationFrame(cb);
+    __rafRef.current = rid;
+    return rid;
+  }
+  function wrappedCAF(rid) {
+    if (__rafRef.current === rid) __rafRef.current = null;
+    window.cancelAnimationFrame(rid);
+  }
+
   function runDemo(codeStr) {
     if (__rafRef.current) { cancelAnimationFrame(__rafRef.current); __rafRef.current = null; }
     __demoListeners.forEach(function(l) {
       l.target.removeEventListener(l.event, l.fn);
     });
     __demoListeners = [];
+    __pendingCb = null;
+    __paused = false;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
@@ -116,10 +161,7 @@ const wrapperClasses = [
       new Function(
         'canvas', 'ctx', 'w', 'h', 'addListener', 'requestAnimationFrame', 'cancelAnimationFrame',
         codeStr
-      )(canvas, ctx, w, h, addDemoListener,
-        function(cb) { var rid = window.requestAnimationFrame(cb); __rafRef.current = rid; return rid; },
-        function(rid) { if (__rafRef.current === rid) __rafRef.current = null; window.cancelAnimationFrame(rid); }
-      );
+      )(canvas, ctx, w, h, addDemoListener, wrappedRAF, wrappedCAF);
     } catch(e) {
       ctx.fillStyle = '#ef4444';
       ctx.font = '14px monospace';
@@ -246,13 +288,109 @@ const wrapperClasses = [
       }
     });
   }
-  runDemo(originalCode);
+
+  var isPlaying = false;
+  var hasStarted = false;   // has the demo been initialized yet?
+  var userPaused = false;   // sticky pause: survives one IO leave/enter cycle
+  var root = canvas.closest('.cl-render');
+  var playBtn = document.querySelector('[data-toggle="' + id + '"]');
+
+  function showPaused() {
+    if (root) root.classList.remove('cl-render--playing');
+    if (playBtn) playBtn.setAttribute('aria-label', 'Play');
+  }
+  function showPlaying() {
+    if (root) root.classList.add('cl-render--playing');
+    if (playBtn) playBtn.setAttribute('aria-label', 'Pause');
+  }
+
+  // Pause without tearing down the demo closure or listeners.
+  // Do NOT cancel the in-flight rAF — let it fire one last frame so the loop
+  // reaches wrappedRAF and naturally stashes itself in __pendingCb. Otherwise
+  // a cancel during fast scroll-away can leave us with no pending callback,
+  // and play() has nothing to resume.
+  function pauseDemo() {
+    __paused = true;
+    isPlaying = false;
+    showPaused();
+  }
+
+  function play() {
+    if (isPlaying) return;
+    isPlaying = true;
+    showPlaying();
+    if (!hasStarted) {
+      hasStarted = true;
+      runDemo(editor ? editor.value : originalCode);
+      return;
+    }
+    __paused = false;
+    // Case 1: a frame is already in flight (loop hadn't reached wrappedRAF
+    // before we paused). It will fire naturally and continue scheduling.
+    // Case 2: the loop did reach wrappedRAF and stashed itself. Restart it.
+    if (__pendingCb) {
+      var cb = __pendingCb;
+      __pendingCb = null;
+      var rid = window.requestAnimationFrame(cb);
+      __rafRef.current = rid;
+    }
+  }
+
+  // Fresh restart with the current editor code. Used by Run button and
+  // Cmd+Enter. Distinct from play() which resumes paused state.
+  function restart() {
+    hasStarted = true;
+    isPlaying = true;
+    userPaused = false;
+    showPlaying();
+    runDemo(editor ? editor.value : originalCode);
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  showPaused();
+
+  if (playBtn) {
+    playBtn.onclick = function() {
+      if (isPlaying) {
+        userPaused = true;     // explicit pause is sticky until next leave/enter
+        pauseDemo();
+      } else {
+        userPaused = false;
+        play();
+      }
+    };
+  }
+
+  // Auto play/pause when canvas enters/leaves the viewport
+  var io = null;
+  if (typeof IntersectionObserver !== 'undefined') {
+    io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          if (!userPaused) play();
+        } else {
+          // canvas fully out of (extended) viewport: stop drawing AND clear sticky pause
+          // so re-entering will auto-play again
+          userPaused = false;
+          if (isPlaying) pauseDemo();
+        }
+      });
+    }, {
+      // Any pixel of the canvas counts as visible (threshold 0),
+      // and the viewport is logically extended by 200px above/below
+      // so we don't pause while the user is still scrolling near it.
+      threshold: 0,
+      rootMargin: '200px 0px 200px 0px',
+    });
+    io.observe(canvas);
+  }
 
   if (!isReadonly && editor) {
     addEditorListener(editor, 'keydown', function(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        runDemo(editor.value);
+        restart();
         return;
       }
       if (e.key === 'Tab') {
@@ -267,7 +405,9 @@ const wrapperClasses = [
   }
 
   window['__canvasCleanup_' + id] = function() {
+    if (io) { io.disconnect(); io = null; }
     if (__rafRef.current) { cancelAnimationFrame(__rafRef.current); __rafRef.current = null; }
+    __pendingCb = null;
     __demoListeners.forEach(function(l) {
       l.target.removeEventListener(l.event, l.fn);
     });
@@ -281,17 +421,27 @@ const wrapperClasses = [
   if (!isReadonly && editor) {
     var runBtn = document.querySelector('[data-run="' + id + '"]');
     if (runBtn) {
-      runBtn.onclick = function() {
-        runDemo(editor.value);
-      };
+      // Run = fresh start with current editor code (restart, not resume).
+      runBtn.onclick = restart;
     }
 
     var resetBtn = document.querySelector('[data-reset="' + id + '"]');
     if (resetBtn) {
       resetBtn.onclick = function() {
         editor.value = originalCode;
-        runDemo(originalCode);
         updateHighlight();
+        // Reset = restart with original code if currently playing,
+        // otherwise just clear and return to fresh state.
+        if (isPlaying) {
+          hasStarted = true;
+          runDemo(originalCode);
+        } else {
+          hasStarted = false;
+          __pendingCb = null;
+          __paused = false;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+        }
       };
     }
   }

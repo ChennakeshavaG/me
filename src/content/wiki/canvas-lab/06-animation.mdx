@@ -1,10 +1,10 @@
 ---
-type: wiki
-category: "canvas-lab"
+type: blog
 title: "Animation"
 description: "Game loops, requestAnimationFrame, smooth motion, physics, easing, and practical animation techniques."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
+category: "Learn Canvas"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
 import Concept from '../../../components/canvas-lab/Concept.astro';
@@ -19,7 +19,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>The flipbook analogy:</strong></p>
-  <pre>{`  Frame 1       Frame 2       Frame 3       Frame 4
+  <pre>{`
+  Frame 1       Frame 2       Frame 3       Frame 4
   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
   │        │   │        │   │        │   │        │
   │ ●      │   │  ●     │   │   ●    │   │    ●   │
@@ -43,7 +44,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>Frame timing at different rates:</strong></p>
-  <pre>{`  Framerate   Time per frame   Feels like
+  <pre>{`
+  Framerate   Time per frame   Feels like
   ─────────   ──────────────   ──────────
    10 fps       100.0 ms       slideshow, painful
    24 fps        41.7 ms       cinema film
@@ -63,7 +65,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>setInterval vs requestAnimationFrame:</strong></p>
-  <pre>{`  setInterval(draw, 16):
+  <pre>{`
+  setInterval(draw, 16):
   ├─ fires every ~16ms regardless of monitor refresh
   ├─ keeps firing when tab is hidden (wastes CPU/battery)
   ├─ can drift: 16ms timer ≠ exactly 60fps
@@ -125,7 +128,8 @@ loop();`;
 <p>When the browser calls your animation function, it passes one argument: a <strong>timestamp</strong> in milliseconds. This is a high-precision number from <code>performance.now()</code> that tells you exactly when this frame started. You will use it to calculate how much time has passed between frames.</p>
 
 <Concept>
-  <pre>{`  function loop(timestamp) {
+  <pre>{`
+  function loop(timestamp) {
     // timestamp = 16834.5  (milliseconds since page load)
     // ...draw stuff...
     __raf = requestAnimationFrame(loop);
@@ -144,7 +148,8 @@ loop();`;
 
 <Concept>
   <p><strong>The delta time formula:</strong></p>
-  <pre>{`  speed = 150 pixels per second
+  <pre>{`
+  speed = 150 pixels per second
 
   Frame at 60fps (dt = 0.0167s):
     movement = 150 * 0.0167 = 2.5 pixels this frame
@@ -167,7 +172,7 @@ var lastTime = performance.now();
 
 function loop(now) {
   // Calculate delta time in seconds
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
 
   ctx.clearRect(0, 0, 500, 300);
@@ -182,7 +187,7 @@ function loop(now) {
   ctx.fill();
   ctx.fillStyle = 'gray';
   ctx.font = '13px monospace';
-  ctx.fillText('speed * dt  (consistent on any monitor)', 60, 105);
+  ctx.fillText('speed * dt  (consistent on any monitor)', 60, 135);
 
   // --- Ball 2: fixed increment (wrong way) ---
   x2 += 2.5;                 // same speed only at 60fps!
@@ -193,7 +198,7 @@ function loop(now) {
   ctx.arc(x2, 200, 20, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = 'gray';
-  ctx.fillText('fixed += 2.5  (too fast at 120fps)', 60, 205);
+  ctx.fillText('fixed += 2.5  (too fast at 120fps)', 60, 235);
 
   __raf = requestAnimationFrame(loop);
 }
@@ -215,7 +220,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>The game loop: what happens 60 times per second:</strong></p>
-  <pre>{`          ┌──────────────────────┐
+  <pre>{`
+          ┌──────────────────────┐
           │  Browser calls your  │
           │  loop(timestamp)     │
           └──────────┬───────────┘
@@ -258,7 +264,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>The three layers of motion:</strong></p>
-  <pre>{`  Position     = where the object is right now (x, y)
+  <pre>{`
+  Position     = where the object is right now (x, y)
   Velocity     = how fast it's moving and in what direction (vx, vy)
   Acceleration = how velocity is changing (ax, ay)
 
@@ -284,7 +291,7 @@ var lastTime = performance.now();
 var elapsed = 0;
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   elapsed += dt;
 
@@ -346,7 +353,8 @@ __raf = requestAnimationFrame(loop);`;
 <p>Gravity is just acceleration pointing downward. Each frame, gravity adds to the ball's downward velocity, making it fall faster and faster. When the ball hits the floor, we reverse its vertical velocity (bounce) and multiply by a number less than 1 so it loses energy each bounce, just like a real ball. This demo also uses <code>ctx.shadowColor</code> and <code>ctx.shadowBlur</code> to add a glow effect around the ball; setting <code>shadowBlur</code> back to 0 disables it for subsequent draws.</p>
 
 <Concept>
-  <pre>{`  Gravity simulation each frame:
+  <pre>{`
+  Gravity simulation each frame:
     vy += gravity * dt        // gravity pulls the ball down
     y  += vy * dt             // ball moves according to velocity
 
@@ -366,11 +374,12 @@ export const gravityBounceCode = `var ball = {
 };
 var gravity = 600;       // pixels/sec² (pulls downward)
 var bounceFactor = 0.7;  // how much energy is kept after bounce (0-1)
+var groundFriction = 2;  // horizontal drag while touching the floor (per sec)
 var floorY = 380;        // where the "ground" is
 var lastTime = performance.now();
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
 
   // --- Update physics ---
@@ -382,22 +391,23 @@ function loop(now) {
   if (ball.y + ball.radius > floorY) {
     ball.y = floorY - ball.radius;     // snap to floor
     ball.vy = -ball.vy * bounceFactor; // reverse + lose energy
+    ball.vx *= Math.max(0, 1 - groundFriction * dt); // rolling friction
   }
 
-  // Bounce off walls
+  // Bounce off walls (lose energy like the floor bounce)
   if (ball.x - ball.radius < 0) {
     ball.x = ball.radius;
-    ball.vx = Math.abs(ball.vx);
+    ball.vx = Math.abs(ball.vx) * bounceFactor;
   }
   if (ball.x + ball.radius > 500) {
     ball.x = 500 - ball.radius;
-    ball.vx = -Math.abs(ball.vx);
+    ball.vx = -Math.abs(ball.vx) * bounceFactor;
   }
 
   // Bounce off ceiling
   if (ball.y - ball.radius < 0) {
     ball.y = ball.radius;
-    ball.vy = Math.abs(ball.vy);
+    ball.vy = Math.abs(ball.vy) * bounceFactor;
   }
 
   // --- Draw ---
@@ -439,12 +449,17 @@ __raf = requestAnimationFrame(loop);`;
   code={gravityBounceCode}
 />
 
+<Concept variant="note">
+**Try this:** Once the ball settles on the floor, click **Run** to drop it again.
+</Concept>
+
 ## Friction and Damping
 
 <p>In real life, things slow down. A ball rolling on the ground loses speed to friction. A swinging pendulum gradually stops. In code, we simulate this by multiplying velocity by a number slightly less than 1 each frame. This is called <strong>damping</strong>.</p>
 
 <Concept>
-  <pre>{`  Damping (simple friction):
+  <pre>{`
+  Damping (simple friction):
     velocity *= 0.99          // lose 1% speed each frame
 
   Problem: this is frame-rate dependent! At 120fps you
@@ -474,8 +489,10 @@ balls.push({
 
 addListener(canvas, 'click', function(e) {
   var rect = canvas.getBoundingClientRect();
-  var mx = e.clientX - rect.left;
-  var my = e.clientY - rect.top;
+  var scaleX = 500 / rect.width;
+  var scaleY = 350 / rect.height;
+  var mx = (e.clientX - rect.left) * scaleX;
+  var my = (e.clientY - rect.top) * scaleY;
   // Launch from center toward click
   balls.push({
     x: 250, y: 175,
@@ -488,7 +505,7 @@ addListener(canvas, 'click', function(e) {
 });
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
 
   ctx.clearRect(0, 0, 500, 350);
@@ -544,7 +561,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Sine wave anatomy:</strong></p>
-  <pre>{`  Math.sin(time) oscillates between -1 and +1:
+  <pre>{`
+  Math.sin(time) oscillates between -1 and +1:
 
    +1 ─  ╭──╮       ╭──╮       ╭──╮
          │  │       │  │       │  │
@@ -566,7 +584,7 @@ var lastTime = performance.now();
 var time = 0;
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   time += dt;
 
@@ -574,62 +592,71 @@ function loop(now) {
   ctx.font = '12px monospace';
   ctx.fillStyle = 'gray';
 
+  // Left column: three sine demos stacked
+  // Right column: the sine wave itself
+
   // --- 1. Bobbing (vertical sine) ---
-  ctx.fillText('bobbing: y = 70 + sin(time * 2) * 30', 160, 25);
-  var bobY = 70 + Math.sin(time * 2) * 30;
+  ctx.fillStyle = 'gray';
+  ctx.fillText('bobbing: y = 70 + sin(t * 2) * 25', 20, 20);
+  var bobY = 70 + Math.sin(time * 2) * 25;
   ctx.fillStyle = 'cyan';
   ctx.beginPath();
-  ctx.arc(100, bobY, 18, 0, Math.PI * 2);
+  ctx.arc(120, bobY, 16, 0, Math.PI * 2);
   ctx.fill();
 
   // --- 2. Pulsing (size sine) ---
   ctx.fillStyle = 'gray';
-  ctx.fillText('pulsing: r = 20 + sin(time * 3) * 10', 160, 170);
+  ctx.fillText('pulsing: r = 20 + sin(t * 3) * 10', 20, 140);
   var pulseR = 20 + Math.sin(time * 3) * 10;
   ctx.fillStyle = 'deeppink';
   ctx.beginPath();
-  ctx.arc(100, 175, pulseR, 0, Math.PI * 2);
+  ctx.arc(120, 185, pulseR, 0, Math.PI * 2);
   ctx.fill();
 
   // --- 3. Orbiting (sin + cos = circle) ---
   ctx.fillStyle = 'gray';
-  ctx.fillText('orbit: x = cos(t)*60, y = sin(t)*60', 160, 310);
-  var orbitX = 100 + Math.cos(time * 1.5) * 60;
-  var orbitY = 320 + Math.sin(time * 1.5) * 60;
+  ctx.fillText('orbit: x = cos(t)*45, y = sin(t)*45', 20, 250);
+  var orbitX = 120 + Math.cos(time * 1.5) * 45;
+  var orbitY = 320 + Math.sin(time * 1.5) * 45;
 
-  // Draw orbit path
   ctx.strokeStyle = '#1a1a2a';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(100, 320, 60, 0, Math.PI * 2);
+  ctx.arc(120, 320, 45, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Draw center dot
   ctx.fillStyle = '#1a1a2a';
   ctx.beginPath();
-  ctx.arc(100, 320, 4, 0, Math.PI * 2);
+  ctx.arc(120, 320, 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // Draw orbiting dot
   ctx.fillStyle = 'limegreen';
   ctx.beginPath();
-  ctx.arc(orbitX, orbitY, 14, 0, Math.PI * 2);
+  ctx.arc(orbitX, orbitY, 12, 0, Math.PI * 2);
   ctx.fill();
 
-  // --- Draw a sine wave visualization on the right ---
+  // --- Right column: the sine wave itself ---
+  ctx.fillStyle = 'gray';
+  ctx.fillText('the sine wave itself', 280, 20);
+
+  // Zero axis
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(270, 210);
+  ctx.lineTo(470, 210);
+  ctx.stroke();
+
   ctx.strokeStyle = 'cyan';
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (var px = 0; px < 200; px++) {
     var waveX = 270 + px;
-    var waveY = 200 + Math.sin((px / 30) + time * 2) * 80;
+    var waveY = 210 + Math.sin((px / 16) + time * 2) * 70;
     if (px === 0) ctx.moveTo(waveX, waveY);
     else ctx.lineTo(waveX, waveY);
   }
   ctx.stroke();
-
-  ctx.fillStyle = 'gray';
-  ctx.fillText('the sine wave itself', 310, 105);
 
   __raf = requestAnimationFrame(loop);
 }
@@ -649,7 +676,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Lerp explained:</strong></p>
-  <pre>{`  function lerp(start, end, t) {
+  <pre>{`
+  function lerp(start, end, t) {
     return start + (end - start) * t;
   }
 
@@ -678,10 +706,18 @@ var circleY = 175;
 var targetX = 250;
 var targetY = 175;
 
-addListener(canvas, 'mousemove', function(e) {
+function setFromPointer(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
-  targetX = e.clientX - rect.left;
-  targetY = e.clientY - rect.top;
+  targetX = (clientX - rect.left) * (500 / rect.width);
+  targetY = (clientY - rect.top) * (350 / rect.height);
+}
+addListener(canvas, 'mousemove', function(e) {
+  setFromPointer(e.clientX, e.clientY);
+});
+addListener(canvas, 'touchmove', function(e) {
+  if (!e.touches[0]) return;
+  e.preventDefault();
+  setFromPointer(e.touches[0].clientX, e.touches[0].clientY);
 });
 
 function loop() {
@@ -741,7 +777,8 @@ loop();`;
 <p>Normally we clear the canvas completely each frame with <code>clearRect</code>. But there is a beautiful trick: instead of clearing fully, draw a semi-transparent rectangle over the entire canvas. The previous frame fades but does not disappear instantly, creating a trail or "ghosting" effect.</p>
 
 <Concept>
-  <pre>{`  Normal clear (no trails):
+  <pre>{`
+  Normal clear (no trails):
     ctx.clearRect(0, 0, w, h);     // 100% erase, clean slate
 
   Trail effect (semi-transparent overlay):
@@ -779,7 +816,7 @@ ctx.fillStyle = 'black';
 ctx.fillRect(0, 0, 500, 400);
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   time += dt;
 
@@ -824,7 +861,8 @@ __raf = requestAnimationFrame(loop);`;
 <p>HSL color mode makes animating colors trivial. The <strong>hue</strong> component goes from 0 to 360 (red -> yellow -> green -> cyan -> blue -> magenta -> red). Just increase the hue over time and you get a smooth rainbow cycle.</p>
 
 <Concept>
-  <pre>{`  HSL = Hue (0-360), Saturation (0-100%), Lightness (0-100%)
+  <pre>{`
+  HSL = Hue (0-360), Saturation (0-100%), Lightness (0-100%)
 
   hue: 0=red  60=yellow  120=green  180=cyan  240=blue  300=magenta
 
@@ -842,7 +880,7 @@ var time = 0;
 var lastTime = performance.now();
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   time += dt;
 
@@ -887,7 +925,8 @@ __raf = requestAnimationFrame(loop);`;
 <p>How do you know if your animation is running smoothly? Build an FPS counter. Count how many frames happen each second. If the number drops below 60, your drawing code is too slow and you need to optimize.</p>
 
 <Concept>
-  <pre>{`  FPS counter strategy:
+  <pre>{`
+  FPS counter strategy:
     1. Count frames in a running window
     2. Every 0.5 seconds, calculate: frames / elapsed = fps
     3. Display the number
@@ -918,7 +957,7 @@ for (var i = 0; i < 80; i++) {
 }
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   time += dt;
 
@@ -977,7 +1016,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Common easing functions:</strong></p>
-  <pre>{`  linear(t)       = t              flat line, constant speed
+  <pre>{`
+  linear(t)       = t              flat line, constant speed
   easeInQuad(t)    = t * t          starts slow, ends fast
   easeOutQuad(t)   = t * (2 - t)   starts fast, ends slow
   easeInOutCubic   = smooth S-curve slow → fast → slow
@@ -1025,7 +1065,8 @@ var easings = [
 
 var duration = 2000;
 var startTime = performance.now();
-var startX = 55, endX = 420;
+// endX leaves headroom for elastic's ~1.27x overshoot + ball radius
+var startX = 55, endX = 385;
 var rowH = 55;
 
 function loop(now) {
@@ -1088,7 +1129,8 @@ __raf = requestAnimationFrame(loop);`;
 
 <Concept>
   <p><strong>Spring physics:</strong></p>
-  <pre>{`  Spring force = -stiffness * displacement
+  <pre>{`
+  Spring force = -stiffness * displacement
   Damping force = -damping * velocity
 
   Each frame:
@@ -1116,12 +1158,14 @@ var lastTime = performance.now();
 
 addListener(canvas, 'click', function(e) {
   var rect = canvas.getBoundingClientRect();
-  target.x = e.clientX - rect.left;
-  target.y = e.clientY - rect.top;
+  var scaleX = 500 / rect.width;
+  var scaleY = 350 / rect.height;
+  target.x = (e.clientX - rect.left) * scaleX;
+  target.y = (e.clientY - rect.top) * scaleY;
 });
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   // Cap dt to avoid explosion on tab-switch
   if (dt > 0.1) dt = 0.016;
@@ -1203,7 +1247,7 @@ export const loadingSpinnerCode = `var time = 0;
 var lastTime = performance.now();
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   time += dt;
 
@@ -1260,7 +1304,7 @@ export const waveOceanCode = `var time = 0;
 var lastTime = performance.now();
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;
+  var dt = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
   time += dt;
 
@@ -1297,7 +1341,8 @@ function loop(now) {
   var boatX = 250;
   var boatWave1 = Math.sin(boatX * 0.035 + time * 1.8) * 12;
   var boatWave2 = Math.sin(boatX * 0.035 * 1.7 + time * 1.8 * 0.6) * 6;
-  var boatY = 190 + boatWave1 + boatWave2 - 14;
+  // hull bottom is 8px below translate origin; -6 lets it sink 2px into the wave
+  var boatY = 190 + boatWave1 + boatWave2 - 6;
   var boatTilt = Math.cos(boatX * 0.035 + time * 1.8) * 0.15;
 
   ctx.save();
@@ -1405,29 +1450,33 @@ function loop() {
     ctx.stroke();
   }
 
-  // Minute ticks
+  // Minute ticks: share the same outer edge as the hour markers (radius - 4)
+  // so the whole tick ring lines up.
   for (var m = 0; m < 60; m++) {
     if (m % 5 === 0) continue;  // skip where hour markers are
     var mAngle = (m / 60) * Math.PI * 2 - Math.PI / 2;
-    ctx.strokeStyle = '#1a1a2a';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'gray';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(mAngle) * (radius - 6), cy + Math.sin(mAngle) * (radius - 6));
-    ctx.lineTo(cx + Math.cos(mAngle) * (radius - 3), cy + Math.sin(mAngle) * (radius - 3));
+    ctx.moveTo(cx + Math.cos(mAngle) * (radius - 8), cy + Math.sin(mAngle) * (radius - 8));
+    ctx.lineTo(cx + Math.cos(mAngle) * (radius - 4), cy + Math.sin(mAngle) * (radius - 4));
     ctx.stroke();
   }
 
   // --- Draw hands ---
+  // Hands are pre-drawn pointing up (0,10 to 0,-length), so angle = 0 already
+  // means 12 o'clock. No -PI/2 offset here (unlike the marker math above,
+  // which uses cos/sin where 0 rad = right and needs the shift).
   // Hour hand
-  var hourAngle = ((hours + minutes / 60) / 12) * Math.PI * 2 - Math.PI / 2;
+  var hourAngle = ((hours + minutes / 60) / 12) * Math.PI * 2;
   drawHand(hourAngle, 60, 5, 'lightgray');
 
   // Minute hand
-  var minAngle = ((minutes + smoothSec / 60) / 60) * Math.PI * 2 - Math.PI / 2;
+  var minAngle = ((minutes + smoothSec / 60) / 60) * Math.PI * 2;
   drawHand(minAngle, 85, 3, 'gray');
 
   // Second hand (smooth sweep)
-  var secAngle = (smoothSec / 60) * Math.PI * 2 - Math.PI / 2;
+  var secAngle = (smoothSec / 60) * Math.PI * 2;
   drawHand(secAngle, 95, 1.5, 'deeppink');
 
   // Center cap
@@ -1462,7 +1511,8 @@ loop();`;
 
 <Concept>
   <p><strong>Lesson 6 recap, everything you need for canvas animation:</strong></p>
-  <pre>{`  Core loop:      clear → update → draw → requestAnimationFrame
+  <pre>{`
+  Core loop:      clear → update → draw → requestAnimationFrame
   Delta time:      distance = speed * dt  (frame-rate independent)
   Physics:         velocity += acceleration * dt; position += velocity * dt
   Gravity:         acceleration pointing down + bounce on collision

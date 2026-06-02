@@ -1,0 +1,2149 @@
+---
+type: blog
+title: "Final Boss: The Drift"
+description: "Build the macOS Drift screensaver from scratch, one concept at a time, ending in a real-time fluid simulation rendered as a grid of glowing line segments."
+createdAt: 2026-05-14
+tags: [canvas]
+category: "Learn Canvas"
+---
+import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
+import Concept from '../../../components/canvas-lab/Concept.astro';
+import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
+import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
+
+<LessonHeader number={9} />
+
+## The Boss Fight
+
+<p>You have built fire, snow, confetti, starfields, and a complete particle system with a thousand-particle pool. Time for the boss fight. We are going to rebuild <strong>Drift</strong>, the macOS Catalina screensaver: the hypnotic field of glowing ribbons that twists and slides across a velvet-black canvas. The reference implementation in <a href="/wiki/canvas-lab/08-particle-system">Lesson 8</a> dropped this in your lap as a single 300-line code block. This chapter takes that block apart, one concept per demo, and rebuilds it.</p>
+
+<p>Drift looks like moving particles, but it isn't. The trick is a <strong>fixed grid of line segments</strong> sampling a moving velocity field underneath. The grid never goes anywhere. What you see is the field, made visible by the lines. Get that idea in your head now; the next dozen demos are about making the field interesting enough to be worth watching.</p>
+
+<Concept>
+  <p><strong>The plan:</strong></p>
+  <pre>{`
+  ┌─────────────────────────────────────────────────────────┐
+  │  Phase A.  the naive attempt                            │
+  │     1. Static grid of lines                             │
+  │     2. Lines aimed by a noise function                  │
+  │     3. Animate the noise → it jitters, doesn't flow     │
+  │                                                         │
+  │  Phase B.  give the field memory                        │
+  │     4. Velocity grid + force injection                  │
+  │     5. Diffusion (viscosity)                            │
+  │     6. Reflective boundaries                            │
+  │                                                         │
+  │  Phase C.  the killer steps                             │
+  │     7. Advection (the field carries itself)             │
+  │     8. Pressure projection (no sources, no sinks)       │
+  │                                                         │
+  │  Phase D.  the look                                     │
+  │     9. Bilinear sampling + easing line grid             │
+  │    10. Palette, blending, gradient                      │
+  │                                                         │
+  │  Phase E.  polish                                       │
+  │    11. Pre-warming + drifting noise origin              │
+  │    12. The full Drift                                   │
+  └─────────────────────────────────────────────────────────┘`}</pre>
+</Concept>
+
+<p>The published open-source tribute to Drift is <a href="https://github.com/sandydoo/flux" style="color: var(--color-accent);">sandydoo/flux</a>, which runs the same algorithm on a GPU. We are going to run a smaller version on the CPU in plain JavaScript, and it will still hit 60fps. The whole simulation fits in about 200 lines.</p>
+
+## Step 1: A Grid of Lines
+
+<p>Start with the dumbest possible version: a regular grid of identical horizontal line segments. No physics, no field, no animation. Just the canvas split into cells, with one short line per cell. This is the canvas Drift draws on. Every later demo just changes what each line points at.</p>
+
+<Concept>
+  <p><strong>The grid:</strong></p>
+  <pre>{`
+   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+
+  Each cell has one anchor (the center)
+  and one line that grows outward
+  in some direction.`}</pre>
+</Concept>
+
+export const gridOfLinesCode = `// The grid never moves. What will move (in later demos) is the
+// direction each line points. Step 1 is just the scaffolding.
+var SPACING = 22;        // pixels between grid cells
+var LENGTH  = 10;        // how long each line is
+
+function loop() {
+  // Dark background. We will keep this for every demo so the colors
+  // pop the way Drift's do.
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+
+  // Walk every cell. Anchor at its center.
+  for (var y = SPACING / 2; y < h; y += SPACING) {
+    for (var x = SPACING / 2; x < w; x += SPACING) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + LENGTH, y);  // pointing right, every cell
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="grid-of-lines"
+  title="Step 1: Static Grid of Lines"
+  width={500}
+  height={400}
+  code={gridOfLinesCode}
+/>
+
+<Concept variant="note">
+**Try this:** Change `SPACING` to 12 for a much denser grid, or 40 for sparse. Change the `lineTo` end point so all lines aim diagonally instead of right. The visual you should reach for next: lines that each pick their own direction based on where they sit.
+</Concept>
+
+## Step 2: Aiming Lines With Noise
+
+<p>The first interesting thing you can do is give every cell its own angle, derived from its position. If neighboring cells get similar angles, the lines will look like they belong to the same smooth field, like a brushed metal pattern, or the lines drawn around a magnet to show its field. The function that gives us "similar values for nearby inputs" is <strong>noise</strong>.</p>
+
+<p>Noise is not the same as <code>Math.random()</code>. Random gives uncorrelated samples; every call is independent of every other call, so adjacent lines would point in completely unrelated directions and the result would look like static. What we want is a function that is <em>continuous</em>: <code>noise(100, 100)</code> and <code>noise(101, 100)</code> should return nearly identical values. Perlin noise is the famous one, but it is overkill for a screensaver. Three layered sines at incommensurate frequencies do the job in ten flops.</p>
+
+<Concept>
+  <p><strong>From noise value to angle:</strong></p>
+  <pre>{`
+  noise(x, y)  =  Math.sin(x * 0.9)
+                + Math.cos(y * 1.1)
+                + Math.sin((x + y) * 0.6) * 0.6
+
+  Output is roughly in [-2.6, 2.6].
+  Multiply by Math.PI to get an angle in radians.
+  Then (cos(angle), sin(angle)) is a unit vector.
+
+  Important: one noise call → one angle. If you sampled
+  noise twice (once for vx, once for vy) you would get
+  vectors of wildly varying length: some cells barely
+  moving, some lines stretched across half the canvas.`}</pre>
+</Concept>
+
+export const noiseAngleCode = `// Three sines at awkward frequencies (0.9, 1.1, 0.6, chosen because
+// their ratios are irrational-ish) give us a cheap smooth field. The
+// third term mixes x and y so the pattern has actual 2D structure
+// instead of just stripes.
+function noise(x, y) {
+  return (
+    Math.sin(x * 0.9) +
+    Math.cos(y * 1.1) +
+    Math.sin((x + y) * 0.6) * 0.6
+  );
+}
+
+var SPACING = 20;
+var LENGTH  = 14;
+
+function loop() {
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+
+  for (var y = SPACING / 2; y < h; y += SPACING) {
+    for (var x = SPACING / 2; x < w; x += SPACING) {
+      // Scale x and y down before feeding to noise so the field has
+      // big smooth features instead of high-frequency noise.
+      var a = noise(x * 0.02, y * 0.02) * Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(
+        x + Math.cos(a) * LENGTH,
+        y + Math.sin(a) * LENGTH
+      );
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="noise-angle"
+  title="Step 2: Angles From Noise"
+  width={500}
+  height={400}
+  code={noiseAngleCode}
+/>
+
+<p>That is your first flow field. Bands of lines bend and twist together, because the noise function gives nearby cells nearly-identical angles. It is static (the pattern never changes), but you can already see structure. Drop a particle anywhere and it would follow these arrows around a curving path. This is, by the way, the technique behind a thousand "generative art" pieces on Codepen.</p>
+
+<Concept variant="note">
+**Try this:** Multiply the noise input by `0.05` instead of `0.02` for tighter swirls, or `0.005` for broad gentle bands. Change the third sine's `0.6` multiplier to `1.5` and watch the diagonals get wilder.
+</Concept>
+
+## Step 3: Animate the Noise
+
+<p>Static is fine for a poster. For a screensaver, the field has to evolve. The standard move: add a third argument to <code>noise</code>, call it <code>t</code>, and increment it every frame. Now the field at each cell drifts through different angles as time passes.</p>
+
+export const noiseTimeCode = `function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+var SPACING = 20;
+var LENGTH  = 14;
+var t       = 0;
+var last    = performance.now();
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+
+  for (var y = SPACING / 2; y < h; y += SPACING) {
+    for (var x = SPACING / 2; x < w; x += SPACING) {
+      // Each cell samples noise at its own (x, y) and the current t.
+      // Lower the t multiplier (0.4) to slow the animation down.
+      var a = noise(x * 0.02, y * 0.02, t * 0.4) * Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(
+        x + Math.cos(a) * LENGTH,
+        y + Math.sin(a) * LENGTH
+      );
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="noise-time"
+  title="Step 3: Animated Noise Flow Field"
+  width={500}
+  height={400}
+  code={noiseTimeCode}
+/>
+
+<p>Watch it for ten seconds. It looks... fine? The bands twist, swirls form, dissolve, reform. If you saw this on a stranger's portfolio you would tap "save" and move on. Put it side by side with Drift and something is off. Drift looks <em>alive</em>. This looks like a smooth pattern with the time knob being turned. Why?</p>
+
+## Why Noise Alone Is Not Flow
+
+<p>Pay attention to a single swirl in the demo above. It appears at some point on the canvas, twists into shape, then dissolves and reappears elsewhere. It never <strong>travels</strong>. A real fluid carries its disturbances downstream. A puff of dye dropped in a river drifts with the current. Here, every cell just samples the noise function fresh each frame. There is no causal link between what a cell pointed at one frame ago and what it points at now. The whole grid is being repainted from scratch every tick.</p>
+
+<Concept variant="note">
+The defining property of a fluid is **self-transport**: the velocity field carries itself. A noise function has no memory. `noise(x, y, t + dt)` does not know what `noise(x, y, t)` was. It is a fresh math lookup every frame. Your eye reads this immediately, even when it can't name the problem. It looks like grass wiggling in place instead of water flowing.
+</Concept>
+
+<p>Codepen tutorials at this point reach for two knobs to hide the failure: <strong>lower spatial frequency</strong> (bigger, fewer features so the eye averages over the jitter) and <strong>slower temporal speed</strong> (so any individual frame looks nearly static). Both work in the sense that they make the problem less noticeable. Neither fixes it. Zoom in or speed up time and the jitter returns.</p>
+
+<p>The real fix is to throw out the noise field as our velocity source and replace it with a velocity <strong>array</strong>: a grid of floats that we update by <em>reading itself</em>. Forces still inject from noise, but the field then evolves under its own rules. That is Jos Stam's "Stable Fluids" algorithm, and it is what powers Drift, Flux, and basically every real-time fluid demo you have ever seen on the web. Phase B starts here.</p>
+
+## Step 4: A Velocity Grid
+
+<p>Stop drawing the field directly from a function. Allocate two flat arrays, <code>vx</code> and <code>vy</code>, each holding one float per grid cell. Together they encode "at every grid cell, here is the velocity vector right now." Every frame, we will do two things: <strong>inject</strong> small noise-derived forces into the grid (to keep the simulation fed), then later <strong>update</strong> it (to make it flow). For step 4 we only do the injection, so you can see what the bare field looks like with no transport yet.</p>
+
+<Concept>
+  <p><strong>Grid storage:</strong></p>
+  <pre>{`
+  NX = 40 cells wide
+  NY = 32 cells tall
+  N  = NX * NY = 1280 cells
+
+  vx, vy: Float32Array, length N each
+  IX(i, j) = i + NX * j   (flat index from 2D cell coords)
+
+  Why Float32Array?
+    - No GC pressure: allocate once, reuse forever
+    - Contiguous memory: cache-friendly, JIT can vectorize
+    - V8 specializes typed-array loops aggressively`}</pre>
+</Concept>
+
+<p>To visualize the field we will draw a tiny arrow in every cell, pointing along that cell's velocity, with length proportional to the velocity's magnitude. This is a debug view; in Phase D we replace it with the proper line grid.</p>
+
+export const velocityGridCode = `// --- Grid setup -------------------------------------------------
+var NX = 40, NY = 32;           // cells in each dimension
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+// vx[i + NX*j] is the horizontal velocity in cell (i, j).
+// Allocated once; reused every frame. No GC in the hot loop.
+var vx = new Float32Array(N);
+var vy = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+// Inject smooth-noise forces into every other cell. Direction comes
+// from the noise function. Spatial smoothness of noise means
+// neighboring cells get pushed in similar directions, which is exactly
+// the condition that makes eddies form once we have a proper solver.
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.12, j * 0.12, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 600 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 600 * dt;
+    }
+  }
+  // Damp every frame so velocities don't grow unbounded. We do this
+  // inside injectForces because step 4 has no fluidStep yet; once
+  // diffusion arrives in step 5, damping migrates out and this
+  // function will only inject.
+  for (var k = 0; k < N; k++) {
+    vx[k] *= 0.98;
+    vy[k] *= 0.98;
+  }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  injectForces(dt);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+
+  // Debug view: one arrow per cell, length scaled to magnitude.
+  var cellW = w / NX, cellH = h / NY;
+  for (var j = 0; j < NY; j++) {
+    for (var i = 0; i < NX; i++) {
+      var u = vx[IX(i, j)], v = vy[IX(i, j)];
+      var mag = Math.sqrt(u * u + v * v);
+      if (mag < 0.01) continue;
+      var px = (i + 0.5) * cellW;
+      var py = (j + 0.5) * cellH;
+      var len = Math.min(cellW * 0.9, mag * 5);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + (u / mag) * len, py + (v / mag) * len);
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="velocity-grid"
+  title="Step 4: Velocity Grid + Force Injection"
+  width={500}
+  height={400}
+  code={velocityGridCode}
+/>
+
+<p>You should see a sparse, jittery field of arrows. Every other cell gets kicked each frame (the rest stay near zero because nothing transports the velocities sideways). Compared to step 3's noise field this looks <em>worse</em>: chunky, disconnected, ugly. That is the point. We have stopped lying with the noise function and started honestly storing velocities. Now we add the steps that make those velocities behave like a fluid.</p>
+
+## Step 5: Diffusion
+
+<p>The first plumbing step is <strong>diffusion</strong>. Real fluids smear momentum sideways: poke water and the surrounding water tugs along because viscosity drags neighboring molecules into agreement. Without diffusion, each force-injection cell sits in isolation; the field looks like a checkerboard. With diffusion, each cell drifts toward the average of its four neighbors, and the field smooths out.</p>
+
+<Concept>
+  <p><strong>The diffusion update:</strong></p>
+  <pre>{`
+  For each cell (i, j):
+
+    x_new = (x_old + a * (left + right + up + down)) / (1 + 4 * a)
+
+  where a = dt * diffusionRate * (NX-2) * (NY-2)
+
+  Naive Euler would overshoot and explode when a is large
+  (the simulation is "stiff"). Stam's trick is the implicit
+  scheme above: solve "what new values would yield the old
+  values under reverse diffusion?" via Gauss-Seidel sweeps.
+
+  Four sweeps is enough at our resolution. Each cuts the
+  residual error roughly in half. The system is unconditionally
+  stable: no matter how big dt or diff, it stays bounded.`}</pre>
+</Concept>
+
+export const withDiffusionCode = `var NX = 40, NY = 32;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);    // scratch buffers for the solver
+var vy0 = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+// Gauss-Seidel diffusion. Each cell drifts toward the average of its
+// neighbors, weighted by the implicit factor 'a'. Four iterations.
+function diffuse(x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+  }
+}
+
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.12, j * 0.12, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 600 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 600 * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+
+  // Snapshot current state, then diffuse into the live arrays.
+  vx0.set(vx); vy0.set(vy);
+  diffuse(vx, vx0, 0.0001, dt);
+  diffuse(vy, vy0, 0.0001, dt);
+
+  // Gentle damping. Without it, energy accumulates frame over frame.
+  for (var k = 0; k < N; k++) {
+    vx[k] *= 0.995;
+    vy[k] *= 0.995;
+  }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(dt);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+
+  var cellW = w / NX, cellH = h / NY;
+  for (var j = 0; j < NY; j++) {
+    for (var i = 0; i < NX; i++) {
+      var u = vx[IX(i, j)], v = vy[IX(i, j)];
+      var mag = Math.sqrt(u * u + v * v);
+      if (mag < 0.01) continue;
+      var px = (i + 0.5) * cellW;
+      var py = (j + 0.5) * cellH;
+      var len = Math.min(cellW * 0.9, mag * 5);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + (u / mag) * len, py + (v / mag) * len);
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-diffusion"
+  title="Step 5: + Diffusion"
+  width={500}
+  height={400}
+  code={withDiffusionCode}
+/>
+
+<p>Now the arrows are no longer isolated dots. Diffusion has spread each injection across a small patch of neighbors. The field looks woolly. It is still <em>not flowing</em> (the patches do not travel, they just morph and dissolve), but adjacent cells now agree. That agreement is the soil eddies will grow in once we add transport.</p>
+
+<p>We also relaxed the damping factor from <code>0.98</code> to <code>0.995</code>, and moved it out of <code>injectForces</code> into a new <code>fluidStep</code> function. With diffusion now bleeding energy sideways every frame, we no longer need to clamp velocities so aggressively to keep them bounded.</p>
+
+## Step 6: Reflective Boundaries
+
+<p>Quick plumbing: the cells at the very edge of the grid have no neighbor on one side. Without special handling, whatever garbage was last written there leaks into the interior the next time we run diffusion. We need walls that reflect, so the simulation behaves like a sealed box.</p>
+
+<Concept>
+  <p><strong>The boundary rule:</strong></p>
+  <pre>{`
+  Tangential component (along the wall): copy from neighbor inside.
+  Normal component (into the wall): flip sign.
+
+  Why? Setting the outside ghost cell to -inside means their
+  average is zero, and that average sits on the wall surface,
+  which is exactly the "no flow through the wall" condition.
+
+  setBnd(b, x):
+    b = 1 → x is vx, flip on left/right walls
+    b = 2 → x is vy, flip on top/bottom walls
+    b = 0 → x is a scalar (we'll need this in step 8 for pressure)`}</pre>
+</Concept>
+
+export const withBoundariesCode = `var NX = 40, NY = 32;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+// Reflective walls. b encodes which kind of field we're applying
+// boundaries to: 1 = vx (flip left/right), 2 = vy (flip top/bottom),
+// 0 = scalar (just copy).
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);    // refresh ghost cells after every sweep
+  }
+}
+
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.12, j * 0.12, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 600 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 600 * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.0001, dt);
+  diffuse(2, vy, vy0, 0.0001, dt);
+  for (var k = 0; k < N; k++) { vx[k] *= 0.995; vy[k] *= 0.995; }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(dt);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+
+  var cellW = w / NX, cellH = h / NY;
+  for (var j = 0; j < NY; j++) {
+    for (var i = 0; i < NX; i++) {
+      var u = vx[IX(i, j)], v = vy[IX(i, j)];
+      var mag = Math.sqrt(u * u + v * v);
+      if (mag < 0.01) continue;
+      var px = (i + 0.5) * cellW;
+      var py = (j + 0.5) * cellH;
+      var len = Math.min(cellW * 0.9, mag * 5);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + (u / mag) * len, py + (v / mag) * len);
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-boundaries"
+  title="Step 6: + Reflective Walls"
+  width={500}
+  height={400}
+  code={withBoundariesCode}
+/>
+
+<p>Visually, this barely changes. The walls were never very leaky to begin with. But every later step (advection, projection) will read from the boundary, and without <code>setBnd</code> they would silently corrupt the interior. Phase B is now done: we have a velocity grid, forces injecting smoothly, diffusion smearing them sideways, and walls that hold. The field still does not <em>flow</em>. That comes next.</p>
+
+## Step 7: Advection (The Field Carries Itself)
+
+<p>This is the killer step. Without it, every previous demo is just a different way of jittering. With it, the field becomes a fluid.</p>
+
+<p><strong>Advection</strong> is the answer to the question: "if the velocity at cell <code>(i, j)</code> is pointing east, where will the value at <code>(i, j)</code> end up one timestep later?" Answer: somewhere east of <code>(i, j)</code>. The fluid <em>carries its own contents</em>. A swirl born on the left side of the canvas should be dragged toward the right by its own velocity.</p>
+
+<Concept>
+  <p><strong>Why backwards, not forwards:</strong></p>
+  <pre>{`
+  Naive forward: "for each cell, push its value to where
+                  its velocity points."
+    → Multiple cells may push to the same destination (double-write).
+    → Other cells receive nothing (holes).
+    → You'd have to accumulate and normalize. Painful.
+
+  Semi-Lagrangian: "for each destination cell, ask where its
+                    fluid came FROM one timestep ago."
+    → Walk backward along the velocity. (i - vx*dt, j - vy*dt)
+    → That lands at some non-integer point in the grid.
+    → Bilinearly interpolate the value from the 4 nearest cells.
+    → Every destination gets exactly one value. No holes.
+
+  This trick is Stam's headline contribution. It is also why
+  the scheme is unconditionally stable: backward tracing
+  can't blow up.`}</pre>
+</Concept>
+
+export const withAdvectionCode = `var NX = 40, NY = 32;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+// Semi-Lagrangian advection: for each cell, trace BACKWARDS along
+// the velocity and sample what was there one timestep ago via
+// bilinear interpolation of the 4 nearest cells.
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      // Trace back. The point (x, y) is where this cell's fluid
+      // was located one timestep ago, in cell-index space.
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      // Clamp to interior so the bilinear sample never reads the
+      // boundary halo (which would be wrong values).
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      // Bilinear blend of the 4 surrounding cells.
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.12, j * 0.12, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 600 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 600 * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+
+  // Diffuse the field.
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.0001, dt);
+  diffuse(2, vy, vy0, 0.0001, dt);
+
+  // Advect: the field carries itself. Snapshot first, then read
+  // from the snapshot while writing into the live arrays.
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+
+  for (var k = 0; k < N; k++) { vx[k] *= 0.995; vy[k] *= 0.995; }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(dt);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+
+  var cellW = w / NX, cellH = h / NY;
+  for (var j = 0; j < NY; j++) {
+    for (var i = 0; i < NX; i++) {
+      var u = vx[IX(i, j)], v = vy[IX(i, j)];
+      var mag = Math.sqrt(u * u + v * v);
+      if (mag < 0.01) continue;
+      var px = (i + 0.5) * cellW;
+      var py = (j + 0.5) * cellH;
+      var len = Math.min(cellW * 0.9, mag * 5);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + (u / mag) * len, py + (v / mag) * len);
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-advection"
+  title="Step 7: + Advection (the moment)"
+  width={500}
+  height={400}
+  code={withAdvectionCode}
+/>
+
+<p>Wait twenty seconds. Watch a single bright patch. It <em>moves</em>. Not just morphs. It drifts across the canvas, deforming as it goes, getting picked up by its neighbors' velocities. The field has gained memory. This is the moment the noise-flow-field demo from step 3 has been envying for the last six demos.</p>
+
+<p>But look carefully and you will see a new problem: the field <em>breathes</em>. Bright regions expand outward as if everything is exploding from a source; dark regions act like sinks where velocity drains away. Eddies pile up and dissolve without ever quite curling. That is because advection alone does not enforce <em>incompressibility</em>, the rule that says fluid can be stirred but not created or destroyed. Fix that and the breathing turns into curling.</p>
+
+## Step 8: Pressure Projection (Eddies Curl Now)
+
+<p><strong>Pressure projection</strong> is the second killer step. It enforces <code>∇·v = 0</code>: the divergence of the velocity field is zero everywhere. In English: at every cell, the amount of fluid flowing in equals the amount flowing out. No sources, no sinks. The eddies you wanted have nowhere to "pile up to," so they curl in place instead.</p>
+
+<Concept>
+  <p><strong>Helmholtz decomposition, in one breath:</strong></p>
+  <pre>{`
+  Any vector field can be split, uniquely, into two parts:
+
+    1. A curl-free part. Think: water flowing downhill from a
+       height map. Pure expansion and contraction. No swirls.
+    2. A divergence-free part. Think: a hurricane. Pure swirling.
+       No sources or sinks.
+
+  We want only the second part. So we:
+    1. Compute divergence of the current field.
+    2. Solve a Poisson equation to find a scalar 'pressure' field
+       whose gradient equals the curl-free component.
+    3. Subtract pressure's gradient from the velocity.
+
+  What's left is divergence-free. The eddies curl.`}</pre>
+</Concept>
+
+<p>The Poisson solve is iterative. Same Gauss-Seidel pattern as diffusion, but you need many more sweeps (18 in our code) because the Poisson operator has no diagonal dominance to make it converge fast. The number 18 was picked by Stam decades ago for a 64-cell grid and still works fine for our scale.</p>
+
+<Concept>
+  <p><strong>The canonical step order:</strong></p>
+  <pre>{`
+  fluidStep(dt):
+    inject forces
+    diffuse → project   (diffusion adds divergence, scrub it out)
+    advect  → project   (advection adds divergence too, scrub again)
+
+  Skip the second project → breathing returns.
+  Reorder advect/diffuse → instability.
+  This is the recipe from Jos Stam's 1999 paper.`}</pre>
+</Concept>
+
+<p>Damping relaxes one more notch, from <code>0.995</code> to <code>0.9995</code>. Advection and projection together dissipate enough energy on their own that we want the field to retain its eddies between injection bursts; bigger eddies survive longer at lower damping. We also switch from a raw <code>dt</code> substep to a fixed <code>1/220</code>, which gives the fluid a lazier, more cinematic timescale (the lines you draw on top will still move at full frame rate).</p>
+
+export const withProjectionCode = `var NX = 60, NY = 44;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+var pf  = new Float32Array(N);   // pressure scratch
+var dvg = new Float32Array(N);   // divergence scratch
+
+var t    = 0;
+var last = performance.now();
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+// Pressure projection. (1) compute divergence. (2) solve Poisson
+// for pressure via 18 Gauss-Seidel sweeps. (3) subtract gradient.
+function project(vxF, vyF, p, div) {
+  var hx = 1.0 / NX;
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      div[IX(i, j)] = -0.5 * hx * (
+        vxF[IX(i + 1, j)] - vxF[IX(i - 1, j)] +
+        vyF[IX(i, j + 1)] - vyF[IX(i, j - 1)]
+      );
+      p[IX(i, j)] = 0;
+    }
+  }
+  setBnd(0, div); setBnd(0, p);
+
+  for (var k = 0; k < 18; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        p[IX(i, j)] = (div[IX(i, j)] +
+          p[IX(i - 1, j)] + p[IX(i + 1, j)] +
+          p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+      }
+    }
+    setBnd(0, p);
+  }
+
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      vxF[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / hx;
+      vyF[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / hx;
+    }
+  }
+  setBnd(1, vxF); setBnd(2, vyF);
+}
+
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.08, j * 0.08, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 800 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 800 * dt;
+    }
+  }
+}
+
+// The canonical Stam order: inject → diffuse → project → advect → project.
+function fluidStep(dt) {
+  injectForces(dt);
+
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.00002, dt);
+  diffuse(2, vy, vy0, 0.00002, dt);
+  project(vx, vy, pf, dvg);
+
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+  project(vx, vy, pf, dvg);
+
+  for (var k = 0; k < N; k++) { vx[k] *= 0.9995; vy[k] *= 0.9995; }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(1 / 220);   // fixed slow substep, lazy fluid, big eddies
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(180, 130, 220, 0.75)';
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+
+  var cellW = w / NX, cellH = h / NY;
+  for (var j = 0; j < NY; j++) {
+    for (var i = 0; i < NX; i++) {
+      var u = vx[IX(i, j)], v = vy[IX(i, j)];
+      var mag = Math.sqrt(u * u + v * v);
+      if (mag < 0.01) continue;
+      var px = (i + 0.5) * cellW;
+      var py = (j + 0.5) * cellH;
+      var len = Math.min(cellW * 0.9, mag * 60);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + (u / mag) * len, py + (v / mag) * len);
+      ctx.stroke();
+    }
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-projection"
+  title="Step 8: + Pressure Projection"
+  width={500}
+  height={400}
+  code={withProjectionCode}
+/>
+
+<p>That is a fluid. Eddies curl. Disturbances flow downstream. Bright patches travel rather than breathing in place. The visualization is still ugly (arrows on a grid), but the field under it is doing real physics. Everything from here is presentation.</p>
+
+<Concept variant="note">
+**Try this:** Comment out the second `project(vx, vy, pf, dvg);` call in `fluidStep`. The breathing comes back. Eddies pile up and vanish instead of curling. Now comment out *both* projections. You get the step-7 problem: it moves, but expands outward. Projection is what separates "fluid motion" from "shapeless transport."
+</Concept>
+
+## Step 9: Bilinear Sampling and an Easing Line Grid
+
+<p>Time to fix the look. Replace the arrow visualization with a denser grid of <em>fixed</em> line segments. Each line stays at its anchor point forever; what changes is its angle and length, derived from the velocity field at its position. This is the "fixed grid, moving field" trick that gives Drift its identity.</p>
+
+<p>Two pieces matter here:</p>
+
+<Concept>
+  <p><strong>Bilinear sampling:</strong></p>
+  <pre>{`
+  Line at canvas pixel (px, py) doesn't sit on a cell center.
+  It lives at some continuous (fi, fj) in cell-index space.
+
+  Find the 4 surrounding cells and weigh each by area:
+
+    i0 = floor(fi)         j0 = floor(fj)
+    s  = fi - i0           u  = fj - j0
+    weight(i0, j0)   = (1-s) * (1-u)
+    weight(i0+1, j0) =   s   * (1-u)
+    weight(i0, j0+1) = (1-s) *   u
+    weight(i0+1, j0+1) = s   *   u
+
+  Sum: 1. Result varies smoothly inside the cell.
+  Nearest-neighbor sampling would give blocky stairs.`}</pre>
+</Concept>
+
+<Concept>
+  <p><strong>Easing toward the target:</strong></p>
+  <pre>{`
+  Don't snap a line to its new target angle each frame.
+  Ease toward it with an exponential filter:
+
+    k = 1 - exp(-EASE * dt)   // frame-rate independent
+    angle += (targetAngle - angle) * k
+
+  EASE = 1.5 gives roughly 0.67-second time constant.
+  Why? Real flowing ribbons lag the current; they curl
+  OVER TIME, they don't whip around instantly. The lag IS
+  the ribbon look.`}</pre>
+</Concept>
+
+export const withLineRenderCode = `var NX = 60, NY = 44;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+var pf  = new Float32Array(N);
+var dvg = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+var GRID_SPACING = 14;
+var LINE_LENGTH  = 36;
+var EASE         = 1.5;
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+function project(vxF, vyF, p, div) {
+  var hx = 1.0 / NX;
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      div[IX(i, j)] = -0.5 * hx * (
+        vxF[IX(i + 1, j)] - vxF[IX(i - 1, j)] +
+        vyF[IX(i, j + 1)] - vyF[IX(i, j - 1)]
+      );
+      p[IX(i, j)] = 0;
+    }
+  }
+  setBnd(0, div); setBnd(0, p);
+  for (var k = 0; k < 18; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        p[IX(i, j)] = (div[IX(i, j)] +
+          p[IX(i - 1, j)] + p[IX(i + 1, j)] +
+          p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+      }
+    }
+    setBnd(0, p);
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      vxF[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / hx;
+      vyF[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / hx;
+    }
+  }
+  setBnd(1, vxF); setBnd(2, vyF);
+}
+
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.08, j * 0.08, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 800 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 800 * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.00002, dt);
+  diffuse(2, vy, vy0, 0.00002, dt);
+  project(vx, vy, pf, dvg);
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+  project(vx, vy, pf, dvg);
+  for (var k = 0; k < N; k++) { vx[k] *= 0.9995; vy[k] *= 0.9995; }
+}
+
+// Bilinear velocity sample at canvas pixel (px, py).
+function sampleVelocity(px, py) {
+  var fi = (px / w) * (NX - 2) + 1;
+  var fj = (py / h) * (NY - 2) + 1;
+  if (fi < 0.5) fi = 0.5; if (fi > NX - 1.5) fi = NX - 1.5;
+  if (fj < 0.5) fj = 0.5; if (fj > NY - 1.5) fj = NY - 1.5;
+  var i0 = Math.floor(fi), j0 = Math.floor(fj);
+  var s = fi - i0, u = fj - j0;
+  var a = IX(i0, j0), b = IX(i0 + 1, j0);
+  var c = IX(i0, j0 + 1), d = IX(i0 + 1, j0 + 1);
+  return {
+    x: (1 - s) * (1 - u) * vx[a] + s * (1 - u) * vx[b] +
+       (1 - s) * u * vx[c] + s * u * vx[d],
+    y: (1 - s) * (1 - u) * vy[a] + s * (1 - u) * vy[b] +
+       (1 - s) * u * vy[c] + s * u * vy[d],
+  };
+}
+
+// Build a dense grid of line objects. Each line carries its CURRENT
+// angle and length; we ease those toward the field's target every
+// frame so lines lag the flow like real ribbons.
+var lines = [];
+for (var gy = GRID_SPACING / 2; gy < h; gy += GRID_SPACING) {
+  for (var gx = GRID_SPACING / 2; gx < w; gx += GRID_SPACING) {
+    lines.push({ x: gx, y: gy, angle: 0, len: 0 });
+  }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(1 / 220);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(200, 160, 240, 0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+
+  // Exponential easing factor, frame-rate independent.
+  var k = 1 - Math.exp(-EASE * dt);
+
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    var v = sampleVelocity(L.x, L.y);
+    var mag = Math.sqrt(v.x * v.x + v.y * v.y);
+    var targetAngle = Math.atan2(v.y, v.x);
+    var norm = Math.min(1, Math.sqrt(mag) * 0.5);
+    var targetLen = LINE_LENGTH * norm;
+
+    // Shortest-arc angle interpolation so lines don't spin the
+    // wrong way around the circle.
+    var da = targetAngle - L.angle;
+    while (da >  Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    L.angle += da * k;
+    L.len   += (targetLen - L.len) * k;
+
+    if (L.len < 2) continue;
+
+    var ex = L.x + Math.cos(L.angle) * L.len;
+    var ey = L.y + Math.sin(L.angle) * L.len;
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-line-render"
+  layout="stack"
+  fluid
+  title="Step 9: Bilinear Sampling + Easing Line Grid"
+  width={500}
+  height={400}
+  code={withLineRenderCode}
+/>
+
+<p>The arrows are gone. In their place is a much denser carpet of lines, each glued to its anchor, each curling slowly toward whatever direction the local fluid is pointing. Strong flow regions show long lines bunched together; calm regions collapse to nearly-invisible nubs. The lag from the easing factor makes the whole thing look like ribbons being pulled through space.</p>
+
+## Step 10: Color, Blending, and the Drift Look
+
+<p>Three rendering tricks are left between us and the screensaver: a real <strong>palette</strong>, the right <strong>blending mode</strong>, and a <strong>per-line gradient</strong>. Pull them in together.</p>
+
+<Concept>
+  <p><strong>Palette interpolation:</strong></p>
+  <pre>{`
+  A 5-stop HSL palette: deep violet → magenta → coral → gold → cyan.
+  Sample the palette at a value t01 in [0, 1]:
+
+    f = t01 * (n - 1)
+    i = floor(f)
+    k = f - i
+    color = lerp(palette[i], palette[i + 1], k)
+
+  What drives t01? Three signals blended:
+    - velocity magnitude (faster = brighter colors)
+    - position diagonal  (sweeps hue across the canvas)
+    - slow temporal sine (the whole palette breathes)`}</pre>
+</Concept>
+
+<Concept>
+  <p><strong>Blending and gradients:</strong></p>
+  <pre>{`
+  globalCompositeOperation = 'screen'
+    Additive in the dark, saturating toward white in the bright.
+    'lighter' (pure additive) blows out to harsh X-shapes where
+    lines cross. 'screen' stays in glow territory.
+
+  Per-line gradient along the line:
+    transparent at the anchor → opaque at the tip
+    Lines read as STREAKS, not bars. Same trick Flux uses.`}</pre>
+</Concept>
+
+export const withPaletteCode = `var NX = 60, NY = 44;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+var pf  = new Float32Array(N);
+var dvg = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+var GRID_SPACING = 14;
+var LINE_LENGTH  = 50;
+var LINE_WIDTH   = 2;
+var EASE         = 1.5;
+
+// Plasma palette: violet → magenta → coral → gold → cyan.
+var PALETTE = [
+  [275, 80, 32],
+  [320, 85, 50],
+  [10,  90, 60],
+  [45,  95, 65],
+  [185, 90, 65],
+];
+
+function paletteColor(t01, alpha) {
+  var n = PALETTE.length - 1;
+  var f = Math.max(0, Math.min(1, t01)) * n;
+  var i = Math.floor(f);
+  var k = f - i;
+  var a = PALETTE[i], b = PALETTE[Math.min(n, i + 1)];
+  var h = a[0] + (b[0] - a[0]) * k;
+  var s = a[1] + (b[1] - a[1]) * k;
+  var l = a[2] + (b[2] - a[2]) * k;
+  return 'hsla(' + h + ',' + s + '%,' + l + '%,' + alpha + ')';
+}
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+function project(vxF, vyF, p, div) {
+  var hx = 1.0 / NX;
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      div[IX(i, j)] = -0.5 * hx * (
+        vxF[IX(i + 1, j)] - vxF[IX(i - 1, j)] +
+        vyF[IX(i, j + 1)] - vyF[IX(i, j - 1)]
+      );
+      p[IX(i, j)] = 0;
+    }
+  }
+  setBnd(0, div); setBnd(0, p);
+  for (var k = 0; k < 18; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        p[IX(i, j)] = (div[IX(i, j)] +
+          p[IX(i - 1, j)] + p[IX(i + 1, j)] +
+          p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+      }
+    }
+    setBnd(0, p);
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      vxF[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / hx;
+      vyF[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / hx;
+    }
+  }
+  setBnd(1, vxF); setBnd(2, vyF);
+}
+
+function injectForces(dt) {
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(i * 0.08, j * 0.08, t * 0.3) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * 800 * dt;
+      vy[IX(i, j)] += Math.sin(a) * 800 * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.00002, dt);
+  diffuse(2, vy, vy0, 0.00002, dt);
+  project(vx, vy, pf, dvg);
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+  project(vx, vy, pf, dvg);
+  for (var k = 0; k < N; k++) { vx[k] *= 0.9995; vy[k] *= 0.9995; }
+}
+
+function sampleVelocity(px, py) {
+  var fi = (px / w) * (NX - 2) + 1;
+  var fj = (py / h) * (NY - 2) + 1;
+  if (fi < 0.5) fi = 0.5; if (fi > NX - 1.5) fi = NX - 1.5;
+  if (fj < 0.5) fj = 0.5; if (fj > NY - 1.5) fj = NY - 1.5;
+  var i0 = Math.floor(fi), j0 = Math.floor(fj);
+  var s = fi - i0, u = fj - j0;
+  var a = IX(i0, j0), b = IX(i0 + 1, j0);
+  var c = IX(i0, j0 + 1), d = IX(i0 + 1, j0 + 1);
+  return {
+    x: (1 - s) * (1 - u) * vx[a] + s * (1 - u) * vx[b] +
+       (1 - s) * u * vx[c] + s * u * vx[d],
+    y: (1 - s) * (1 - u) * vy[a] + s * (1 - u) * vy[b] +
+       (1 - s) * u * vy[c] + s * u * vy[d],
+  };
+}
+
+var lines = [];
+for (var gy = GRID_SPACING / 2; gy < h; gy += GRID_SPACING) {
+  for (var gx = GRID_SPACING / 2; gx < w; gx += GRID_SPACING) {
+    lines.push({ x: gx, y: gy, angle: 0, len: 0, tone: 0 });
+  }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(1 / 220);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  // 'screen' blends additively in the dark but caps at white, so
+  // dense crossings glow softly instead of blowing out.
+  ctx.globalCompositeOperation = 'screen';
+  ctx.lineWidth = LINE_WIDTH;
+  ctx.lineCap = 'round';
+
+  var k = 1 - Math.exp(-EASE * dt);
+
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    var v = sampleVelocity(L.x, L.y);
+    var mag = Math.sqrt(v.x * v.x + v.y * v.y);
+    var targetAngle = Math.atan2(v.y, v.x);
+    var norm = Math.min(1, Math.sqrt(mag) * 0.5);
+    var targetLen = LINE_LENGTH * norm;
+
+    // Tone blends three signals: velocity magnitude, position
+    // (so colors sweep across the canvas), and a slow temporal sine.
+    var positional = (L.x / w + L.y / h) * 0.5;
+    var temporal   = 0.5 + 0.5 * Math.sin(t * 0.12);
+    var targetTone = norm * 0.5 + positional * 0.3 + temporal * 0.2;
+
+    var da = targetAngle - L.angle;
+    while (da >  Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    L.angle += da * k;
+    L.len   += (targetLen  - L.len)  * k;
+    L.tone  += (targetTone - L.tone) * k;
+
+    if (L.len < 2) continue;
+
+    var ex = L.x + Math.cos(L.angle) * L.len;
+    var ey = L.y + Math.sin(L.angle) * L.len;
+
+    // Linear gradient from transparent anchor to opaque tip.
+    var grad = ctx.createLinearGradient(L.x, L.y, ex, ey);
+    grad.addColorStop(0.0, paletteColor(L.tone, 0));
+    grad.addColorStop(0.4, paletteColor(L.tone, 0.08));
+    grad.addColorStop(1.0, paletteColor(L.tone, 0.55));
+    ctx.strokeStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-palette"
+  layout="stack"
+  fluid
+  title="Step 10: Palette + Blending + Gradient"
+  width={500}
+  height={400}
+  code={withPaletteCode}
+/>
+
+<p>That is starting to look like a screensaver. Plasma colors sweep across the canvas in slow bands, lines glow where they bunch, dark regions look like deep space. The motion is real fluid motion. There is one annoying problem: when the demo starts, every line is at <code>angle: 0, len: 0, tone: 0</code>. For the first second or two you see a parking lot of identical hairs while the field warms up. We fix that next.</p>
+
+## Step 11: Pre-warming and Wandering Eddies
+
+<p>Two small additions, both invisible if you do them right.</p>
+
+<p><strong>Pre-warming.</strong> Before the first <code>requestAnimationFrame</code>, run 240 fluid steps in a tight synchronous loop. That is four seconds of simulated time. Forces inject, advection carries them, projection sculpts them, the field reaches a steady-state energy where damping balances injection. When the user finally sees the canvas, the flow is already in full swing.</p>
+
+<p><strong>Drifting noise origin.</strong> If the noise we sample is always evaluated at the same coordinates, eddies form at fixed canvas positions and just morph in place. To get them to <em>wander</em>, offset the noise input by a slowly-drifting amount. Two slow sines at incommensurate frequencies will never repeat exactly, so the eddy positions wander aperiodically across the canvas. This is the trick that gives Drift its characteristic gliding motion.</p>
+
+<Concept>
+  <p><strong>The wandering offset:</strong></p>
+  <pre>{`
+  driftX = sin(t * 0.07) * 60 + cos(t * 0.041) * 40
+  driftY = cos(t * 0.063) * 45 + sin(t * 0.033) * 30
+
+  Two oscillators at frequencies whose ratio is irrational.
+  Their sum traces a Lissajous-like path that never repeats.
+
+  Use as: noise( (i + driftX) * 0.035, (j + driftY) * 0.035, t * 0.04 )
+
+  Result: one or two large eddies that glide around the
+  canvas instead of being pinned to fixed spots.`}</pre>
+</Concept>
+
+export const withWanderingCode = `var NX = 60, NY = 44;
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+var pf  = new Float32Array(N);
+var dvg = new Float32Array(N);
+
+var t    = 0;
+var last = performance.now();
+var GRID_SPACING = 14;
+var LINE_LENGTH  = 60;
+var LINE_WIDTH   = 2;
+var EASE         = 1.5;
+
+var PALETTE = [
+  [275, 80, 32], [320, 85, 50], [10,  90, 60],
+  [45,  95, 65], [185, 90, 65],
+];
+
+function paletteColor(t01, alpha) {
+  var n = PALETTE.length - 1;
+  var f = Math.max(0, Math.min(1, t01)) * n;
+  var i = Math.floor(f);
+  var k = f - i;
+  var a = PALETTE[i], b = PALETTE[Math.min(n, i + 1)];
+  return 'hsla(' +
+    (a[0] + (b[0] - a[0]) * k) + ',' +
+    (a[1] + (b[1] - a[1]) * k) + '%,' +
+    (a[2] + (b[2] - a[2]) * k) + '%,' + alpha + ')';
+}
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+function project(vxF, vyF, p, div) {
+  var hx = 1.0 / NX;
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      div[IX(i, j)] = -0.5 * hx * (
+        vxF[IX(i + 1, j)] - vxF[IX(i - 1, j)] +
+        vyF[IX(i, j + 1)] - vyF[IX(i, j - 1)]
+      );
+      p[IX(i, j)] = 0;
+    }
+  }
+  setBnd(0, div); setBnd(0, p);
+  for (var k = 0; k < 18; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        p[IX(i, j)] = (div[IX(i, j)] +
+          p[IX(i - 1, j)] + p[IX(i + 1, j)] +
+          p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+      }
+    }
+    setBnd(0, p);
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      vxF[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / hx;
+      vyF[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / hx;
+    }
+  }
+  setBnd(1, vxF); setBnd(2, vyF);
+}
+
+// Wandering noise origin: two slow oscillators per axis. The sum
+// has no exact period, so eddies translate around the canvas
+// instead of being pinned to fixed locations.
+function injectForces(dt) {
+  var driftX = Math.sin(t * 0.07) * 60 + Math.cos(t * 0.041) * 40;
+  var driftY = Math.cos(t * 0.063) * 45 + Math.sin(t * 0.033) * 30;
+  var s = 800;
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(
+        (i + driftX) * 0.035,
+        (j + driftY) * 0.035,
+        t * 0.04
+      ) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * s * dt;
+      vy[IX(i, j)] += Math.sin(a) * s * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.00002, dt);
+  diffuse(2, vy, vy0, 0.00002, dt);
+  project(vx, vy, pf, dvg);
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+  project(vx, vy, pf, dvg);
+  for (var k = 0; k < N; k++) { vx[k] *= 0.9995; vy[k] *= 0.9995; }
+}
+
+// Pre-warm: 240 fluid steps = ~4s of simulated time. By the time
+// the first frame draws, the field has fully-developed eddies.
+for (var w_ = 0; w_ < 240; w_++) fluidStep(1 / 60);
+
+function sampleVelocity(px, py) {
+  var fi = (px / w) * (NX - 2) + 1;
+  var fj = (py / h) * (NY - 2) + 1;
+  if (fi < 0.5) fi = 0.5; if (fi > NX - 1.5) fi = NX - 1.5;
+  if (fj < 0.5) fj = 0.5; if (fj > NY - 1.5) fj = NY - 1.5;
+  var i0 = Math.floor(fi), j0 = Math.floor(fj);
+  var s = fi - i0, u = fj - j0;
+  var a = IX(i0, j0), b = IX(i0 + 1, j0);
+  var c = IX(i0, j0 + 1), d = IX(i0 + 1, j0 + 1);
+  return {
+    x: (1 - s) * (1 - u) * vx[a] + s * (1 - u) * vx[b] +
+       (1 - s) * u * vx[c] + s * u * vx[d],
+    y: (1 - s) * (1 - u) * vy[a] + s * (1 - u) * vy[b] +
+       (1 - s) * u * vy[c] + s * u * vy[d],
+  };
+}
+
+var lines = [];
+for (var gy = GRID_SPACING / 2; gy < h; gy += GRID_SPACING) {
+  for (var gx = GRID_SPACING / 2; gx < w; gx += GRID_SPACING) {
+    lines.push({ x: gx, y: gy, angle: 0, len: 0, tone: 0 });
+  }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(1 / 220);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.lineWidth = LINE_WIDTH;
+  ctx.lineCap = 'round';
+
+  var k = 1 - Math.exp(-EASE * dt);
+
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    var v = sampleVelocity(L.x, L.y);
+    var mag = Math.sqrt(v.x * v.x + v.y * v.y);
+    var targetAngle = Math.atan2(v.y, v.x);
+    var norm = Math.min(1, Math.sqrt(mag) * 0.5);
+    var targetLen = LINE_LENGTH * norm;
+
+    var positional = (L.x / w + L.y / h) * 0.5;
+    var temporal   = 0.5 + 0.5 * Math.sin(t * 0.12);
+    var targetTone = norm * 0.5 + positional * 0.3 + temporal * 0.2;
+
+    var da = targetAngle - L.angle;
+    while (da >  Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    L.angle += da * k;
+    L.len   += (targetLen  - L.len)  * k;
+    L.tone  += (targetTone - L.tone) * k;
+
+    if (L.len < 2) continue;
+
+    var ex = L.x + Math.cos(L.angle) * L.len;
+    var ey = L.y + Math.sin(L.angle) * L.len;
+    var grad = ctx.createLinearGradient(L.x, L.y, ex, ey);
+    grad.addColorStop(0.0, paletteColor(L.tone, 0));
+    grad.addColorStop(0.4, paletteColor(L.tone, 0.08));
+    grad.addColorStop(1.0, paletteColor(L.tone, 0.55));
+    ctx.strokeStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="with-wandering"
+  layout="stack"
+  fluid
+  title="Step 11: Pre-warmed + Wandering Eddies"
+  width={500}
+  height={400}
+  code={withWanderingCode}
+/>
+
+<p>The opening frame is no longer a parking lot. It shows an already-flowing field, because we ran the simulation forward four seconds before drawing. And if you let it run, the bright eddies <em>travel</em> across the canvas instead of pulsing in place. We are one demo away from Drift.</p>
+
+## Step 12: The Final Boss
+
+<p>Everything pulls together. The last demo scales the grid to the canvas (mobile gets fewer cells, big monitors get more), pools its line objects once at startup so the hot loop allocates nothing, and culls cells where the field is too weak to bother drawing. This is the same code you saw at the end of Lesson 8, finally explained.</p>
+
+<Concept>
+  <p><strong>Performance choices:</strong></p>
+  <pre>{`
+  Scale everything to canvas width:
+    GRID_SPACING = max(20, w / 55)        (fewer lines on small canvases)
+    LINE_LENGTH  = max(60, w / 8)
+    LINE_WIDTH   = max(2,  w / 240)
+    NX           = clamp(round(w/14), 40, 96)
+
+  Object pool:
+    Build the lines[] array ONCE at startup.
+    Each frame, mutate { angle, len, tone } in place.
+    No 'new' calls in the loop. No GC.
+
+  Culling:
+    if (line.len < MIN_LINE) continue;
+    Skips ~half the strokes in calm regions.`}</pre>
+</Concept>
+
+export const driftFinalCode = `// Final Drift. Same code as the Lesson 8 demo, fully explained now.
+// Phase A: grid + noise (steps 1-3, abandoned).
+// Phase B: velocity grid, diffusion, walls (steps 4-6).
+// Phase C: advection + pressure projection (steps 7-8).
+// Phase D: bilinear sampling + easing line grid + palette (steps 9-10).
+// Phase E: pre-warming, wandering eddies, pooling, culling (steps 11-12).
+
+// Scale everything to the canvas width so the demo looks right at
+// any size from a phone to a wide monitor.
+var GRID_SPACING = Math.max(20, Math.round(w / 55));
+var LINE_LENGTH  = Math.max(60, w / 8);
+var LINE_WIDTH   = Math.max(2,  w / 240);
+var MIN_LINE     = 2;
+var EASE         = 1.5;
+var t = 0;
+var last = performance.now();
+
+// Fluid grid. Bigger NX = more detail but quadratic solver cost.
+var NX = Math.max(40, Math.min(96, Math.round(w / 14)));
+var NY = Math.max(28, Math.round(NX * h / w));
+var N  = NX * NY;
+function IX(i, j) { return i + NX * j; }
+
+var vx  = new Float32Array(N);
+var vy  = new Float32Array(N);
+var vx0 = new Float32Array(N);
+var vy0 = new Float32Array(N);
+var pf  = new Float32Array(N);
+var dvg = new Float32Array(N);
+
+var PALETTE = [
+  [275, 80, 32],   // deep violet
+  [320, 85, 50],   // magenta
+  [10,  90, 60],   // coral
+  [45,  95, 65],   // gold
+  [185, 90, 65],   // cyan
+];
+
+function paletteColor(t01, alpha) {
+  var n = PALETTE.length - 1;
+  var f = Math.max(0, Math.min(1, t01)) * n;
+  var i = Math.floor(f);
+  var k = f - i;
+  var a = PALETTE[i], b = PALETTE[Math.min(n, i + 1)];
+  return 'hsla(' +
+    (a[0] + (b[0] - a[0]) * k) + ',' +
+    (a[1] + (b[1] - a[1]) * k) + '%,' +
+    (a[2] + (b[2] - a[2]) * k) + '%,' + alpha + ')';
+}
+
+function noise(x, y, t) {
+  return (
+    Math.sin(x * 0.9 + t * 0.7) +
+    Math.cos(y * 1.1 - t * 0.5) +
+    Math.sin((x + y) * 0.6 + t * 0.3) * 0.6
+  );
+}
+
+function setBnd(b, x) {
+  for (var i = 1; i < NX - 1; i++) {
+    x[IX(i, 0)]      = b === 2 ? -x[IX(i, 1)]      : x[IX(i, 1)];
+    x[IX(i, NY - 1)] = b === 2 ? -x[IX(i, NY - 2)] : x[IX(i, NY - 2)];
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    x[IX(0, j)]      = b === 1 ? -x[IX(1, j)]      : x[IX(1, j)];
+    x[IX(NX - 1, j)] = b === 1 ? -x[IX(NX - 2, j)] : x[IX(NX - 2, j)];
+  }
+}
+
+function diffuse(b, x, x0, diff, dt) {
+  var a = dt * diff * (NX - 2) * (NY - 2);
+  for (var k = 0; k < 4; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        x[IX(i, j)] = (x0[IX(i, j)] + a * (
+          x[IX(i - 1, j)] + x[IX(i + 1, j)] +
+          x[IX(i, j - 1)] + x[IX(i, j + 1)]
+        )) / (1 + 4 * a);
+      }
+    }
+    setBnd(b, x);
+  }
+}
+
+function advect(b, d, d0, vxF, vyF, dt) {
+  var dtx = dt * (NX - 2), dty = dt * (NY - 2);
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      var x = i - dtx * vxF[IX(i, j)];
+      var y = j - dty * vyF[IX(i, j)];
+      if (x < 0.5) x = 0.5; if (x > NX - 1.5) x = NX - 1.5;
+      if (y < 0.5) y = 0.5; if (y > NY - 1.5) y = NY - 1.5;
+      var i0 = Math.floor(x), i1 = i0 + 1;
+      var j0 = Math.floor(y), j1 = j0 + 1;
+      var s1 = x - i0, s0 = 1 - s1;
+      var t1 = y - j0, t0 = 1 - t1;
+      d[IX(i, j)] =
+        s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+        s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+    }
+  }
+  setBnd(b, d);
+}
+
+function project(vxF, vyF, p, div) {
+  var hx = 1.0 / NX;
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      div[IX(i, j)] = -0.5 * hx * (
+        vxF[IX(i + 1, j)] - vxF[IX(i - 1, j)] +
+        vyF[IX(i, j + 1)] - vyF[IX(i, j - 1)]
+      );
+      p[IX(i, j)] = 0;
+    }
+  }
+  setBnd(0, div); setBnd(0, p);
+  for (var k = 0; k < 18; k++) {
+    for (var j = 1; j < NY - 1; j++) {
+      for (var i = 1; i < NX - 1; i++) {
+        p[IX(i, j)] = (div[IX(i, j)] +
+          p[IX(i - 1, j)] + p[IX(i + 1, j)] +
+          p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+      }
+    }
+    setBnd(0, p);
+  }
+  for (var j = 1; j < NY - 1; j++) {
+    for (var i = 1; i < NX - 1; i++) {
+      vxF[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / hx;
+      vyF[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / hx;
+    }
+  }
+  setBnd(1, vxF); setBnd(2, vyF);
+}
+
+function injectForces(dt) {
+  // Two slow oscillators per axis. Their sum never repeats exactly,
+  // so the eddy positions wander indefinitely.
+  var driftX = Math.sin(t * 0.07) * 60 + Math.cos(t * 0.041) * 40;
+  var driftY = Math.cos(t * 0.063) * 45 + Math.sin(t * 0.033) * 30;
+  var s = 800;
+  for (var j = 2; j < NY - 2; j += 2) {
+    for (var i = 2; i < NX - 2; i += 2) {
+      var a = noise(
+        (i + driftX) * 0.035,
+        (j + driftY) * 0.035,
+        t * 0.04
+      ) * Math.PI;
+      vx[IX(i, j)] += Math.cos(a) * s * dt;
+      vy[IX(i, j)] += Math.sin(a) * s * dt;
+    }
+  }
+}
+
+function fluidStep(dt) {
+  injectForces(dt);
+  vx0.set(vx); vy0.set(vy);
+  diffuse(1, vx, vx0, 0.00002, dt);
+  diffuse(2, vy, vy0, 0.00002, dt);
+  project(vx, vy, pf, dvg);
+  vx0.set(vx); vy0.set(vy);
+  advect(1, vx, vx0, vx0, vy0, dt);
+  advect(2, vy, vy0, vx0, vy0, dt);
+  project(vx, vy, pf, dvg);
+  for (var i = 0; i < N; i++) {
+    vx[i] *= 0.9995;
+    vy[i] *= 0.9995;
+  }
+}
+
+// Pre-warm 4 seconds of simulated time so the first visible frame
+// already shows a fully-developed flow.
+for (var w_ = 0; w_ < 240; w_++) fluidStep(1 / 60);
+
+function sampleVelocity(px, py) {
+  var fi = (px / w) * (NX - 2) + 1;
+  var fj = (py / h) * (NY - 2) + 1;
+  if (fi < 0.5) fi = 0.5; if (fi > NX - 1.5) fi = NX - 1.5;
+  if (fj < 0.5) fj = 0.5; if (fj > NY - 1.5) fj = NY - 1.5;
+  var i0 = Math.floor(fi), j0 = Math.floor(fj);
+  var s = fi - i0, u = fj - j0;
+  var a = IX(i0, j0), b = IX(i0 + 1, j0);
+  var c = IX(i0, j0 + 1), d = IX(i0 + 1, j0 + 1);
+  return {
+    x: (1 - s) * (1 - u) * vx[a] + s * (1 - u) * vx[b] +
+       (1 - s) * u * vx[c] + s * u * vx[d],
+    y: (1 - s) * (1 - u) * vy[a] + s * (1 - u) * vy[b] +
+       (1 - s) * u * vy[c] + s * u * vy[d],
+  };
+}
+
+// Pool: one line per grid cell, allocated once, mutated in place.
+var lines = [];
+for (var gy = GRID_SPACING / 2; gy < h; gy += GRID_SPACING) {
+  for (var gx = GRID_SPACING / 2; gx < w; gx += GRID_SPACING) {
+    lines.push({ x: gx, y: gy, angle: 0, len: 0, tone: 0 });
+  }
+}
+
+function loop(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  t += dt;
+
+  fluidStep(1 / 220);
+
+  ctx.fillStyle = '#06070d';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.lineWidth = LINE_WIDTH;
+  ctx.lineCap = 'round';
+
+  var k = 1 - Math.exp(-EASE * dt);
+
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    var v = sampleVelocity(L.x, L.y);
+    var mag = Math.sqrt(v.x * v.x + v.y * v.y);
+    var targetAngle = Math.atan2(v.y, v.x);
+    var norm = Math.min(1, Math.sqrt(mag) * 0.5);
+    var targetLen = LINE_LENGTH * norm;
+
+    var positional = (L.x / w + L.y / h) * 0.5;
+    var temporal   = 0.5 + 0.5 * Math.sin(t * 0.12);
+    var targetTone = norm * 0.5 + positional * 0.3 + temporal * 0.2;
+
+    var da = targetAngle - L.angle;
+    while (da >  Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    L.angle += da * k;
+    L.len   += (targetLen  - L.len)  * k;
+    L.tone  += (targetTone - L.tone) * k;
+
+    // Cull weak lines. Saves roughly half the strokes in calm zones.
+    if (L.len < MIN_LINE) continue;
+
+    var ex = L.x + Math.cos(L.angle) * L.len;
+    var ey = L.y + Math.sin(L.angle) * L.len;
+
+    var grad = ctx.createLinearGradient(L.x, L.y, ex, ey);
+    grad.addColorStop(0.0, paletteColor(L.tone, 0));
+    grad.addColorStop(0.4, paletteColor(L.tone, 0.08));
+    grad.addColorStop(1.0, paletteColor(L.tone, 0.55));
+    ctx.strokeStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  __raf = requestAnimationFrame(loop);
+}
+__raf = requestAnimationFrame(loop);`;
+
+<CanvasRender
+  id="drift-final"
+  layout="stack"
+  fluid
+  title="Step 12: The Drift"
+  width={500}
+  height={400}
+  code={driftFinalCode}
+/>
+
+<Concept variant="note">
+**Try this:** Comment out the second `project()` call in `fluidStep` and watch the flow lose its incompressibility. Eddies pile up or vanish into nothing, exactly the visual difference between Drift and a noise-only field. Push the force amplitude `s` from `800` to `2000` for a hurricane. Drop the damping from `0.9995` to `0.9999` and disturbances persist for much longer, building into massive vortices. Swap the `PALETTE` for cool blues (`[200,90,30], [195,85,50], [180,80,65], [165,70,75], [210,60,85]`) for the Poolside theme.
+</Concept>
+
+## What You Built
+
+<Concept>
+  <p><strong>You shipped a real-time fluid simulation.</strong> Forces inject; diffusion smooths; pressure projection enforces incompressibility; advection carries the field through itself. On top of that, a static grid of line segments samples the field with bilinear interpolation, eases toward its target angle and length, and renders with a plasma palette and screen blending. Everything in this chapter (every demo from step 1 forward) exists in roughly 200 lines of JavaScript, with no library, no GPU, and no allocations in the hot loop.</p>
+  <p>Real-time fluid simulation was a SIGGRAPH paper in 1999. Twenty-five years later it runs in a browser tab on a budget laptop while you read this. That is the gradient the web has been climbing.</p>
+</Concept>
+
+## Where to Go Next
+
+<p>This chapter ends the Canvas Lab. Some directions to take what you learned:</p>
+
+<ul>
+  <li><strong>Add dye/density:</strong> the same fluid solver can carry a scalar field (color, temperature, dye concentration). Render it as a heat map instead of arrows or lines. See Stam's original paper for the full equations.</li>
+  <li><strong>MacCormack advection:</strong> Flux uses a second-order advection scheme that loses far less energy than vanilla semi-Lagrangian. The fix is two semi-Lagrangian passes (forward + reverse) blended together.</li>
+  <li><strong>Move it to WebGL:</strong> port the solver to fragment shaders and you can run a 256×256 grid at 60fps. <a href="https://github.com/sandydoo/flux" style="color: var(--color-accent);">sandydoo/flux</a> is the reference.</li>
+  <li><strong>Coupling to mouse input:</strong> add a brush that injects velocity along the cursor's motion vector. You now have an interactive fluid toy. (See <a href="/wiki/canvas-lab/07-interaction">Lesson 7</a> for the input handling.)</li>
+  <li><strong>Stam's paper:</strong> <a href="https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf" style="color: var(--color-accent);">Real-Time Fluid Dynamics for Games</a> (GDC 2003). The same algorithm in 8 pages, very readable.</li>
+  <li><strong>GPU Gems Chapter 38:</strong> <a href="https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu" style="color: var(--color-accent);">Fast Fluid Dynamics Simulation on the GPU</a>. The GPU port that Flux is built on top of.</li>
+</ul>
+
+<Concept>
+  <p>Congratulations. You started with <code>ctx.fillRect</code> and finished with a real fluid solver. There is no more Canvas Lab. Go make something.</p>
+</Concept>
+
+<LessonNav
+  prev={{ href: '/wiki/canvas-lab/08-particle-system', title: 'Particle System' }}
+  next={{ href: '/wiki/canvas-lab/appendix-bezier-math', title: 'Appendix: Bezier Math' }}
+/>

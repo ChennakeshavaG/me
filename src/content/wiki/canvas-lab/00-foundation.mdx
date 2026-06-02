@@ -31,7 +31,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
 <p><strong>Think of it like this:</strong> imagine a huge sheet of graph paper where every tiny square can be colored in. That is your screen. Each square is one pixel. When you "draw" on a computer, you are really just telling the computer which squares to color and what color to make them.</p>
-<pre>{`    Each square = one pixel
+<pre>{`
+    Each square = one pixel
     ┌───┬───┬───┬───┬───┬───┬───┬───┐
     │   │   │ ■ │ ■ │ ■ │ ■ │   │   │
     ├───┼───┼───┼───┼───┼───┼───┼───┤
@@ -59,7 +60,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 <p>In HTML, you create a drawing surface with the <code>&lt;canvas&gt;</code> tag:</p>
 
 <Concept>
-<pre>{`    <canvas id="myCanvas" width="500" height="400"></canvas>
+<pre>{`
+    <canvas id="myCanvas" width="500" height="400"></canvas>
 
     ┌──────── id ─────────┐
     │  A unique name so   │
@@ -124,7 +126,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 <p>The <code>'2d'</code> context is what we will use throughout this course, but it is not the only option. When you call <code>getContext()</code>, you can request different types:</p>
 
 <Concept>
-<pre>{`    Context Type          What It Does
+<pre>{`
+    Context Type          What It Does
     ───────────────────── ──────────────────────────────────
     '2d'                  2D drawing: shapes, text, images,
                           gradients. This is what we use.
@@ -214,7 +217,8 @@ ctx.fillText('A few lines of code is all it takes!', 100, 250);`;
 
 <Concept>
 <p><strong>The two sizes of a canvas:</strong></p>
-<pre>{`    1. DRAWING SURFACE (set via HTML attributes)
+<pre>{`
+    1. DRAWING SURFACE (set via HTML attributes)
        width="500" height="400"
        = 500 x 400 pixels of actual drawing space
 
@@ -290,7 +294,8 @@ ctx.fillText('size is set correctly!', 200, 135);`;
 <p>Here is a side-by-side comparison of how the two modes handle the same operations:</p>
 
 <Concept>
-<pre>{`    RETAINED MODE (DOM / SVG)          IMMEDIATE MODE (Canvas)
+<pre>{`
+    RETAINED MODE (DOM / SVG)          IMMEDIATE MODE (Canvas)
 
     You: "Draw a red circle"           You: "Draw a red circle"
     Browser: "OK, I'll remember        Canvas: "OK, done. Red pixels
@@ -458,7 +463,8 @@ flowchart TD
 
 <Concept>
 <p><strong>How Canvas coordinates work:</strong></p>
-<pre>{`    (0,0) ──── X increases ────> (500,0)
+<pre>{`
+    (0,0) ──── X increases ────> (500,0)
       │
       │
       Y increases
@@ -496,7 +502,8 @@ Our reality: Canvas Y down comes from 130 years of machines that print top to bo
 
 **The family tree:**
 
-<pre>{`    Descartes (1637):           Typewriter (1870s):
+<pre>{`
+    Descartes (1637):           Typewriter (1870s):
     "Y goes up because          "Y goes down because
      more is up, obviously."     that's how paper feeds."
             │                           │
@@ -644,7 +651,8 @@ points.forEach(function(p) {
 
 <Concept>
 <p><strong>What you learned in this lesson:</strong></p>
-<pre>{`    Concept                      Key Takeaway
+<pre>{`
+    Concept                      Key Takeaway
     ──────────────────────────── ─────────────────────────────────
     Pixels                       Your screen is a grid of tiny
                                  colored dots. Canvas controls a

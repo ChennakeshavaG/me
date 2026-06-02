@@ -24,7 +24,8 @@ import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
 
 <Concept>
 <p><strong>Building the formula step by step:</strong></p>
-<pre>{`    Example: A=10, B=50, you want the point 30% of the way.
+<pre>{`
+    Example: A=10, B=50, you want the point 30% of the way.
 
     Distance from A to B:       B - A = 40
     30% of that distance:       0.3 x 40 = 12
@@ -44,7 +45,8 @@ import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
 <p><strong>t</strong> is a fraction from 0 to 1. Think of it as "how far along." <strong>(1-t)</strong> is the leftover. If t is 0.3, then (1-t) is 0.7. Together they are weights that say how much each point contributes:</p>
 
 <Concept>
-<pre>{`    t=0.0  ->  (1.0)*A + (0.0)*B  =  all A, none of B    -> at A
+<pre>{`
+    t=0.0  ->  (1.0)*A + (0.0)*B  =  all A, none of B    -> at A
     t=0.3  ->  (0.7)*A + (0.3)*B  =  mostly A, some B     -> 30% toward B
     t=0.5  ->  (0.5)*A + (0.5)*B  =  equal mix             -> midpoint
     t=1.0  ->  (0.0)*A + (1.0)*B  =  none of A, all B     -> at B
@@ -58,7 +60,8 @@ import LessonNav from '../../../components/canvas-lab/LessonNav.astro';
 <p>For 2D points, apply lerp to x and y separately:</p>
 
 <Concept>
-<pre>{`    x = (1-t) * Ax  +  t * Bx
+<pre>{`
+    x = (1-t) * Ax  +  t * Bx
     y = (1-t) * Ay  +  t * By`}</pre>
 </Concept>
 
@@ -135,7 +138,8 @@ draw();`;
 <p>A quadratic Bezier curve uses 3 points:</p>
 
 <Concept>
-<pre>{`    P0 = start       (curve passes through this)
+<pre>{`
+    P0 = start       (curve passes through this)
     P1 = control      (the "magnet" that pulls the curve)
     P2 = end          (curve passes through this)
 
@@ -147,14 +151,16 @@ draw();`;
 
 <Concept>
 <p><strong>Level 1:</strong> Two lerps running in parallel.</p>
-<pre>{`    A(t) = lerp(P0, P1, t) = (1-t)*P0 + t*P1
+<pre>{`
+    A(t) = lerp(P0, P1, t) = (1-t)*P0 + t*P1
                                slide along P0 -> P1
 
     B(t) = lerp(P1, P2, t) = (1-t)*P1 + t*P2
                                slide along P1 -> P2`}</pre>
 
 <p><strong>Level 2:</strong> Lerp between those two results.</p>
-<pre>{`    C(t) = lerp(A, B, t) = (1-t)*A(t) + t*B(t)
+<pre>{`
+    C(t) = lerp(A, B, t) = (1-t)*A(t) + t*B(t)
                              this is the curve point`}</pre>
 </Concept>
 
@@ -163,7 +169,8 @@ draw();`;
 <p>Substitute Level 1 into Level 2:</p>
 
 <Concept>
-<pre>{`    C(t) = (1-t) * A(t) + t * B(t)
+<pre>{`
+    C(t) = (1-t) * A(t) + t * B(t)
 
     Replace A(t) and B(t) with their definitions:
 
@@ -294,7 +301,8 @@ draw();`;
 <p>A cubic Bezier adds one more point and one more level of lerp:</p>
 
 <Concept>
-<pre>{`    P0 = start           (curve passes through)
+<pre>{`
+    P0 = start           (curve passes through)
     P1 = control point 1  (pulls curve near the start)
     P2 = control point 2  (pulls curve near the end)
     P3 = end              (curve passes through)
@@ -306,7 +314,8 @@ draw();`;
 <p><strong>Three levels of lerp:</strong></p>
 
 <Concept>
-<pre>{`    Level 1 (3 lerps):
+<pre>{`
+    Level 1 (3 lerps):
         A = lerp(P0, P1, t)
         B = lerp(P1, P2, t)
         C = lerp(P2, P3, t)
@@ -324,7 +333,8 @@ draw();`;
 <p>Same substitution process as quadratic, one more level deep:</p>
 
 <Concept>
-<pre>{`    F(t) = lerp(D, E, t)
+<pre>{`
+    F(t) = lerp(D, E, t)
          = (1-t)*D(t) + t*E(t)
 
     D(t) = (1-t)*A(t) + t*B(t)
@@ -469,7 +479,8 @@ draw();`;
 <Concept>
 <p><strong>The binomial theorem</strong> says: if a + b = 1, then (a + b)^n = 1 for any n.</p>
 <p>Here a = (1-t), b = t, so:</p>
-<pre>{`    Degree 2 (quadratic):
+<pre>{`
+    Degree 2 (quadratic):
         ((1-t) + t)^2 = 1
         (1-t)^2 + 2*(1-t)*t + t^2 = 1
                                      ^
@@ -489,7 +500,8 @@ draw();`;
 <p>The numbers in front (1, 2, 1 for quadratic; 1, 3, 3, 1 for cubic) are <strong>binomial coefficients</strong>. They come from <strong>Pascal's triangle</strong>, where each number is the sum of the two above it:</p>
 
 <Concept>
-<pre>{`    Pascal's triangle:
+<pre>{`
+    Pascal's triangle:
 
         Row 0:       1
         Row 1:      1   1
@@ -507,7 +519,8 @@ draw();`;
 <p>You can check that the curve really passes through P0 and the last point by plugging in t=0 and t=1:</p>
 
 <Concept>
-<pre>{`    Quadratic at t=0:
+<pre>{`
+    Quadratic at t=0:
         (1-0)^2*P0 + 2*(1-0)*0*P1 + 0^2*P2
         = 1*P0 + 0 + 0
         = P0                                  at start
@@ -528,7 +541,8 @@ draw();`;
 ## The General Pattern
 
 <Concept>
-<pre>{`    Degree  Points  Endpoints  Control pts  Pascal's row
+<pre>{`
+    Degree  Points  Endpoints  Control pts  Pascal's row
       1       2        2           0          1, 1           line
       2       3        2           1          1, 2, 1        one bend
       3       4        2           2          1, 3, 3, 1     S-curve
@@ -543,7 +557,8 @@ draw();`;
 <p>Higher degrees (4+ control points) are mathematically valid. You could build a degree-10 curve with 11 points. But nobody does, for three reasons:</p>
 
 <Concept>
-<pre>{`    1. INSTABILITY
+<pre>{`
+    1. INSTABILITY
        Move one control point slightly and the
        entire curve wobbles unpredictably.
 
@@ -571,5 +586,5 @@ draw();`;
 <p>The Bezier formula, Bernstein polynomials, and binomial coefficients are all just the algebra that falls out when you substitute nested lerps into each other. If you understand <code>(1-t)*A + t*B</code>, you understand the whole thing.</p>
 
 <LessonNav
-  prev={{ href: "/wiki/canvas-lab/08-particle-system", title: "Particle System" }}
+  prev={{ href: "/wiki/canvas-lab/09-drift", title: "Final Boss: The Drift" }}
 />

@@ -1,10 +1,10 @@
 ---
-type: wiki
-category: "canvas-lab"
+type: blog
 title: "Interaction"
 description: "Mouse, touch, and keyboard input: coordinate mapping, hit detection, dragging, and building interactive tools."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
+category: "Learn Canvas"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
 import Concept from '../../../components/canvas-lab/Concept.astro';
@@ -21,7 +21,8 @@ Everything you have built so far is passive; the user watches but cannot interac
 
 <Concept>
   <p><strong>Analogy:</strong> Imagine you are sitting in a room with a doorbell. You do not constantly check the door. Instead, you <em>listen</em> for the bell. When it rings, you go check who is there. Browser events work the same way: you register a "listener" function, and the browser calls it when that event happens.</p>
-  <pre>{`  Your code            The browser
+  <pre>{`
+  Your code            The browser
   ┌──────────┐        ┌───────────────┐
   │ listener │◄───────│ "click" event │
   │ function │        │ happened!     │
@@ -41,7 +42,8 @@ Everything you have built so far is passive; the user watches but cannot interac
 
 <Concept>
   <p><strong>Key event properties for mouse events:</strong></p>
-  <pre>{`  e.clientX, e.clientY   → position relative to the browser window
+  <pre>{`
+  e.clientX, e.clientY   → position relative to the browser window
   e.pageX, e.pageY       → position relative to the entire page
   e.offsetX, e.offsetY   → position relative to the target element
   e.button               → which mouse button (0=left, 1=middle, 2=right)
@@ -177,7 +179,8 @@ draw();`;
 
 <Concept>
   <p><strong>Three coordinate systems at play:</strong></p>
-  <pre>{`  Page coordinates (e.pageX, e.pageY)
+  <pre>{`
+  Page coordinates (e.pageX, e.pageY)
   ┌─────────────────────────────────────────┐
   │ Browser window (may be scrolled)        │
   │                                         │
@@ -257,7 +260,8 @@ loop();`;
 
 <Concept>
   <p><strong>The DPI scaling problem and solution:</strong></p>
-  <pre>{`  Without DPI scaling (blurry on Retina):
+  <pre>{`
+  Without DPI scaling (blurry on Retina):
   ┌───────────────────────┐
   │ canvas.width  = 500   │  CSS size: 500px
   │ canvas.height = 400   │  Pixel buffer: 500x400
@@ -285,7 +289,8 @@ loop();`;
 <p>When converting mouse coordinates on a DPI-scaled canvas, you must account for the difference between the CSS size and the drawing coordinate space:</p>
 
 <Concept>
-  <pre>{`  // Full coordinate conversion formula:
+  <pre>{`
+  // Full coordinate conversion formula:
   var rect = canvas.getBoundingClientRect();
   var canvasX = (e.clientX - rect.left) * (logicalWidth / rect.width);
   var canvasY = (e.clientY - rect.top)  * (logicalHeight / rect.height);
@@ -301,7 +306,8 @@ loop();`;
 
 <Concept>
   <p><strong>Touch events vs. mouse events:</strong></p>
-  <pre>{`  Mouse events:         Touch events:
+  <pre>{`
+  Mouse events:         Touch events:
   mousedown       →     touchstart
   mousemove       →     touchmove
   mouseup         →     touchend
@@ -419,7 +425,7 @@ addListener(window, 'keyup', function(e) {
 var lastTime = performance.now();
 
 function loop(now) {
-  var dt = (now - lastTime) / 1000;  // delta time in seconds
+  var dt = Math.min(0.1, (now - lastTime) / 1000);  // delta time in seconds
   lastTime = now;
 
   // Move based on which keys are held
@@ -482,7 +488,8 @@ loop(performance.now());`;
 
 <Concept>
   <p><strong>The distance formula:</strong></p>
-  <pre>{`                   click point (cx, cy)
+  <pre>{`
+                   click point (cx, cy)
                        ·
                       /|
                      / |
@@ -560,7 +567,8 @@ draw();`;
 <p>What about detecting when two circles overlap (collide)? The idea is the same as click detection: measure the distance between their centers. If that distance is less than the sum of their radii, they are overlapping.</p>
 
 <Concept>
-  <pre>{`  Circle A (r=30)       Circle B (r=20)
+  <pre>{`
+  Circle A (r=30)       Circle B (r=20)
 
        ┌───┐                ┌──┐
       ╱  A  ╲              ╱  B ╲
@@ -575,13 +583,13 @@ draw();`;
 </Concept>
 
 export const circleCollisionCode = `// Draggable circle
-var circleA = { x: 150, y: 175, r: 45, color: 'cyan' };
+var circleA = { x: 150, y: 250, r: 38, color: 'cyan' };
 
 // Stationary circles
 var others = [
-  { x: 300, y: 120, r: 40, color: 'limegreen' },
-  { x: 380, y: 250, r: 35, color: 'goldenrod' },
-  { x: 200, y: 280, r: 50, color: 'mediumpurple' },
+  { x: 600, y: 130, r: 34, color: 'limegreen' },
+  { x: 720, y: 280, r: 30, color: 'goldenrod' },
+  { x: 560, y: 410, r: 42, color: 'mediumpurple' },
 ];
 
 var dragging = false;
@@ -591,8 +599,8 @@ function getPos(e) {
   var clientX = e.touches ? e.touches[0].clientX : e.clientX;
   var clientY = e.touches ? e.touches[0].clientY : e.clientY;
   return {
-    x: (clientX - rect.left) * (500 / rect.width),
-    y: (clientY - rect.top) * (350 / rect.height)
+    x: (clientX - rect.left) * (800 / rect.width),
+    y: (clientY - rect.top) * (500 / rect.height)
   };
 }
 
@@ -634,7 +642,7 @@ function checkCollision(a, b) {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, 500, 350);
+  ctx.clearRect(0, 0, 800, 500);
 
   // Draw stationary circles
   others.forEach(function(c) {
@@ -683,7 +691,7 @@ function draw() {
 
   ctx.fillStyle = 'gray';
   ctx.font = '12px monospace';
-  ctx.fillText('Drag the blue circle into the others', 120, 340);
+  ctx.fillText('Drag the blue circle into the others', 270, 485);
 
   __raf = requestAnimationFrame(draw);
 }
@@ -693,8 +701,8 @@ draw();`;
   id="circle-collision"
   layout="stack"
   title="Circle-Circle Collision: Drag the Blue Circle"
-  width={500}
-  height={350}
+  width={800}
+  height={500}
   code={circleCollisionCode}
 />
 
@@ -704,7 +712,8 @@ draw();`;
 
 <Concept>
   <p><strong>AABB overlap logic:</strong></p>
-  <pre>{`  Two rectangles overlap if and only if they overlap
+  <pre>{`
+  Two rectangles overlap if and only if they overlap
   on BOTH the X axis AND the Y axis.
 
   Box A                 Box B
@@ -838,7 +847,8 @@ draw();`;
 <p>Dragging combines three events: <code>mousedown</code> (start), <code>mousemove</code> (update), and <code>mouseup</code> (stop). The key trick is storing the <strong>offset</strong>, the distance between the click point and the object's corner, so the object does not "jump" to the cursor.</p>
 
 <Concept>
-  <pre>{`  Step 1: mousedown
+  <pre>{`
+  Step 1: mousedown
   ┌───────────┐
   │ BOX       │  Click happens at (clickX, clickY)
   │   · ◄─────┼── offset = click - box position
@@ -1045,7 +1055,8 @@ draw();`;
 
 <Concept>
   <p><strong>How zoom and pan work together:</strong></p>
-  <pre>{`  Without transform:           With translate + scale:
+  <pre>{`
+  Without transform:           With translate + scale:
   ┌──────────────┐             ┌──────────────┐
   │ · · · · · ·  │             │              │
   │ · · · · · ·  │   zoom in   │   · · · ·    │
@@ -1520,7 +1531,9 @@ function drawToolbar() {
   // Brush size indicator
   ctx.fillStyle = 'gray';
   ctx.font = '11px monospace';
-  ctx.fillText('Size: ' + brushSize, 310, 22);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Size: ' + brushSize, 315, 25);
+  ctx.textBaseline = 'alphabetic';
 
   // Size buttons
   ctx.fillStyle = '#1a1a2a';
@@ -1544,7 +1557,7 @@ function drawToolbar() {
   // Brush preview
   ctx.fillStyle = brushColor;
   ctx.beginPath();
-  ctx.arc(295, 20, Math.min(brushSize, 12), 0, Math.PI * 2);
+  ctx.arc(295, 25, brushSize / 2, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -1655,7 +1668,7 @@ drawToolbar();`;
 
 <Concept>
   <p><strong>What you learned in this lesson:</strong></p>
-  <ul style="color: var(--color-muted); margin-left: 1rem; margin-top: 0.5rem;">
+  <ul>
     <li>Browser events deliver information through the event object (<code>e</code>)</li>
     <li>Convert page/client coordinates to canvas coordinates with <code>getBoundingClientRect()</code></li>
     <li>DPI scaling: multiply canvas size by <code>devicePixelRatio</code>, then <code>ctx.scale()</code></li>

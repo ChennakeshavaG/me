@@ -3,7 +3,9 @@
     "allow": [
       "Read(//Users/keshava-13944/playground/canvas-lab/**)",
       "Read(//Users/keshava-13944/playground/**)",
-      "Bash(grep -E \"\\\\.\\(astro|mdx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(astro|mdx\\)$\")",
+      "Bash(git -C /Users/keshava-13944/me log --oneline -10)",
+      "Bash(git -C /Users/keshava-13944/me status -s)"
     ]
   }
 }

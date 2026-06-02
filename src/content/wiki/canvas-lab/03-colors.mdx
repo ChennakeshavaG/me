@@ -3,7 +3,7 @@ type: blog
 title: "Colors & Styles"
 description: "A deep dive into color theory, gradients, patterns, transparency, compositing, line styles, and shadows on the Canvas."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
 category: "Learn Canvas"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
@@ -21,7 +21,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>Think of it like stage lighting.</strong> Imagine three spotlights in a dark theater: one red, one green, one blue. Point them all at the same spot on the wall:</p>
-  <pre>{`  Red only       Green only     Blue only      Red + Green    All three
+  <pre>{`
+  Red only       Green only     Blue only      Red + Green    All three
   +------+       +------+       +------+       +------+       +------+
   | R    |       |    G |       |      |       | R  G |       | R  G |
   |  **  |       |  **  |       |  **  |       |  **  |       |  **  |
@@ -149,7 +150,8 @@ formats.forEach(function(c, i) {
   <p><strong>Hue</strong>: "What color?" Pick a spot on the rainbow. It is a number from 0 to 360, like degrees on a circle. 0 is red, 120 is green, 240 is blue, and 360 wraps back to red.</p>
   <p><strong>Saturation</strong>: "How vivid?" At 100% the color is pure and vibrant. At 0% all the color drains out and you get gray.</p>
   <p><strong>Lightness</strong>: "How light or dark?" 0% is always black, 100% is always white, and 50% gives you the true color.</p>
-  <pre>{`            The Hue Color Wheel (degrees)
+  <pre>{`
+            The Hue Color Wheel (degrees)
 
                     0/360 = Red
                        |
@@ -383,7 +385,8 @@ ctx.fillText('change!', 180, 280);`;
 
 <Concept>
   <p><strong>Analogy: Glass Windows.</strong> Imagine stacking colored glass windows:</p>
-  <pre>{`  alpha = 1.0         alpha = 0.5          alpha = 0.0
+  <pre>{`
+  alpha = 1.0         alpha = 0.5          alpha = 0.0
   (fully opaque)      (semi-transparent)   (invisible)
   +──────────+        +──────────+         +──────────+
   │##########│        │# # # # # │         │          │
@@ -500,7 +503,8 @@ ctx.textAlign = 'left';`;
 
 <Concept>
   <p><code>createLinearGradient(x0, y0, x1, y1)</code> defines the line along which colors change:</p>
-  <pre>{`  Horizontal:  (0, 100) ─────────> (500, 100)
+  <pre>{`
+  Horizontal:  (0, 100) ─────────> (500, 100)
                start                end
                Left to right, same y
 
@@ -639,7 +643,8 @@ ctx.fillText('Sun: radial gradient (covered next)', 20, 300);`;
 
 <Concept>
   <p><code>createRadialGradient(x0, y0, r0, x1, y1, r1)</code></p>
-  <pre>{`  (x0, y0, r0) = inner circle center + radius  (gradient START)
+  <pre>{`
+  (x0, y0, r0) = inner circle center + radius  (gradient START)
   (x1, y1, r1) = outer circle center + radius  (gradient END)
 
   Centered (same center):        Off-center (spotlight):
@@ -829,7 +834,8 @@ ctx.fillText('Tip: patterns are great for backgrounds!', 20, 375);`;
   <p><strong>Analogy: Photo editing layers.</strong> If you've used Photoshop or GIMP, composite operations are like blend modes. They control how a new layer combines with layers below it.</p>
   <p><strong>"source"</strong> = the new shape you're drawing</p>
   <p><strong>"destination"</strong> = what's already on the canvas</p>
-  <pre>{`  source-over      source-atop      destination-over     xor
+  <pre>{`
+  source-over      source-atop      destination-over     xor
   +------+         +------+         +------+             +------+
   |  BB  |         |  .B  |         |  AA  |             |  BA  |
   | AABB |         | AABB |         | AABB |             | AA.BB|
@@ -956,14 +962,16 @@ ctx.fillText('destination-out punches holes through existing content', 30, 290);
 <Concept>
   <p><strong>lineWidth</strong>: thickness in pixels. The line is centered on the path, so half the width extends to each side.</p>
   <p><strong>lineCap</strong>: how line endpoints are drawn:</p>
-  <pre>{`  "butt"       "round"      "square"
+  <pre>{`
+  "butt"       "round"      "square"
   ---|---      ---O---      --[|]--
   Ends at      Adds a       Adds a
   the exact    semicircle   rectangle
   endpoint     beyond       beyond the
                the end      endpoint`}</pre>
   <p><strong>lineJoin</strong>: how corners between line segments connect:</p>
-  <pre>{`  "miter"      "round"      "bevel"
+  <pre>{`
+  "miter"      "round"      "bevel"
     /\\           /\\           /\\
    /  \\         (  )         /--\\
   Sharp        Rounded      Flat
@@ -1165,7 +1173,8 @@ draw();`;
   <p><strong>shadowColor</strong>: the shadow's color (use rgba for translucent shadows).</p>
   <p><strong>shadowBlur</strong>: how fuzzy the shadow is (0 = sharp, higher = softer).</p>
   <p><strong>shadowOffsetX / shadowOffsetY</strong>: where the shadow falls relative to the shape.</p>
-  <pre>{`  shadowBlur = 0        shadowBlur = 10       shadowBlur = 30
+  <pre>{`
+  shadowBlur = 0        shadowBlur = 10       shadowBlur = 30
   +───+                 +───+                 +───+
   │   │x                │   │                 │   │
   +───+x                +───+                 +───+

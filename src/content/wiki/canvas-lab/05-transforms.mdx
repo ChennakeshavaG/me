@@ -1,10 +1,10 @@
 ---
-type: wiki
-category: "canvas-lab"
+type: blog
 title: "Transforms"
 description: "Translate, rotate, scale, and the critical save/restore state stack."
 createdAt: 2026-05-14
-tags: [canvas, javascript, graphics, tutorial]
+tags: [canvas]
+category: "Learn Canvas"
 ---
 import CanvasRender from '../../../components/canvas-lab/CanvasRender.astro';
 import Concept from '../../../components/canvas-lab/Concept.astro';
@@ -19,7 +19,8 @@ import LessonHeader from '../../../components/canvas-lab/LessonHeader.astro';
 
 <Concept>
   <p><strong>The Canvas coordinate system:</strong></p>
-  <pre>{`  (0,0)───────────────────────▶ x increases
+  <pre>{`
+  (0,0)───────────────────────▶ x increases
     │
     │    (50,30)●
     │
@@ -117,7 +118,8 @@ ctx.restore();`;
 
 <Concept>
   <p><strong>The "moving the paper, not the pen" analogy:</strong></p>
-  <pre>{`  Method 1: Move the pen              Method 2: Move the paper
+  <pre>{`
+   Method 1: Move the pen              Method 2: Move the paper
   ┌─────────────────────┐             ┌─────────────────────┐
   │                     │             │                     │
   │     ▲ pen moves     │             │     paper slides    │
@@ -137,7 +139,8 @@ ctx.restore();`;
 
 <Concept>
   <p><strong>Step by step: what translate does:</strong></p>
-  <pre>{`  Before translate(200, 100):       After translate(200, 100):
+  <pre>{`
+  Before translate(200, 100):       After translate(200, 100):
   ┌────────────────────┐            ┌────────────────────┐
   │(0,0)               │            │ old origin         │
   │  ●                 │            │  ○                 │
@@ -246,7 +249,8 @@ ctx.fillText('Same drawHouse(): three different translate() calls', 50, 260);`;
 
 <Concept>
   <p><strong>Degrees vs Radians, a quick conversion chart:</strong></p>
-  <pre>{`  Degrees │ Radians          │ In code
+  <pre>{`
+  Degrees │ Radians          │ In code
   ────────┼──────────────────┼──────────────────────
      0°   │ 0                │ 0
     30°   │ PI / 6  ≈ 0.524  │ Math.PI / 6
@@ -268,7 +272,8 @@ ctx.fillText('Same drawHouse(): three different translate() calls', 50, 260);`;
 
 <Concept>
   <p><strong>The Canvas unit circle (y-axis is flipped!):</strong></p>
-  <pre>{`                  270° (-PI/2)
+  <pre>{`
+                  270° (-PI/2)
                         │
                         │  ↺ negative
                         │    (counter-clockwise)
@@ -525,7 +530,8 @@ ctx.fillText('scale(-1, -1)', 220, 255);`;
 
 <Concept>
   <p><strong>Think of it like an undo stack:</strong></p>
-  <pre>{`   save()         save()         restore()       restore()
+  <pre>{`
+   save()         save()         restore()       restore()
      │               │               │               │
      ▼               ▼               ▼               ▼
   ┌───────┐      ┌───────┐      ┌───────┐      ┌───────┐
@@ -606,7 +612,8 @@ ctx.fillText('Top row: translates stacked. Bottom: each isolated.', 30, 310);`;
 
 <Concept>
   <p><strong>Visualizing transform order:</strong></p>
-  <pre>{`  Translate-then-Rotate:            Rotate-then-Translate:
+  <pre>{`
+  Translate-then-Rotate:            Rotate-then-Translate:
   1. Move origin to (200, 100)      1. Rotate axes 45°
   2. Rotate axes 45°                2. Move along NEW rotated axes
   3. Draw                           3. Draw
@@ -681,7 +688,8 @@ ctx.fillText('Same angle + distance, different order = different result', 30, 33
 
 <Concept>
   <p><strong>The 2D transformation matrix:</strong></p>
-  <pre>{`  Canvas uses a 3x3 matrix internally, but you only set 6 values:
+  <pre>{`
+  Canvas uses a 3x3 matrix internally, but you only set 6 values:
 
   ┌          ┐     ┌                                ┐
   │  a  c  e  │     │  scaleX   skewX    translateX  │
@@ -1241,7 +1249,7 @@ ctx.textAlign = 'center';
 ctx.textBaseline = 'middle';
 for (var n = 1; n <= 12; n++) {
   var angle = (n * Math.PI / 6) - Math.PI / 2;
-  var numRadius = radius - 35;
+  var numRadius = radius - 42;
   ctx.fillText(
     n.toString(),
     numRadius * Math.cos(angle),

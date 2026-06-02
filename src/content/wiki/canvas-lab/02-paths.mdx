@@ -23,7 +23,8 @@ Rectangles are useful for prototyping, but real graphics need triangles, circles
 
 <Concept>
   <p><strong>Drawing with an invisible pen:</strong></p>
-  <pre>{`    1. Pick up the pen and place it somewhere
+  <pre>{`
+    1. Pick up the pen and place it somewhere
        --> moveTo(x, y)         "Move without drawing"
 
     2. Drag the pen to draw a line
@@ -275,7 +276,8 @@ ctx.fillText('so the stroke appears on top of the fill.', 105, 296);`;
 
 <Concept>
   <p><strong>Radians cheat sheet:</strong></p>
-  <pre>{`    Degrees     Radians            Position on clock
+  <pre>{`
+    Degrees     Radians            Position on clock
     ───────     ─────────────      ──────────────────
     0           0                  3 o'clock (right)
     90          Math.PI / 2        6 o'clock (bottom)
@@ -526,7 +528,8 @@ ctx.fillText('egg (scaled arc)', 130, 255);`;
 
 <Concept>
   <p><strong>The rubber band analogy:</strong></p>
-  <pre>{`    Imagine a rubber band pinned at START and END.
+  <pre>{`
+    Imagine a rubber band pinned at START and END.
     The control point is a finger pulling the band sideways.
 
     control point (cpx, cpy)
@@ -598,7 +601,8 @@ ctx.fillText('(pulls the curve)', cpX - 45, cpY + 20);`;
 
 <Concept>
   <p><strong>How two control points shape a curve:</strong></p>
-  <pre>{`    CP1 controls the      CP2 controls the
+  <pre>{`
+    CP1 controls the      CP2 controls the
     START of the curve    END of the curve
         ●                     ●
        ╱                       ╲
@@ -860,7 +864,8 @@ ctx.fillText('center has a hole!', 278, 293);`;
 
 <Concept>
   <p><strong>When to use each:</strong></p>
-  <pre>{`    nonzero (default):
+  <pre>{`
+    nonzero (default):
     - Fills everything enclosed by the path
     - Use for simple shapes, most of the time
 
@@ -1390,7 +1395,8 @@ draw();`;
 
 <Concept>
 <p><strong>The gear algorithm:</strong></p>
-<pre>{`    teeth = 12  -->  points = 24
+<pre>{`
+    teeth = 12  -->  points = 24
     
     Point 0  (even) --> outer radius --> tooth TIP
     Point 1  (odd)  --> inner radius --> tooth VALLEY
@@ -1611,7 +1617,8 @@ birds.forEach(function(b) {
 
 <Concept>
   <p><strong>Challenge 1: Draw a House with Paths</strong></p>
-  <pre>{`    Use paths (not fillRect) to draw:
+  <pre>{`
+    Use paths (not fillRect) to draw:
     - A triangular roof (moveTo + lineTo + closePath + fill)
     - A rectangular wall (rect or 4 lineTo calls)
     - A circular window (arc)
@@ -1622,7 +1629,8 @@ birds.forEach(function(b) {
 
 <Concept>
   <p><strong>Challenge 2: Draw a Pie Chart</strong></p>
-  <pre>{`    Given data like: var data = [30, 20, 25, 15, 10];
+  <pre>{`
+    Given data like: var data = [30, 20, 25, 15, 10];
     Draw a pie chart:
 
     - Each slice is an arc (use moveTo to center, then arc)
@@ -1646,7 +1654,8 @@ birds.forEach(function(b) {
 
 <Concept>
   <p><strong>Challenge 3: Draw Your Initials</strong></p>
-  <pre>{`    Use lineTo and bezierCurveTo to draw your initials
+  <pre>{`
+    Use lineTo and bezierCurveTo to draw your initials
     as custom letter shapes (not ctx.fillText).
 
     For example, the letter "S" could be two arcs:
@@ -1661,7 +1670,8 @@ birds.forEach(function(b) {
 
 <Concept>
   <p><strong>What you learned in this lesson:</strong></p>
-  <pre>{`    Concept                How to do it
+  <pre>{`
+    Concept                How to do it
     ────────────────────── ─────────────────────────────────────
     Start a new path       ctx.beginPath()
     Move pen (no drawing)  ctx.moveTo(x, y)

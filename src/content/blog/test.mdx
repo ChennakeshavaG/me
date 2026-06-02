@@ -1,0 +1,266 @@
+---
+type: blog
+title: "n-body POC"
+description: "Click-drag-launch gravity simulation. Sandboxed POC before wiring into the home page."
+createdAt: 2026-05-24
+tags: [canvas, simulation]
+draft: true
+---
+
+import CanvasRender from '../../components/canvas-lab/CanvasRender.astro';
+
+# n-body POC
+
+Self-contained sandbox of the gravity simulator before wiring it into the home page. Exercises the full pipeline in one closure: spawn, slingshot, velocity-Verlet integration, trails, merge-on-contact, and reset.
+
+Deliberately missing vs the production version: painter handoff to the grid module, SPA-nav cleanup, theme-aware color tokens, mobile overlay z-stack. Those are Phase 1 and Phase 7 work.
+
+**Controls**
+
+- click: stationary body at click point
+- drag: slingshot launch (release direction inverts into velocity, scaled by K)
+- R: clear all bodies
+
+export const code = `// n-body POC. All state in this closure; reset by hitting Run.
+
+var G = 800;            // gravitational constant (px^3 / s^2 / mass)
+var EPS = 5;            // softening; keeps r^2 + EPS^2 > 0
+var EPS2 = EPS * EPS;
+var K = 0.5;            // drag distance to velocity scale
+var FIXED_DT = 1 / 120; // physics timestep
+var TRAIL_AGE = 60;     // frames of trail to keep
+var DRAG_THRESHOLD = 5; // px below which release counts as a click
+var BODY_CAP = 200;
+
+var bodies = [];
+var nextId = 1;
+var drag = null;
+var accumulator = 0;
+var frameId = 0;
+var lastTime = 0;
+
+canvas.style.touchAction = 'none';
+
+function addBody(b) {
+  if (bodies.length >= BODY_CAP) return;
+  b.id = nextId++;
+  bodies.push(b);
+}
+
+function spawn(x, y, vx, vy) {
+  addBody({ x: x, y: y, vx: vx, vy: vy, ax: 0, ay: 0, m: 1, r: 6, trail: [] });
+}
+
+function pointerXY(e) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (w / rect.width),
+    y: (e.clientY - rect.top) * (h / rect.height)
+  };
+}
+
+addListener(canvas, 'pointerdown', function(e) {
+  if (!e.isPrimary) return;
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  var p = pointerXY(e);
+  drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+});
+
+addListener(canvas, 'pointermove', function(e) {
+  if (!e.isPrimary || !drag) return;
+  var p = pointerXY(e);
+  drag.x1 = p.x;
+  drag.y1 = p.y;
+});
+
+addListener(canvas, 'pointerup', function(e) {
+  if (!e.isPrimary || !drag) return;
+  try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  var dx = drag.x1 - drag.x0;
+  var dy = drag.y1 - drag.y0;
+  if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) {
+    spawn(drag.x0, drag.y0, 0, 0);
+  } else {
+    spawn(drag.x0, drag.y0, (drag.x0 - drag.x1) * K, (drag.y0 - drag.y1) * K);
+  }
+  drag = null;
+});
+
+addListener(window, 'keydown', function(e) {
+  if (e.key === 'r' || e.key === 'R') {
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    bodies.length = 0;
+    drag = null;
+  }
+});
+
+function step(dt) {
+  frameId++;
+  var n = bodies.length;
+
+  // Velocity-Verlet drift with current accelerations.
+  for (var i = 0; i < n; i++) {
+    var b = bodies[i];
+    b.x += b.vx * dt + 0.5 * b.ax * dt * dt;
+    b.y += b.vy * dt + 0.5 * b.ay * dt * dt;
+  }
+
+  // Pairwise forces -> new accelerations.
+  var nax = new Array(n);
+  var nay = new Array(n);
+  for (var i = 0; i < n; i++) { nax[i] = 0; nay[i] = 0; }
+  for (var i = 0; i < n; i++) {
+    var bi = bodies[i];
+    for (var j = i + 1; j < n; j++) {
+      var bj = bodies[j];
+      var dx = bj.x - bi.x;
+      var dy = bj.y - bi.y;
+      var r2 = dx * dx + dy * dy + EPS2;
+      var invR = 1 / Math.sqrt(r2);
+      var invR3 = invR / r2;
+      var f = G * invR3;
+      nax[i] += f * bj.m * dx;
+      nay[i] += f * bj.m * dy;
+      nax[j] -= f * bi.m * dx;
+      nay[j] -= f * bi.m * dy;
+    }
+  }
+
+  // Kick + acceleration commit + trail push + prune.
+  var cut = frameId - TRAIL_AGE;
+  for (var i = 0; i < n; i++) {
+    var b = bodies[i];
+    b.vx += 0.5 * (b.ax + nax[i]) * dt;
+    b.vy += 0.5 * (b.ay + nay[i]) * dt;
+    b.ax = nax[i];
+    b.ay = nay[i];
+    b.trail.push({ x: b.x, y: b.y, fid: frameId });
+    while (b.trail.length && b.trail[0].fid < cut) b.trail.shift();
+  }
+
+  // Merge on contact. Conserve momentum + area; weight position by mass.
+  for (var i = 0; i < bodies.length; i++) {
+    var bi = bodies[i];
+    for (var j = i + 1; j < bodies.length; j++) {
+      var bj = bodies[j];
+      var dx = bj.x - bi.x;
+      var dy = bj.y - bi.y;
+      if (Math.sqrt(dx * dx + dy * dy) < bi.r + bj.r) {
+        var mTot = bi.m + bj.m;
+        bi.x = (bi.x * bi.m + bj.x * bj.m) / mTot;
+        bi.y = (bi.y * bi.m + bj.y * bj.m) / mTot;
+        bi.vx = (bi.vx * bi.m + bj.vx * bj.m) / mTot;
+        bi.vy = (bi.vy * bi.m + bj.vy * bj.m) / mTot;
+        bi.m = mTot;
+        bi.r = Math.sqrt(bi.r * bi.r + bj.r * bj.r);
+        bodies.splice(j, 1);
+        j--;
+      }
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Trails: per-segment alpha based on age.
+  ctx.lineWidth = 1.5;
+  for (var i = 0; i < bodies.length; i++) {
+    var t = bodies[i].trail;
+    if (t.length < 2) continue;
+    for (var k = 1; k < t.length; k++) {
+      var alpha = 1 - (frameId - t[k].fid) / TRAIL_AGE;
+      if (alpha <= 0) continue;
+      ctx.strokeStyle = 'rgba(120, 200, 255, ' + alpha.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.moveTo(t[k - 1].x, t[k - 1].y);
+      ctx.lineTo(t[k].x, t[k].y);
+      ctx.stroke();
+    }
+  }
+
+  // Bodies: filled circle + soft glow.
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = '#88d4ff';
+  ctx.fillStyle = '#ffffff';
+  for (var i = 0; i < bodies.length; i++) {
+    var b = bodies[i];
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  // Drag preview: dashed line + arrowhead from start to current pointer.
+  if (drag) {
+    ctx.strokeStyle = '#ffb74d';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(drag.x0, drag.y0);
+    ctx.lineTo(drag.x1, drag.y1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    var ang = Math.atan2(drag.y1 - drag.y0, drag.x1 - drag.x0);
+    ctx.fillStyle = '#ffb74d';
+    ctx.beginPath();
+    ctx.moveTo(drag.x1, drag.y1);
+    ctx.lineTo(drag.x1 - 10 * Math.cos(ang - 0.4), drag.y1 - 10 * Math.sin(ang - 0.4));
+    ctx.lineTo(drag.x1 - 10 * Math.cos(ang + 0.4), drag.y1 - 10 * Math.sin(ang + 0.4));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Idle hint.
+  if (bodies.length === 0 && !drag) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('click to spawn  -  drag to slingshot  -  R to reset', w / 2, h / 2);
+    ctx.textAlign = 'start';
+  }
+}
+
+function loop(now) {
+  var realDt = lastTime ? (now - lastTime) / 1000 : 0;
+  if (realDt > 0.25) realDt = 0.25;
+  lastTime = now;
+  accumulator += realDt;
+
+  var iter = 0;
+  while (accumulator >= FIXED_DT && iter < 8) {
+    step(FIXED_DT);
+    accumulator -= FIXED_DT;
+    iter++;
+  }
+  if (iter === 8) accumulator = 0;
+
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+`;
+
+<CanvasRender
+  id="nbody-poc"
+  title="n-body sandbox"
+  width={800}
+  height={500}
+  code={code}
+  fluid
+/>
+
+## What this proves
+
+- Velocity-Verlet stays well-behaved across hundreds of bodies without per-frame NaN guards, because softening `EPS` keeps the denominator strictly positive and the slingshot velocity is bounded by `K * max drag distance`.
+- Trails as `{x, y, fid}` arrays push-and-shift cheaply at this body count. Phase 7 measures whether GC pressure justifies a Float32Array ring buffer; for the POC the object form is the readable choice.
+- Merge keeps mass and momentum exactly; radius grows by area (`r = sqrt(r1^2 + r2^2)`), which feels right visually and matches the plan.
+- Click vs drag is a release-time distance check, not a timer. Avoids accidental drags from jittery hands.
+
+## What this does not prove
+
+- Lifecycle. The home version needs SPA-nav cleanup, idempotent re-mount, and `astro:before-swap` teardown. Sandbox dies on Run, so none of that matters here.
+- Cross-module wiring. The home version splits this single closure across `grid`, `state`, `clock`, `runner`, `interact`. The split is mechanical once the math is right.
+- Theme tokens. Colors are hardcoded for the dark canvas wrap. Production uses `--nbody-*` CSS vars with light + dark values.
+- Mobile overlay. Production overlay has `touch-action: none` plus `z-index` choreography with the site header. POC sets `touch-action` inline for the canvas only.

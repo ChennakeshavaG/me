@@ -155,7 +155,7 @@ Used by `src/content.config.js` (validation) and `scripts/create.js` (scaffoldin
 
 ## Canvas Lab Wiki (Custom Components)
 
-The `wiki/canvas-lab/` section contains 9 interactive HTML Canvas lessons migrated from a standalone site. It uses custom Astro components importable in MDX:
+The `wiki/canvas-lab/` section contains 10 interactive HTML Canvas lessons migrated from a standalone site. It uses custom Astro components importable in MDX:
 
 | Component | File | Purpose |
 |---|---|---|
@@ -174,6 +174,8 @@ src/content/wiki/canvas-lab/
   01-basics.mdx          ← blog
   ...
   08-particle-system.mdx ← blog
+  09-drift.mdx           ← blog (final boss: full fluid sim)
+  appendix-bezier-math.mdx ← wiki
 ```
 
 ## Adding a New Content Type
