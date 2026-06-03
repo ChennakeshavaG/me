@@ -12,6 +12,7 @@ Minimalist monochrome aesthetic — cyan as the sole accent color, monochrome in
 |-------|-----------|
 | Framework | Astro 6 (`output: 'static'`, no SSR adapter) |
 | Content | MDX (`@astrojs/mdx`) |
+| Sitemap | `@astrojs/sitemap` (needs `site` set; emits `sitemap-index.xml`) |
 | Math | `remark-math` + `rehype-katex` (KaTeX CDN for CSS) |
 | Diagrams | `rehype-mermaid` + Playwright (build-time SVG, 0KB client JS) |
 | Syntax | Shiki (built into Astro, `excludeLangs: ['mermaid']`) |
@@ -32,7 +33,8 @@ me/
 ├── package.json               scripts: dev, build, preview, create, validate
 │
 ├── public/                    static assets (served as-is)
-│   └── favicon.svg
+│   ├── favicon.svg
+│   └── _headers               Cloudflare headers: immutable cache for /_astro/*, security headers
 │
 ├── src/
 │   ├── content.config.js      unified collection: glob + Zod discriminated union
@@ -180,8 +182,9 @@ KaTeX CSS loaded via CDN in BaseLayout `<head>`. Mermaid diagrams rendered at bu
 ## Astro Config
 
 ```js
+site:         'https://gck.sh'   // required by sitemap
 output:       'static'
-integrations: [mdx(), solid()]
+integrations: [mdx(), solid(), sitemap()]
 markdown:
   remarkPlugins: [remarkMath]
   rehypePlugins: [rehypeKatex, [rehypeMermaid, { strategy: 'img-svg', dark: true }]]
