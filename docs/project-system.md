@@ -2,7 +2,7 @@
 
 ## Overview
 
-Personal site built with Astro 6, deployed to Cloudflare Workers. Three sections — Home, Atelier, About — each with isolated styling via CSS scoping (wrapper classes, no shadow DOM). Content is MDX with math (KaTeX), syntax highlighting (Shiki), and future Mermaid support.
+Personal site built with Astro 6 as a fully static site, deployed to Cloudflare Workers Static Assets (no Worker runtime). Three sections — Home, Atelier, About — each with isolated styling via CSS scoping (wrapper classes, no shadow DOM). Content is MDX with math (KaTeX), syntax highlighting (Shiki), and future Mermaid support.
 
 Minimalist monochrome aesthetic — cyan as the sole accent color, monochrome interactive grid with cyan mouse glow, clean surfaces. Full dark/light theming via `data-theme` attribute on `<html>`. Light mode is default.
 
@@ -10,8 +10,7 @@ Minimalist monochrome aesthetic — cyan as the sole accent color, monochrome in
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Astro 6 |
-| Adapter | `@astrojs/cloudflare` (Cloudflare Workers) |
+| Framework | Astro 6 (`output: 'static'`, no SSR adapter) |
 | Content | MDX (`@astrojs/mdx`) |
 | Math | `remark-math` + `rehype-katex` (KaTeX CDN for CSS) |
 | Diagrams | `rehype-mermaid` + Playwright (build-time SVG, 0KB client JS) |
@@ -19,7 +18,7 @@ Minimalist monochrome aesthetic — cyan as the sole accent color, monochrome in
 | UI Islands | Solid.js (`@astrojs/solid-js`) — client-side interactive components |
 | 3D | Three.js (home page, future) |
 | Types | TypeScript strict mode |
-| Deploy | Wrangler (`wrangler.jsonc`) |
+| Deploy | Wrangler static assets (`wrangler.jsonc`, no `main`) |
 | Node | >= 22.12.0 |
 | Vite | 7 (pinned via overrides) |
 
@@ -27,9 +26,9 @@ Minimalist monochrome aesthetic — cyan as the sole accent color, monochrome in
 
 ```
 me/
-├── astro.config.mjs          Astro config: cloudflare adapter, MDX, Solid.js, remark/rehype
-├── tsconfig.json              strict mode, includes worker-configuration.d.ts
-├── wrangler.jsonc             Cloudflare Workers deploy config, assets from ./dist/
+├── astro.config.mjs          Astro config: static output, MDX, Solid.js, remark/rehype
+├── tsconfig.json              strict mode
+├── wrangler.jsonc             Cloudflare static-assets deploy config, assets from ./dist/
 ├── package.json               scripts: dev, build, preview, create, validate
 │
 ├── public/                    static assets (served as-is)
@@ -181,8 +180,8 @@ KaTeX CSS loaded via CDN in BaseLayout `<head>`. Mermaid diagrams rendered at bu
 ## Astro Config
 
 ```js
-adapter:      cloudflare()
-integrations: [mdx()]
+output:       'static'
+integrations: [mdx(), solid()]
 markdown:
   remarkPlugins: [remarkMath]
   rehypePlugins: [rehypeKatex, [rehypeMermaid, { strategy: 'img-svg', dark: true }]]
@@ -296,16 +295,21 @@ Defined in `src/models/`. Each exports `schema` (Zod), `template` (frontmatter d
 | `npm run preview` | preview production build |
 | `npm run create <type> <path>` | scaffold new content file |
 | `npm run validate` | validate all content against schemas |
-| `npm run generate-types` | regenerate Cloudflare Worker types |
+| `npm run deploy` | build + `wrangler deploy` (static assets) |
 
 `validate` runs automatically before every build via `prebuild` hook.
 
 ## Deploy
 
-Cloudflare Workers via Wrangler. Config in `wrangler.jsonc`:
-- Assets served from `./dist/`
-- Observability enabled
-- Server entrypoint: `@astrojs/cloudflare/entrypoints/server`
+Cloudflare Workers Static Assets via Wrangler — no Worker runtime, so static
+files are served directly (unlimited, free; requests do not count against the
+Workers 100k/day limit). Config in `wrangler.jsonc`:
+- Static assets served from `./dist/`
+- No `main` entrypoint (pure static; adding one would route every request
+  through a billable Worker invocation)
+
+Run `npm run deploy` (local build + `wrangler deploy`); deploys are not driven
+by Cloudflare Git builds (Mermaid needs Chromium, unavailable in CF's container).
 
 ## Build Steps Completed
 

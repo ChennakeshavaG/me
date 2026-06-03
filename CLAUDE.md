@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Personal site. Astro 6, Cloudflare Workers via `@astrojs/cloudflare` adapter.
+Personal site. Astro 6, fully static (`output: 'static'`), deployed to Cloudflare Workers Static Assets (no Worker runtime, no SSR adapter).
 
 ## Commands
 
@@ -14,7 +14,7 @@ Personal site. Astro 6, Cloudflare Workers via `@astrojs/cloudflare` adapter.
 - `npm run validate` — validate all content against schemas
 - `npm run create <type> <name> [location]` — scaffold content (blog/wiki/project). Location = full path from content root (e.g., `project/blurrysite`, not just `blurrysite`)
 - `npm run create help` — full scaffolding docs with examples
-- `npm run generate-types` — regen Cloudflare Worker types (worker-configuration.d.ts)
+- `npm run deploy` — build + `wrangler deploy` (static assets)
 
 ## Props Convention
 
