@@ -24,11 +24,11 @@ const icons = {
   ),
 };
 
-export default function TypeIcon(props: { type: 'blog' | 'wiki' | 'project' }) {
+export default function TypeIcon(props: { type: 'blog' | 'wiki' | 'project'; label?: boolean }) {
   return (
     <span class="type-icon">
       {icons[props.type]}
-      <span class="type-icon__label">[{props.type}]</span>
+      {props.label && <span class="type-icon__label">[{props.type}]</span>}
     </span>
   );
 }

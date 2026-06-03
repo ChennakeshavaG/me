@@ -34,7 +34,7 @@ export default function StreamCard(props: { item: Item }) {
       <div class="stream-card__header">
         <div class="stream-card__route">
           {props.item.pinned && <span class="stream-card__pin"><PinIcon /></span>}
-          <TypeIcon type={props.item.type} />
+          <TypeIcon type={props.item.type} label />
           <For each={props.item.route.filter(s => !s.isType)}>
             {(seg, i) => (
               <>
