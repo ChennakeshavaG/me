@@ -1,12 +1,22 @@
 ---
 import BaseLayout from './BaseLayout.astro';
-import '../styles/about.css';
+import '../styles/canvas-lab.css';
 
-const { title = 'About', description = '' } = Astro.props;
+// Works both as an MDX page layout (props arrive under `frontmatter`)
+// and when used directly with title/description props.
+const { frontmatter } = Astro.props;
+const title = frontmatter?.title ?? Astro.props.title ?? 'About';
+const description = frontmatter?.description ?? Astro.props.description ?? '';
 ---
 
-<BaseLayout title={title} description={description}>
-  <div class="about">
-    <slot />
-  </div>
+<BaseLayout title={title} description={description} ogType="article">
+  <article class="content">
+    <header class="content__header">
+      <h1>{title}</h1>
+      {description && <p class="content__desc">{description}</p>}
+    </header>
+    <div class="content__body">
+      <slot />
+    </div>
+  </article>
 </BaseLayout>
