@@ -15,17 +15,17 @@ MDX: ```mermaid ... ```
 
 ## Installation
 
-Two steps: npm packages + browser binary:
+The npm packages (`rehype-mermaid`, `playwright`) are regular dependencies. The Chromium binary is fetched automatically by the `postinstall` script in package.json:
 
-```bash
-# 1. Install npm packages
-npm install rehype-mermaid playwright
-
-# 2. Download Chromium binary (~150MB, one-time per machine)
-npx playwright install --with-deps chromium
+```json
+"postinstall": "playwright install chromium"
 ```
 
-The Chromium binary is stored in `~/.cache/ms-playwright/`, not in `node_modules`. It persists across projects. If you move to a new machine or wipe `~/.cache`, run step 2 again.
+So a plain `npm install` (or `npm ci` in CI) downloads Chromium too; no manual step. The binary lands in `~/.cache/ms-playwright/` (~150MB), not in `node_modules`, and persists across projects.
+
+This is required in CI/CD: the Cloudflare Workers build container ships no browser, so without `postinstall` the build fails at `astro build` with `browserType.launch: Executable doesn't exist`. Because the cache dir lives outside `node_modules`, Cloudflare's dependency cache does not retain it; expect a fresh Chromium download (~10-20s) on each build.
+
+On a bare machine that lacks system browser libs, run `npx playwright install --with-deps chromium` manually (needs sudo; not used in `postinstall` since CI build users can't apt).
 
 ## Configuration
 
