@@ -187,6 +187,7 @@ markdown:
   remarkPlugins: [remarkMath]
   rehypePlugins: [rehypeKatex, [rehypeMermaid, { strategy: 'img-svg', dark: true }]]
   syntaxHighlight: { type: 'shiki', excludeLangs: ['mermaid'] }
+  shikiConfig:      { themes: { light: 'github-light', dark: 'nord' } }
 ```
 
 ## Routing

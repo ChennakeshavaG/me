@@ -23,7 +23,6 @@
   --space-lg: 2rem;
   --radius-sm: 3px;
   --radius-md: 6px;
-  --color-code-bg: #2e3440;
 
   /* Breakpoints (reference — use in @media queries)
      --bp-mobile:   360px   smallest common phone
@@ -273,14 +272,20 @@ pre code {
   padding: 0;
 }
 
-pre.astro-code,
+/* Light mode (default): use Shiki's inline github-light colors. Spans stay
+   transparent so only the pre carries the background. */
 pre.astro-code span {
-  color: var(--shiki-dark) !important;
   background-color: transparent !important;
 }
 
-pre.astro-code {
-  background: var(--color-code-bg) !important;
+/* Dark mode: swap to the nord variant Shiki emits as --shiki-dark(-bg). */
+[data-theme="dark"] pre.astro-code,
+[data-theme="dark"] pre.astro-code span {
+  color: var(--shiki-dark) !important;
+}
+
+[data-theme="dark"] pre.astro-code {
+  background-color: var(--shiki-dark-bg) !important;
 }
 
 /* ── Mermaid Diagrams ── */
@@ -358,9 +363,34 @@ table {
   margin-right: auto;
 }
 
-.content__body > pre,
-.content__body > .content__body-table-wrap,
-.content__body > table,
+/* Safety net: an inline tag left alone on its own line in MDX is emitted as a
+   bare flow child (not wrapped in <p>), and inline elements ignore the
+   max-width above, so they stretch to the full content width. Force such bare
+   inline children to behave like a prose-width block. Proper fix is still to
+   wrap them in <p>, which keeps the highlight tight to the text. */
+.content__body > mark,
+.content__body > span,
+.content__body > a,
+.content__body > code,
+.content__body > abbr,
+.content__body > kbd,
+.content__body > time,
+.content__body > sub,
+.content__body > sup,
+.content__body > small,
+.content__body > strong,
+.content__body > em,
+.content__body > b,
+.content__body > i,
+.content__body > u {
+  display: block;
+  max-width: var(--w-prose);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Wide tier: flowcharts and canvas demos. Tables and code blocks stay at
+   prose width (var(--w-prose) via `.content__body > *`) so they align to the text. */
 .content__body > .cl-render,
 .content__body > .wide,
 .content__body > svg[id^="mermaid-"] {
@@ -369,6 +399,70 @@ table {
 
 .content__body > .full {
   max-width: var(--w-full);
+}
+
+/* ── Code block panel (matches the .cl-render aesthetic) ── */
+.content__body .code-block {
+  margin-block: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.content__body .code-block__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0.4rem var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.content__body .code-block__copy {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.55rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.content__body .code-block__copy:hover {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.content__body .code-block__copy:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.content__body .code-block__copy[data-copied="true"] {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* The inner Shiki block: drop its own chrome, the panel owns it. Keep horizontal scroll. */
+.content__body .code-block pre.astro-code {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: var(--space-sm);
 }
 
 /* Breadcrumb */

@@ -71,11 +71,11 @@ All sizes use `clamp()` for fluid scaling. Never use fixed `px` for body/heading
 | Accent (links, markers, highlights) | `--color-accent` |
 | Borders, dividers | `--color-border` |
 | Inline code background | `--color-bg` (inside `.content` card) |
-| Code block background (Shiki) | `--color-code-bg` (#2e3440 Nord dark, both themes) |
+| Code block background (Shiki) | theme-dependent: `github-light` (#fff) in light mode, Nord (#2e3440) in dark mode |
 | Content card background | `--color-content-bg` |
 | Surface / cards | `--color-surface` |
 
-**Exception:** Shiki syntax tokens use Nord palette via `--shiki-dark` CSS variables. These are controlled by `astro.config.mjs` theme config, not manual CSS.
+**Exception:** Shiki uses dual themes (`github-light` / `nord`) configured in `astro.config.mjs` under `shikiConfig.themes`. Each token is emitted with inline light colors plus `--shiki-dark` / `--shiki-dark-bg` CSS variables; `global.css` swaps to those variables under `[data-theme="dark"]`. Not controlled by manual color CSS.
 
 ## Element Styles
 
@@ -96,7 +96,7 @@ All sizes use `clamp()` for fluid scaling. Never use fixed `px` for body/heading
 
 ### Code
 - **Inline code:** `--color-bg` background (contrasts with `--color-content-bg` card). Small border-radius.
-- **Code blocks:** Nord dark background in both themes (`--color-code-bg`). Auto-promote to `--w-wide`. On mobile: reduced font size (0.8em) and padding.
+- **Code blocks:** dual-theme via Shiki — light `github-light` (white bg, dark syntax) in light mode, `nord` (#2e3440 navy) in dark mode. Wrapped in a `.code-block` panel (language label + copy button) by BaseLayout. Prose width. On mobile: reduced font size (0.8em) and padding.
 - **Inside `.content`:** inline code uses `--color-bg` (not `--color-surface`) because the card already uses `--color-content-bg` as its background — surface-on-surface has no contrast.
 
 ### Tables

@@ -110,6 +110,37 @@ const currentPath = Astro.url.pathname;
         }
         window.addEventListener('scroll', onScroll, { passive: true, signal: __navAC.signal });
         onScroll();
+
+        // Code blocks: wrap each Shiki block in a titled panel (language label + copy button),
+        // matching the canvas-lab render panel. Idempotent and SPA-safe.
+        document.querySelectorAll('.content__body pre.astro-code:not([data-enhanced])').forEach((pre) => {
+          pre.dataset.enhanced = 'true';
+          const raw = pre.getAttribute('data-language') || 'text';
+          const lang = raw === 'plaintext' ? 'text' : raw;
+
+          const fig = document.createElement('figure');
+          fig.className = 'code-block';
+          const bar = document.createElement('div');
+          bar.className = 'code-block__bar';
+          const label = document.createElement('span');
+          label.className = 'code-block__lang';
+          label.textContent = lang;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'code-block__copy';
+          btn.textContent = 'Copy';
+          btn.addEventListener('click', () => {
+            navigator.clipboard?.writeText(pre.textContent || '').then(() => {
+              btn.textContent = 'Copied';
+              btn.dataset.copied = 'true';
+              setTimeout(() => { btn.textContent = 'Copy'; btn.removeAttribute('data-copied'); }, 1500);
+            }).catch(() => {});
+          });
+          bar.append(label, btn);
+
+          pre.parentNode.insertBefore(fig, pre);
+          fig.append(bar, pre);
+        });
       }
 
       document.addEventListener('astro:page-load', init);

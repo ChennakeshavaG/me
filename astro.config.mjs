@@ -25,8 +25,10 @@ export default defineConfig({
     syntaxHighlight: {
       type: 'shiki',
       excludeLangs: ['mermaid'],
+    },
+    shikiConfig: {
       themes: {
-        light: 'nord',
+        light: 'github-light',
         dark: 'nord',
       },
     },
