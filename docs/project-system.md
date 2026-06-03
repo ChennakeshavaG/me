@@ -314,6 +314,19 @@ Workers 100k/day limit). Config in `wrangler.jsonc`:
 Run `npm run deploy` (local build + `wrangler deploy`); deploys are not driven
 by Cloudflare Git builds (Mermaid needs Chromium, unavailable in CF's container).
 
+## SEO
+
+- `BaseLayout.astro` derives `<title>` from the `title` prop: home renders the
+  prop verbatim, every other page gets a ` | gck.sh` suffix. `og:title` mirrors
+  the same `pageTitle`.
+- Home title/description carry the full name ("Chennakeshava Gudapalli") so the
+  site ranks for name searches; the About page `<h1>` is the name too.
+- `BaseLayout.astro` emits a JSON-LD `Person` entity (name, `jobTitle`,
+  `worksFor`, `sameAs` → LinkedIn/GitHub) **on the home page only**.
+- Sitemap at `/sitemap-index.xml` (`@astrojs/sitemap`, needs `site` in config).
+- `robots.txt` is Cloudflare-managed (auto-injected); not a repo file.
+- `public/_headers` sets immutable caching for `/_astro/*` plus security headers.
+
 ## Build Steps Completed
 
 1. **Dependencies + Markdown Config** — installed `@astrojs/mdx`, `remark-math`, `rehype-katex`, `three`; configured Astro markdown pipeline

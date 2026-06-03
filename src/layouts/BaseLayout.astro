@@ -4,6 +4,23 @@ import '../styles/global.css';
 
 const { title, description = '', ogType = 'website' } = Astro.props;
 const currentPath = Astro.url.pathname;
+const isHome = currentPath === '/';
+const pageTitle = isHome ? title : `${title} | gck.sh`;
+
+// Person entity for search engines — ties the site to the name "Chennakeshava
+// Gudapalli" and links authoritative profiles. Emitted on the home page only.
+const personLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Chennakeshava Gudapalli',
+  url: 'https://gck.sh',
+  jobTitle: 'Software Engineer',
+  worksFor: { '@type': 'Organization', name: 'Zoho' },
+  sameAs: [
+    'https://www.linkedin.com/in/chennakeshava-gudapalli-1126251b6/',
+    'https://github.com/ChennakeshavaG',
+  ],
+};
 ---
 
 <html lang="en">
@@ -11,7 +28,7 @@ const currentPath = Astro.url.pathname;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {description && <meta name="description" content={description} />}
-    <meta property="og:title" content={title} />
+    <meta property="og:title" content={pageTitle} />
     {description && <meta property="og:description" content={description} />}
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={Astro.url.href} />
@@ -34,7 +51,8 @@ const currentPath = Astro.url.pathname;
       });
     </script>
     <ClientRouter />
-    <title>{title === 'Home' ? 'gck.sh' : `${title} | gck.sh`}</title>
+    <title>{pageTitle}</title>
+    {isHome && <script type="application/ld+json" set:html={JSON.stringify(personLd)} />}
   </head>
   <body>
     <canvas class="grid-glow" id="grid-glow" transition:persist></canvas>
